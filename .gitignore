@@ -15,10 +15,10 @@ backend/obj/
 backend/artifacts/
 backend/*-run.log
 backend/*-run.err.log
-backend/renderer-source/
-backend/renderer-source-test/
-backend/renderer-runtime/
-backend/renderer-assets/
+# backend/renderer-source/
+# backend/renderer-source-test/
+# backend/renderer-runtime/
+# backend/renderer-assets/
 
 frontend/node_modules/
 frontend/dist/
