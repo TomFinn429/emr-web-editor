@@ -57,25 +57,39 @@ export function useDocumentSession() {
     }
   }
 
-  function markSaving() {
+  function markSaving(documentId?: string) {
+    if (!isCurrentDocument(documentId)) {
+      return
+    }
+
     isSaving.value = true
+    error.value = null
     saveState.value = 'saving'
   }
 
-  function markSaved(xml: string) {
+  function markSaved(xml: string, documentId?: string) {
+    if (!isCurrentDocument(documentId)) {
+      return
+    }
+
     isSaving.value = false
     lastSavedXml.value = xml
+    error.value = null
     saveState.value = 'saved'
   }
 
-  function markFailed(message: string) {
+  function markFailed(message: string, documentId?: string) {
+    if (!isCurrentDocument(documentId)) {
+      return
+    }
+
     isSaving.value = false
     error.value = message
     saveState.value = 'failed'
   }
 
-  function setValidationIssues(issues: ValidationIssue[]) {
-    validationIssues.value = issues
+  function setValidationIssues(issues: readonly ValidationIssue[]) {
+    validationIssues.value = [...issues]
   }
 
   function clearDocument() {
@@ -105,5 +119,13 @@ export function useDocumentSession() {
     markFailed,
     setValidationIssues,
     clearDocument,
+  }
+
+  function isCurrentDocument(documentId?: string) {
+    if (!document.value) {
+      return false
+    }
+
+    return !documentId || document.value.id === documentId
   }
 }
