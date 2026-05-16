@@ -40,26 +40,6 @@ function command(
   }
 }
 
-function legacyCommand(
-  id: EditorCommandId,
-  label: string,
-  commandName: string,
-  parameter: unknown = null,
-  showUI = false,
-): RibbonCommand {
-  return {
-    id,
-    label,
-    payload: {
-      commandName,
-      showUI,
-      parameter,
-      executor: 'legacy',
-    },
-    requiresWriter: true,
-  }
-}
-
 export const ribbonTabs: RibbonTab[] = [
   {
     id: 'file',
@@ -105,11 +85,35 @@ export const ribbonTabs: RibbonTab[] = [
         label: '临床控件',
         commands: [
           command('insertInputField', '输入域', 'InsertInputField', null, true),
-          command('insertDateTime', '日期时间', 'InsertDatetime', null, true),
-          command('insertCheckbox', '勾选框', 'InsertCheckBoxOrRadio', { type: 'checkbox' }, false),
-          command('insertRadio', '单选框', 'InsertCheckBoxOrRadio', { type: 'radio' }, false),
+          command('insertDateTime', '日期时间', 'InsertDateTimeField', null, true),
+          command(
+            'insertCheckbox',
+            '勾选框',
+            'InsertCheckBoxOrRadio',
+            { Name: 'checkbox', Type: 'checkbox', CaptionFlowLayout: true },
+            true,
+          ),
+          command(
+            'insertRadio',
+            '单选框',
+            'InsertCheckBoxOrRadio',
+            { Name: 'radio', Type: 'radio', CaptionFlowLayout: true },
+            true,
+          ),
           command('insertPageBreak', '分页符', 'insertpagebreak', null, true),
-          command('insertPageInfo', '页码', 'InsertPageInfoElement', null, false),
+          command(
+            'insertPageInfo',
+            '页码',
+            'InsertPageInfoElement',
+            {
+              ID: 'pageinfo1',
+              Height: '65',
+              Width: '400',
+              ValueType: 'PageIndex',
+              FormatString: '第[%PageIndex%]页 共[%NumOfPages%]页',
+            },
+            true,
+          ),
         ],
       },
     ],
@@ -129,7 +133,7 @@ export const ribbonTabs: RibbonTab[] = [
           command('insertColumnLeft', '左侧插入列', 'Table_InsertColumnLeft'),
           command('insertColumnRight', '右侧插入列', 'Table_InsertColumnRight'),
           command('mergeCell', '合并单元格', 'Table_MergeCell'),
-          legacyCommand('splitCell', '拆分单元格', 'Table_SplitCellExt', null, true),
+          command('splitCell', '拆分单元格', 'Table_SplitCellExt', null, true),
           command('tableProperties', '表格属性', 'tableproperties', null, true),
           command('rowProperties', '行属性', 'tablerowproperties', null, true),
           command('cellProperties', '单元格属性', 'tablecellproperties', null, true),

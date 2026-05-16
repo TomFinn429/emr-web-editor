@@ -15,12 +15,45 @@ describe('ribbonCommands', () => {
     })
   })
 
-  it('maps split cell to the legacy command executor', () => {
+  it('maps split cell to the DC command executor', () => {
     expect(createWriterCommandPayload('splitCell')).toEqual({
       commandName: 'Table_SplitCellExt',
       showUI: true,
       parameter: null,
-      executor: 'legacy',
+      executor: 'dc',
+    })
+  })
+
+  it('maps clinical insert commands to runtime command names and options', () => {
+    expect(createWriterCommandPayload('insertDateTime')).toEqual({
+      commandName: 'InsertDateTimeField',
+      showUI: true,
+      parameter: null,
+      executor: 'dc',
+    })
+    expect(createWriterCommandPayload('insertCheckbox')).toEqual({
+      commandName: 'InsertCheckBoxOrRadio',
+      showUI: true,
+      parameter: { Name: 'checkbox', Type: 'checkbox', CaptionFlowLayout: true },
+      executor: 'dc',
+    })
+    expect(createWriterCommandPayload('insertRadio')).toEqual({
+      commandName: 'InsertCheckBoxOrRadio',
+      showUI: true,
+      parameter: { Name: 'radio', Type: 'radio', CaptionFlowLayout: true },
+      executor: 'dc',
+    })
+    expect(createWriterCommandPayload('insertPageInfo')).toEqual({
+      commandName: 'InsertPageInfoElement',
+      showUI: true,
+      parameter: {
+        ID: 'pageinfo1',
+        Height: '65',
+        Width: '400',
+        ValueType: 'PageIndex',
+        FormatString: '第[%PageIndex%]页 共[%NumOfPages%]页',
+      },
+      executor: 'dc',
     })
   })
 
