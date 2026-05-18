@@ -1,0 +1,120 @@
+<script setup lang="ts">
+import CanvasPreview from './CanvasPreview.vue'
+import ValidationPanel from './ValidationPanel.vue'
+import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
+import type { ImportedDocument, ValidationIssue } from '../../types/document'
+
+interface Props {
+  document: ImportedDocument | null
+  fileName?: string
+  statusMessage: string
+  warningText: string
+  zoom: number
+  validationIssues: readonly ValidationIssue[]
+}
+
+interface Emits {
+  modeChange: [mode: string]
+  renderError: [message: string | null]
+  writerReady: [writerElement: ExternalWriterElement | null]
+  selectIssue: [issue: ValidationIssue]
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+</script>
+
+<template>
+  <section class="editor-area" aria-label="DCWriter 编辑区">
+    <div class="editor-area__tabs">
+      <div class="editor-area__tab editor-area__tab--active" :title="props.fileName || '未打开文档'">
+        {{ props.fileName || '未打开文档' }}
+      </div>
+    </div>
+
+    <div class="editor-area__message-row">
+      <span class="editor-area__message">{{ props.statusMessage }}</span>
+      <span v-if="props.warningText" class="editor-area__warning">{{ props.warningText }}</span>
+    </div>
+
+    <CanvasPreview
+      :document="props.document"
+      :zoom="props.zoom"
+      @mode-change="emit('modeChange', $event)"
+      @render-error="emit('renderError', $event)"
+      @writer-ready="emit('writerReady', $event)"
+    />
+
+    <ValidationPanel
+      :issues="props.validationIssues"
+      @select-issue="emit('selectIssue', $event)"
+    />
+  </section>
+</template>
+
+<style scoped>
+.editor-area {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: 34px auto minmax(0, 1fr) auto;
+  background: #dbe5ed;
+}
+
+.editor-area__tabs {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  border-bottom: 1px solid #c8d3dd;
+  background: #f7f9fb;
+}
+
+.editor-area__tab {
+  display: inline-flex;
+  max-width: 280px;
+  height: 32px;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 14px;
+  border-right: 1px solid #c8d3dd;
+  color: #2f4053;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-area__tab--active {
+  background: #ffffff;
+  color: #1f4f73;
+  font-weight: 700;
+}
+
+.editor-area__message-row {
+  display: flex;
+  min-width: 0;
+  min-height: 28px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px;
+  border-bottom: 1px solid #d4dee7;
+  background: #fff;
+  font-size: 12px;
+}
+
+.editor-area__message,
+.editor-area__warning {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-area__message {
+  color: #334155;
+}
+
+.editor-area__warning {
+  margin-left: auto;
+  color: #8a5a00;
+}
+</style>

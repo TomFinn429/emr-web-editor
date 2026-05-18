@@ -45,7 +45,7 @@ export interface ValidationIssue {
   severity: 'error' | 'warning'
 }
 
-export type EditorCommandId =
+export type WriterEditorCommandId =
   | 'undo'
   | 'redo'
   | 'copy'
@@ -55,10 +55,6 @@ export type EditorCommandId =
   | 'bold'
   | 'italic'
   | 'underline'
-  | 'fontSize'
-  | 'fontName'
-  | 'foreColor'
-  | 'backColor'
   | 'alignLeft'
   | 'alignCenter'
   | 'alignRight'
@@ -79,6 +75,39 @@ export type EditorCommandId =
   | 'tableProperties'
   | 'rowProperties'
   | 'cellProperties'
+
+export type AppCommandId =
+  | 'importXml'
+  | 'save'
+  | 'downloadXml'
+  | 'print'
+  | 'printPreview'
+  | 'closePrintPreview'
+  | 'clearDocument'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'resetZoom'
+
+export type PlaceholderCommandId =
+  | 'fontSize'
+  | 'fontName'
+  | 'foreColor'
+  | 'backColor'
+  | 'uploadTemplate'
+  | 'cancelUpload'
+  | 'historyVersions'
+  | 'advancedHistoryVersions'
+  | 'templateAudit'
+  | 'advancedTemplateAudit'
+  | 'dataElementManager'
+  | 'dictionaryManager'
+  | 'dataSourceManager'
+  | 'pageSettings'
+  | 'advancedPermissions'
+  | 'batchReplace'
+  | 'signatureSettings'
+
+export type EditorCommandId = WriterEditorCommandId | AppCommandId | PlaceholderCommandId
 
 export interface WriterCommandPayload {
   commandName: string

@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef } from 'vue'
-import CanvasPreview from './CanvasPreview.vue'
 import EditorStatusBar from './EditorStatusBar.vue'
-import ImportToolbar from './ImportToolbar.vue'
-import TemplatePanel from './TemplatePanel.vue'
-import ValidationPanel from './ValidationPanel.vue'
+import PropertyInspectorPanel from './PropertyInspectorPanel.vue'
+import TemplateTreePanel from './TemplateTreePanel.vue'
+import WorkbenchAssistPanel from './WorkbenchAssistPanel.vue'
+import WorkbenchEditorArea from './WorkbenchEditorArea.vue'
+import WorkbenchTopMenu from './WorkbenchTopMenu.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import { useDocumentImport } from '../../composables/useDocumentImport'
 import { useDocumentSession } from '../../composables/useDocumentSession'
 import { downloadXml, saveDocumentToBackend } from '../../services/documentSaveService'
-import { fetchTemplateContent, fetchTemplates } from '../../services/templateService'
-import type { EditorCommandId, TemplateSummary, ValidationIssue } from '../../types/document'
+import { fetchTemplateContent } from '../../services/templateService'
+import {
+  fetchTemplateWorkbenchData,
+  type TemplateTreeNode,
+  type TemplateWorkbenchData,
+} from '../../services/templateWorkbenchService'
+import type { EditorCommandId, ValidationIssue } from '../../types/document'
 import { createWriterControlAdapter } from '../../utils/writerControlAdapter'
 import type { WriterPrintResult } from '../../utils/writerPrint'
+import { createWriterCommandPayload, findCommandDefinition } from './commandRegistry'
 import { canReplaceCurrentDocument, toPreviewDocument } from './editorShellState'
-import { createWriterCommandPayload } from './ribbonCommands'
 
 const importState = useDocumentImport()
 const session = useDocumentSession()
@@ -26,10 +32,11 @@ const printMessage = shallowRef<string | null>(null)
 const commandMessage = shallowRef<string | null>(null)
 const writerElement = shallowRef<ExternalWriterElement | null>(null)
 const isPrintPreviewing = shallowRef(false)
-const activeToolbarTab = shallowRef('start')
-const templates = shallowRef<TemplateSummary[]>([])
 const templatesError = shallowRef<string | null>(null)
-const isLoadingTemplates = shallowRef(false)
+const isLoadingWorkbench = shallowRef(false)
+const workbenchData = shallowRef<TemplateWorkbenchData | null>(null)
+const workbenchError = shallowRef<string | null>(null)
+const selectedTreeNodeId = shallowRef<string | undefined>()
 let disposeContentChanged: (() => void) | null = null
 
 const adapter = computed(() => createWriterControlAdapter(writerElement.value))
@@ -37,6 +44,12 @@ const previewDocument = computed(() => toPreviewDocument(session.document.value)
 const canUseWriter = computed(() => writerElement.value !== null)
 const canSaveFromWriter = computed(() => Boolean(session.document.value) && canUseWriter.value)
 const statusRenderMode = computed(() => (rendererMode.value === 'external' ? '外部渲染' : '结构化预览'))
+const workbenchTree = computed(() => workbenchData.value?.templateTree || [])
+const workbenchCategories = computed(() => workbenchData.value?.categories || ['全部分类'])
+const metadataItems = computed(() => workbenchData.value?.metadataItems || [])
+const fragmentTemplates = computed(() => workbenchData.value?.fragmentTemplates || [])
+const templateProperties = computed(() => workbenchData.value?.templateProperties || null)
+const elementProperties = computed(() => workbenchData.value?.elementProperties || null)
 const statusMessage = computed(() => {
   if (importState.isImporting.value) return '正在导入 XML'
   if (importState.error.value) return importState.error.value
@@ -50,19 +63,19 @@ const statusMessage = computed(() => {
 const warningText = computed(() => session.document.value?.warnings.join('；') || '')
 
 onMounted(() => {
-  loadTemplates()
+  loadWorkbenchData()
 })
 
-async function loadTemplates() {
-  isLoadingTemplates.value = true
-  templatesError.value = null
+async function loadWorkbenchData() {
+  isLoadingWorkbench.value = true
+  workbenchError.value = null
 
   try {
-    templates.value = await fetchTemplates()
+    workbenchData.value = await fetchTemplateWorkbenchData()
   } catch (error) {
-    templatesError.value = error instanceof Error ? error.message : '模板列表加载失败。'
+    workbenchError.value = error instanceof Error ? error.message : '工作台数据加载失败。'
   } finally {
-    isLoadingTemplates.value = false
+    isLoadingWorkbench.value = false
   }
 }
 
@@ -78,7 +91,7 @@ function resetZoom() {
   zoom.value = 1
 }
 
-async function handleTemplateSelect(id: string) {
+async function handleTemplateSelect(id: string, treeNodeId?: string) {
   if (!canReplaceCurrentDocument(session.isDirty.value, confirmDiscardChanges)) {
     return
   }
@@ -91,6 +104,7 @@ async function handleTemplateSelect(id: string) {
   try {
     const template = await fetchTemplateContent(id)
     session.loadTemplate(template)
+    selectedTreeNodeId.value = treeNodeId
   } catch (error) {
     const message = error instanceof Error ? error.message : '模板内容加载失败。'
     templatesError.value = message
@@ -98,6 +112,14 @@ async function handleTemplateSelect(id: string) {
       session.markFailed(message)
     }
   }
+}
+
+async function handleTemplateTreeSelect(node: TemplateTreeNode) {
+  if (!node.templateId) {
+    return
+  }
+
+  await handleTemplateSelect(node.templateId, node.id)
 }
 
 async function handleLocalImport(file: File) {
@@ -112,8 +134,45 @@ async function handleLocalImport(file: File) {
   await importState.importFile(file)
   if (importState.document.value) {
     session.loadLocalDocument(importState.document.value)
+    selectedTreeNodeId.value = undefined
   } else if (importState.error.value) {
     session.markFailed(importState.error.value)
+  }
+}
+
+function handleWorkbenchCommand(commandId: EditorCommandId) {
+  const definition = findCommandDefinition(commandId)
+  if (!definition || definition.kind === 'placeholder') {
+    return
+  }
+
+  if (definition.kind === 'app') {
+    runAppCommand(commandId)
+    return
+  }
+
+  runEditorCommand(commandId)
+}
+
+function runAppCommand(commandId: EditorCommandId) {
+  if (commandId === 'save') {
+    void saveToBackend()
+  } else if (commandId === 'downloadXml') {
+    downloadCurrentXml()
+  } else if (commandId === 'print') {
+    printDocument()
+  } else if (commandId === 'printPreview') {
+    openPrintPreview()
+  } else if (commandId === 'closePrintPreview') {
+    closePrintPreview()
+  } else if (commandId === 'clearDocument') {
+    clear()
+  } else if (commandId === 'zoomIn') {
+    zoomIn()
+  } else if (commandId === 'zoomOut') {
+    zoomOut()
+  } else if (commandId === 'resetZoom') {
+    resetZoom()
   }
 }
 
@@ -224,14 +283,11 @@ function clear() {
   session.clearDocument()
   importState.clearDocument()
   writerElement.value = null
+  selectedTreeNodeId.value = undefined
   isPrintPreviewing.value = false
   printMessage.value = null
   commandMessage.value = null
   rendererError.value = null
-}
-
-function selectToolbarTab(tabId: string) {
-  activeToolbarTab.value = tabId
 }
 
 function handleValidationIssue(issue: ValidationIssue) {
@@ -245,61 +301,52 @@ function confirmDiscardChanges() {
 
 <template>
   <div class="app-shell">
-    <ImportToolbar
+    <WorkbenchTopMenu
+      :file-name="session.document.value?.fileName"
       :is-importing="importState.isImporting.value"
+      :can-save="canSaveFromWriter"
       :can-print="Boolean(session.document.value)"
       :can-use-writer-print="canUseWriter"
       :can-use-writer-commands="canUseWriter"
-      :can-save="canSaveFromWriter"
       :is-saving="session.isSaving.value"
       :is-print-previewing="isPrintPreviewing"
-      :zoom="zoom"
-      :file-name="session.document.value?.fileName"
-      :active-tab-id="activeToolbarTab"
       @import-file="handleLocalImport"
-      @zoom-in="zoomIn"
-      @zoom-out="zoomOut"
-      @reset-zoom="resetZoom"
-      @print="printDocument"
-      @print-preview="openPrintPreview"
-      @close-print-preview="closePrintPreview"
-      @clear="clear"
-      @select-tab="selectToolbarTab"
-      @tab-change="selectToolbarTab"
-      @run-command="runEditorCommand"
-      @save="saveToBackend"
-      @download-xml="downloadCurrentXml"
+      @command="handleWorkbenchCommand"
     />
 
     <main class="app-shell__body">
-      <TemplatePanel
-        :templates="templates"
-        :selected-template-id="session.document.value?.templateId"
-        :is-loading="isLoadingTemplates"
-        :error="templatesError"
-        @select-template="handleTemplateSelect"
-        @import-file="handleLocalImport"
+      <TemplateTreePanel
+        :nodes="workbenchTree"
+        :categories="workbenchCategories"
+        :selected-node-id="selectedTreeNodeId"
+        :is-loading="isLoadingWorkbench"
+        :error="workbenchError || templatesError"
+        @select-template="handleTemplateTreeSelect"
       />
 
-      <section class="app-shell__workspace">
-        <div v-if="statusMessage || warningText" class="app-shell__message-row">
-          <span class="app-shell__message">{{ statusMessage }}</span>
-          <span v-if="warningText" class="app-shell__warning">{{ warningText }}</span>
-        </div>
-
-        <CanvasPreview
+      <section class="app-shell__middle">
+        <WorkbenchAssistPanel
+          :metadata-items="metadataItems"
+          :fragment-templates="fragmentTemplates"
+        />
+        <WorkbenchEditorArea
           :document="previewDocument"
+          :file-name="session.document.value?.fileName"
+          :status-message="statusMessage"
+          :warning-text="warningText"
           :zoom="zoom"
+          :validation-issues="session.validationIssues.value"
           @mode-change="rendererMode = $event"
           @render-error="rendererError = $event"
           @writer-ready="updateWriterElement"
-        />
-
-        <ValidationPanel
-          :issues="session.validationIssues.value"
           @select-issue="handleValidationIssue"
         />
       </section>
+
+      <PropertyInspectorPanel
+        :template-properties="templateProperties"
+        :element-properties="elementProperties"
+      />
     </main>
 
     <EditorStatusBar
@@ -330,43 +377,14 @@ function confirmDiscardChanges() {
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: 230px minmax(0, 1fr);
+  grid-template-columns: 244px minmax(0, 1fr) 318px;
 }
 
-.app-shell__workspace {
+.app-shell__middle {
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.app-shell__message-row {
-  display: flex;
-  min-width: 0;
-  min-height: 30px;
-  align-items: center;
-  gap: 12px;
-  padding: 5px 12px;
-  border-bottom: 1px solid #d7e0e8;
-  background: #ffffff;
-  font-size: 12px;
-}
-
-.app-shell__message,
-.app-shell__warning {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-shell__message {
-  color: #334155;
-}
-
-.app-shell__warning {
-  margin-left: auto;
-  color: #8a5a00;
+  grid-template-columns: 182px minmax(0, 1fr);
 }
 
 @media (max-width: 860px) {
@@ -374,7 +392,9 @@ function confirmDiscardChanges() {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .app-shell__body :deep(.template-panel) {
+  .app-shell__body :deep(.template-tree),
+  .app-shell__body :deep(.assist-panel),
+  .app-shell__body :deep(.property-panel) {
     display: none;
   }
 }
