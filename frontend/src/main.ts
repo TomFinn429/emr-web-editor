@@ -2,12 +2,8 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import { preloadExternalRenderer } from './composables/useCanvasRenderer'
+import { scheduleExternalRendererPreload } from './rendererPreload'
 
 createApp(App).mount('#app')
 
-const requestIdle = window.requestIdleCallback || ((callback: IdleRequestCallback) => window.setTimeout(callback, 1))
-requestIdle(() => {
-  preloadExternalRenderer().catch(() => {
-    window.__medicalRecordRendererLoading = undefined
-  })
-})
+scheduleExternalRendererPreload(preloadExternalRenderer, import.meta.env.DEV)

@@ -134,6 +134,24 @@ describe('useDocumentSession', () => {
     expect(session.saveState.value).toBe('failed')
   })
 
+  it('keeps unsaved-change protection after a save failure', () => {
+    const session = useDocumentSession()
+
+    session.loadLocalDocument({
+      id: '1',
+      fileName: 'record.xml',
+      xml: '<XTextDocument />',
+      warnings: [],
+      renderMode: 'canvas',
+    })
+    session.markDirty()
+    session.markSaving()
+    session.markFailed('保存失败')
+
+    expect(session.saveState.value).toBe('failed')
+    expect(session.isDirty.value).toBe(true)
+  })
+
   it('clears stale errors when saving starts and succeeds', () => {
     const session = useDocumentSession()
 

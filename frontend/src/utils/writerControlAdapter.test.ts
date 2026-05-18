@@ -59,6 +59,23 @@ describe('writerControlAdapter', () => {
     expect(target.ExecuteCommand).not.toHaveBeenCalled()
   })
 
+  it('restores WriterControl focus before executing toolbar commands', () => {
+    const focus = vi.fn(() => true)
+    const executeCommand = vi.fn(() => true)
+    const target: WriterControlTarget = {
+      Focus: focus,
+      DCExecuteCommand: executeCommand,
+    }
+
+    const result = createWriterControlAdapter(target).executeCommand({
+      commandName: 'Bold',
+      showUI: false,
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(focus).toHaveBeenCalledBefore(executeCommand)
+  })
+
   it('executes commands through legacy ExecuteCommand when requested', () => {
     const target: WriterControlTarget = {
       DCExecuteCommand: vi.fn(() => true),
@@ -135,6 +152,54 @@ describe('writerControlAdapter', () => {
     expect(target.GetCommandStatus).toHaveBeenCalledWith('bold')
     expect(createWriterControlAdapter({}).getCommandStatus('bold')).toBeNull()
     expect(createWriterControlAdapter(null).getCommandStatus('bold')).toBeNull()
+  })
+
+  it('binds WriterControl content change callback and DOM edit fallbacks', () => {
+    const addEventListener = vi.fn()
+    const removeEventListener = vi.fn()
+    const target: WriterControlTarget = {
+      addEventListener,
+      removeEventListener,
+    }
+    const onChange = vi.fn()
+
+    const dispose = createWriterControlAdapter(target).onContentChanged(onChange)
+    target.DocumentContentChanged?.(target, { TriggerType: 'test' })
+    addEventListener.mock.calls
+      .filter(([eventName]) => eventName === 'input')
+      .forEach(([, handler]) => handler(new Event('input')))
+
+    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(addEventListener).toHaveBeenCalledWith('input', expect.any(Function), true)
+    expect(addEventListener).toHaveBeenCalledWith('change', expect.any(Function), true)
+    expect(addEventListener).toHaveBeenCalledWith('paste', expect.any(Function), true)
+    expect(addEventListener).toHaveBeenCalledWith('cut', expect.any(Function), true)
+
+    dispose()
+
+    expect(target.DocumentContentChanged).toBeUndefined()
+    expect(removeEventListener).toHaveBeenCalledWith('input', expect.any(Function), true)
+    expect(removeEventListener).toHaveBeenCalledWith('change', expect.any(Function), true)
+    expect(removeEventListener).toHaveBeenCalledWith('paste', expect.any(Function), true)
+    expect(removeEventListener).toHaveBeenCalledWith('cut', expect.any(Function), true)
+  })
+
+  it('does not overwrite a newer WriterControl content change callback when disposed', () => {
+    const previousContentChanged = vi.fn()
+    const nextContentChanged = vi.fn()
+    const removeEventListener = vi.fn()
+    const target: WriterControlTarget = {
+      DocumentContentChanged: previousContentChanged,
+      removeEventListener,
+    }
+
+    const dispose = createWriterControlAdapter(target).onContentChanged(vi.fn())
+    target.DocumentContentChanged = nextContentChanged
+
+    dispose()
+
+    expect(target.DocumentContentChanged).toBe(nextContentChanged)
+    expect(removeEventListener).toHaveBeenCalledTimes(4)
   })
 
   it('delegates print operations to existing writer print helpers', () => {

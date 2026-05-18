@@ -15,8 +15,9 @@ export function useDocumentSession() {
   const error = shallowRef<string | null>(null)
   const isLoading = shallowRef(false)
   const isSaving = shallowRef(false)
+  const hasUnsavedChanges = shallowRef(false)
 
-  const isDirty = computed(() => saveState.value === 'dirty')
+  const isDirty = computed(() => hasUnsavedChanges.value)
 
   function loadTemplate(template: TemplateContent) {
     document.value = {
@@ -32,6 +33,7 @@ export function useDocumentSession() {
     error.value = null
     isLoading.value = false
     isSaving.value = false
+    hasUnsavedChanges.value = false
     saveState.value = 'saved'
   }
 
@@ -48,11 +50,13 @@ export function useDocumentSession() {
     error.value = null
     isLoading.value = false
     isSaving.value = false
+    hasUnsavedChanges.value = false
     saveState.value = 'saved'
   }
 
   function markDirty() {
     if (document.value) {
+      hasUnsavedChanges.value = true
       saveState.value = 'dirty'
     }
   }
@@ -75,6 +79,7 @@ export function useDocumentSession() {
     isSaving.value = false
     lastSavedXml.value = xml
     error.value = null
+    hasUnsavedChanges.value = false
     saveState.value = 'saved'
   }
 
@@ -99,6 +104,7 @@ export function useDocumentSession() {
     error.value = null
     isSaving.value = false
     isLoading.value = false
+    hasUnsavedChanges.value = false
     saveState.value = 'idle'
   }
 

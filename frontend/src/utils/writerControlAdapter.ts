@@ -16,9 +16,11 @@ export interface WriterControlTarget extends WriterPrintTarget {
   SaveDocumentToString?: (options?: unknown, textOptions?: unknown) => string
   DCExecuteCommand?: (commandName: string, showUI: boolean, parameter?: unknown) => boolean | void
   ExecuteCommand?: (commandName: string, showUI: boolean, parameter?: unknown) => boolean | void
+  Focus?: () => boolean | void
   GetCommandStatus?: (commandName: string) => unknown
   addEventListener?: HTMLElement['addEventListener']
   removeEventListener?: HTMLElement['removeEventListener']
+  DocumentContentChanged?: (sender: unknown, args: unknown) => void
 }
 
 export type WriterAdapterFailureReason =
@@ -82,6 +84,7 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
         }
       }
 
+      target.Focus?.()
       return normalizeWriterResult(
         execute.call(target, payload.commandName, payload.showUI, payload.parameter ?? null),
         `编辑器未接受命令：${payload.commandName}。`,
@@ -94,6 +97,35 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
       }
 
       return target.GetCommandStatus(commandName)
+    },
+
+    onContentChanged(callback: () => void) {
+      if (!target) {
+        return () => {}
+      }
+
+      const previousDocumentContentChanged = target.DocumentContentChanged
+      const contentChangedHandler = (sender: unknown, args: unknown) => {
+        previousDocumentContentChanged?.call(target, sender, args)
+        callback()
+      }
+      target.DocumentContentChanged = contentChangedHandler
+
+      const fallbackEvents = ['input', 'change', 'paste', 'cut'] as const
+      const fallbackHandler = () => callback()
+      fallbackEvents.forEach((eventName) => {
+        target.addEventListener?.(eventName, fallbackHandler, true)
+      })
+
+      return () => {
+        if (target.DocumentContentChanged === contentChangedHandler) {
+          target.DocumentContentChanged = previousDocumentContentChanged
+        }
+
+        fallbackEvents.forEach((eventName) => {
+          target.removeEventListener?.(eventName, fallbackHandler, true)
+        })
+      }
     },
 
     saveXml(): WriterSaveResult {

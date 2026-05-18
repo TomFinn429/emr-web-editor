@@ -194,6 +194,7 @@ function commandIcon(commandId: EditorCommandId) {
               type="button"
               :title="command.label"
               :disabled="!props.canUseWriterCommands"
+              @mousedown.prevent
               @click="runCommand(command)"
             >
               <component :is="commandIcon(command.id)" :size="18" aria-hidden="true" />
@@ -229,6 +230,7 @@ function commandIcon(commandId: EditorCommandId) {
           type="button"
           title="打印"
           :disabled="!props.canPrint || !props.canUseWriterPrint"
+          @mousedown.prevent
           @click="emit('print')"
         >
           <Printer :size="18" aria-hidden="true" />
@@ -239,6 +241,7 @@ function commandIcon(commandId: EditorCommandId) {
           type="button"
           title="打印预览"
           :disabled="!props.canPrint || !props.canUseWriterPrint"
+          @mousedown.prevent
           @click="emit('printPreview')"
         >
           <FileSearch :size="18" aria-hidden="true" />
@@ -249,6 +252,7 @@ function commandIcon(commandId: EditorCommandId) {
           type="button"
           title="关闭打印预览"
           :disabled="!props.canUseWriterPrint"
+          @mousedown.prevent
           @click="emit('closePrintPreview')"
         >
           <X :size="18" aria-hidden="true" />

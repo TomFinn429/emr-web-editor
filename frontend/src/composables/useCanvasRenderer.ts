@@ -30,7 +30,9 @@ declare global {
 
 export type RendererMode = 'external' | 'preview'
 
-const rendererBootstrapPath = '/renderer/_framework/dcwriter5.js'
+const rendererBootstrapPath = import.meta.env.DEV
+  ? '/renderer-dev/_framework/dcwriter5.js'
+  : '/renderer/_framework/dcwriter5.js'
 
 export function useCanvasRenderer() {
   const isRendering = shallowRef(false)
@@ -103,7 +105,7 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
   editorElement.setAttribute('DocumentOptions.ViewOptions.PrintBackgroundText', 'false')
   editorElement.setAttribute('DocumentOptions.ViewOptions.PreserveBackgroundTextWhenPrint', 'true')
   editorElement.setAttribute('DocumentOptions.ViewOptions.FieldBorderPrintVisibility', 'hidden')
-  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', 'true')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', 'false')
   editorElement.className = 'external-renderer-host'
   container.appendChild(editorElement)
 

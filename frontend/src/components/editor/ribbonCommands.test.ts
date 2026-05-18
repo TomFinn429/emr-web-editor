@@ -8,11 +8,22 @@ describe('ribbonCommands', () => {
 
   it('maps bold to a DC command', () => {
     expect(createWriterCommandPayload('bold')).toEqual({
-      commandName: 'bold',
+      commandName: 'Bold',
       showUI: false,
-      parameter: true,
+      parameter: null,
       executor: 'dc',
     })
+  })
+
+  it('maps inline formatting to WriterControl toolbar command names', () => {
+    expect(createWriterCommandPayload('italic')).toMatchObject({ commandName: 'Italic', parameter: null })
+    expect(createWriterCommandPayload('underline')).toMatchObject({ commandName: 'Underline', parameter: null })
+  })
+
+  it('maps paragraph alignment to WriterControl toolbar command names', () => {
+    expect(createWriterCommandPayload('alignLeft')).toMatchObject({ commandName: 'AlignLeft' })
+    expect(createWriterCommandPayload('alignCenter')).toMatchObject({ commandName: 'AlignCenter' })
+    expect(createWriterCommandPayload('alignRight')).toMatchObject({ commandName: 'AlignRight' })
   })
 
   it('maps split cell to the DC command executor', () => {

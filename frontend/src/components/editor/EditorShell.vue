@@ -23,22 +23,26 @@ const zoom = shallowRef(1)
 const rendererMode = shallowRef('preview')
 const rendererError = shallowRef<string | null>(null)
 const printMessage = shallowRef<string | null>(null)
+const commandMessage = shallowRef<string | null>(null)
 const writerElement = shallowRef<ExternalWriterElement | null>(null)
 const isPrintPreviewing = shallowRef(false)
 const activeToolbarTab = shallowRef('start')
 const templates = shallowRef<TemplateSummary[]>([])
 const templatesError = shallowRef<string | null>(null)
 const isLoadingTemplates = shallowRef(false)
+let disposeContentChanged: (() => void) | null = null
 
 const adapter = computed(() => createWriterControlAdapter(writerElement.value))
 const previewDocument = computed(() => toPreviewDocument(session.document.value))
 const canUseWriter = computed(() => writerElement.value !== null)
+const canSaveFromWriter = computed(() => Boolean(session.document.value) && canUseWriter.value)
 const statusRenderMode = computed(() => (rendererMode.value === 'external' ? '外部渲染' : '结构化预览'))
 const statusMessage = computed(() => {
   if (importState.isImporting.value) return '正在导入 XML'
   if (importState.error.value) return importState.error.value
   if (session.error.value) return session.error.value
   if (rendererError.value) return rendererError.value
+  if (commandMessage.value) return commandMessage.value
   if (printMessage.value) return printMessage.value
   if (!session.document.value) return '请选择模板或导入 XML'
   return isPrintPreviewing.value ? '已进入打印预览' : '文档已加载'
@@ -81,6 +85,7 @@ async function handleTemplateSelect(id: string) {
 
   rendererError.value = null
   printMessage.value = null
+  commandMessage.value = null
   templatesError.value = null
 
   try {
@@ -102,6 +107,7 @@ async function handleLocalImport(file: File) {
 
   rendererError.value = null
   printMessage.value = null
+  commandMessage.value = null
   templatesError.value = null
   await importState.importFile(file)
   if (importState.document.value) {
@@ -119,11 +125,12 @@ function runEditorCommand(commandId: EditorCommandId) {
 
   const result = adapter.value.executeCommand(payload)
   if (result.ok) {
+    commandMessage.value = null
     session.markDirty()
     return
   }
 
-  session.markFailed(result.message)
+  commandMessage.value = result.message
 }
 
 async function saveToBackend() {
@@ -132,6 +139,7 @@ async function saveToBackend() {
     return
   }
 
+  commandMessage.value = null
   session.markSaving(document.id)
   const result = await saveDocumentToBackend(adapter.value, {
     sessionId: document.id,
@@ -141,6 +149,7 @@ async function saveToBackend() {
 
   if (result.ok) {
     session.setValidationIssues([])
+    commandMessage.value = null
     session.markSaved(result.xml, document.id)
   } else if (result.reason === 'validation-failed') {
     session.setValidationIssues(result.issues)
@@ -163,13 +172,16 @@ function downloadCurrentXml() {
   }
 
   downloadXml(document.fileName, result.xml)
+  commandMessage.value = null
 }
 
 function printDocument() {
+  commandMessage.value = null
   applyPrintResult(adapter.value.print())
 }
 
 function openPrintPreview() {
+  commandMessage.value = null
   const result = adapter.value.openPrintPreview()
   applyPrintResult(result)
   if (result.ok) {
@@ -178,6 +190,7 @@ function openPrintPreview() {
 }
 
 function closePrintPreview() {
+  commandMessage.value = null
   const result = adapter.value.closePrintPreview()
   applyPrintResult(result)
   if (result.ok) {
@@ -186,9 +199,17 @@ function closePrintPreview() {
 }
 
 function updateWriterElement(element: ExternalWriterElement | null) {
+  disposeContentChanged?.()
+  disposeContentChanged = null
   writerElement.value = element
   isPrintPreviewing.value = false
   printMessage.value = null
+  commandMessage.value = null
+  if (element) {
+    disposeContentChanged = createWriterControlAdapter(element).onContentChanged(() => {
+      session.markDirty()
+    })
+  }
 }
 
 function applyPrintResult(result: WriterPrintResult) {
@@ -205,6 +226,7 @@ function clear() {
   writerElement.value = null
   isPrintPreviewing.value = false
   printMessage.value = null
+  commandMessage.value = null
   rendererError.value = null
 }
 
@@ -213,7 +235,7 @@ function selectToolbarTab(tabId: string) {
 }
 
 function handleValidationIssue(issue: ValidationIssue) {
-  session.markFailed(issue.message)
+  session.markFailed(`暂时无法自动定位字段“${issue.fieldName}”：${issue.message}`)
 }
 
 function confirmDiscardChanges() {
@@ -228,7 +250,7 @@ function confirmDiscardChanges() {
       :can-print="Boolean(session.document.value)"
       :can-use-writer-print="canUseWriter"
       :can-use-writer-commands="canUseWriter"
-      :can-save="Boolean(session.document.value)"
+      :can-save="canSaveFromWriter"
       :is-saving="session.isSaving.value"
       :is-print-previewing="isPrintPreviewing"
       :zoom="zoom"
