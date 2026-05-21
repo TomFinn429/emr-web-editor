@@ -7,12 +7,8 @@ export default defineConfig({
   plugins: [
     devLocalTemplateApiPlugin([
       {
-        root: '../backend/renderer-source',
-        category: 'source',
-      },
-      {
-        root: '../backend/renderer-runtime',
-        category: 'runtime',
+        root: 'D:/XML/notes',
+        category: '本地模板',
       },
     ]),
     devLocalRendererAssetsPlugin({

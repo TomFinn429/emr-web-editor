@@ -3,7 +3,8 @@ import type { EditorElementProperties, FragmentTemplateTreeNode, MetadataTreeNod
 import { createDefaultElementProperties } from './elementPropertyService'
 import { fetchFragmentTemplateTree, flattenFragmentTemplates } from './fragmentTemplateService'
 import { fetchMetadataTree, flattenMetadataItems } from './metadataService'
-import { fetchTemplateContent } from './templateService'
+import { fetchTemplateContent, fetchTemplates } from './templateService'
+import type { TemplateSummary } from '../types/document'
 
 export type TemplateTreeNodeKind = 'root' | 'category' | 'template'
 export type TemplateUploadStatus = '已上传' | '未上传' | '待上传' | '上传中' | '已取消' | '上传失败'
@@ -104,118 +105,13 @@ interface TemplateWorkbenchState {
   openTabs: string[]
   activeTemplateId: string
   nextId: number
+  hasLoadedRemoteTemplates: boolean
 }
 
 const today = '2026-05-18'
 const defaultXml = '<XTextDocument><Body>新建模板</Body></XTextDocument>'
-
-const initialTemplateTree: TemplateTreeNode[] = [
-  {
-    id: 'hospital-root',
-    label: '和硕县人民医院',
-    kind: 'root',
-    children: [
-      {
-        id: 'category-home',
-        label: '病案首页',
-        kind: 'category',
-        category: '病案首页',
-        children: [
-          {
-            id: 'western-home',
-            label: '西医病案首页',
-            kind: 'template',
-            category: '病案首页',
-            templateId: 'western-home',
-            status: '未上传',
-          },
-          {
-            id: 'chinese-home',
-            label: '中医病案首页',
-            kind: 'template',
-            category: '病案首页',
-            templateId: 'chinese-home',
-            status: '待上传',
-          },
-        ],
-      },
-      {
-        id: 'category-inpatient',
-        label: '住院病历',
-        kind: 'category',
-        category: '住院病历',
-        children: [
-          {
-            id: 'admission-record',
-            label: '入院记录',
-            kind: 'template',
-            category: '住院病历',
-            templateId: 'admission-record',
-            status: '已上传',
-          },
-          {
-            id: 'surgery-record',
-            label: '手术记录',
-            kind: 'template',
-            category: '住院病历',
-            templateId: 'surgery-record',
-            status: '未上传',
-          },
-        ],
-      },
-      {
-        id: 'category-nursing',
-        label: '护理病历',
-        kind: 'category',
-        category: '护理病历',
-        children: [
-          {
-            id: 'nursing-notice',
-            label: '护理告知书',
-            kind: 'template',
-            category: '护理病历',
-            templateId: 'nursing-notice',
-            status: '已上传',
-          },
-          {
-            id: 'risk-assessment',
-            label: '风险评估表',
-            kind: 'template',
-            category: '护理病历',
-            templateId: 'risk-assessment',
-            status: '待上传',
-          },
-        ],
-      },
-      {
-        id: 'category-other',
-        label: '暂未分类',
-        kind: 'category',
-        category: '暂未分类',
-        children: [
-          {
-            id: 'consultation-apply',
-            label: '会诊申请',
-            kind: 'template',
-            category: '暂未分类',
-            templateId: 'consultation-apply',
-            status: '未上传',
-          },
-        ],
-      },
-    ],
-  },
-]
-
-const initialTemplates: Record<string, TemplateRecord> = {
-  'western-home': templateRecord('western-home', '西医病案首页', '病案首页', '未上传', 'v1.0', 'source', 'The-front-page-of-medical-records'),
-  'chinese-home': templateRecord('chinese-home', '中医病案首页', '病案首页', '待上传', 'v1.0', 'source', 'Medical-Record'),
-  'admission-record': templateRecord('admission-record', '入院记录', '住院病历', '已上传', 'v1.0', 'runtime', 'Admission-Record'),
-  'surgery-record': templateRecord('surgery-record', '手术记录', '住院病历', '未上传', 'v1.0', 'source', 'Operation-Schedule'),
-  'nursing-notice': templateRecord('nursing-notice', '护理告知书', '护理病历', '已上传', 'v1.0', 'runtime', 'List-of-Nursing-Evaluation-at-Admission-for-Patient'),
-  'risk-assessment': templateRecord('risk-assessment', '风险评估表', '护理病历', '待上传', 'v1.0', 'source', 'Pain-Scale'),
-  'consultation-apply': templateRecord('consultation-apply', '会诊申请', '暂未分类', '未上传', 'v1.0', 'source', 'Imaging-Examination-Application-Sheet'),
-}
+const templateRootId = 'template-root'
+const templateRootLabel = 'D:\\XML\\notes'
 
 const mockElementProperties = createDefaultElementProperties('none')
 
@@ -226,6 +122,7 @@ export function resetTemplateWorkbenchState() {
 }
 
 export async function fetchTemplateWorkbenchData(activeTemplateId?: string): Promise<TemplateWorkbenchData> {
+  await ensureTemplateCatalog()
   const activeId = pickActiveTemplateId(activeTemplateId)
   const activeTemplate = state.templates[activeId]
   const metadata = await fetchMetadataTree()
@@ -398,7 +295,7 @@ export function saveTemplateContent(id: string, xml: string, fileName?: string):
 export function saveTemplateAsContent(sourceId: string, name: string, xml: string): TemplateRecord {
   const source = readTemplateRecord(sourceId)
   const targetName = normalizeName(name, `${source.name}-另存`)
-  const parent = findParentNode(sourceId) || readTreeNode('hospital-root')
+  const parent = findParentNode(sourceId) || readTreeNode(templateRootId)
   const copied = createTemplateFile(parent.id, targetName, xml)
   copied.isDirty = false
   copied.uploadMessage = '另存为模板，等待上传'
@@ -473,56 +370,111 @@ export function findTemplateTreeNode(
 }
 
 function createInitialState(): TemplateWorkbenchState {
-  const templates = Object.fromEntries(
-    Object.entries(initialTemplates).map(([id, template]) => [id, { ...template }]),
-  )
-  const history = Object.fromEntries(
-    Object.values(templates).map(template => [
-      template.id,
-      [
-        historyVersion(template, '初始化版本'),
-        {
-          ...historyVersion(template, '一期模板导入'),
-          id: `${template.id}-history-0`,
-          version: 'v0.9',
-          savedAt: '2026-05-16 18:00',
-        },
-      ],
-    ]),
-  )
-
   return {
-    templateTree: cloneTree(initialTemplateTree),
-    templates,
-    history,
-    openTabs: ['western-home'],
-    activeTemplateId: 'western-home',
+    templateTree: emptyTemplateTree(),
+    templates: {},
+    history: {},
+    openTabs: [],
+    activeTemplateId: '',
     nextId: 1,
+    hasLoadedRemoteTemplates: false,
   }
 }
 
+async function ensureTemplateCatalog() {
+  if (state.hasLoadedRemoteTemplates) {
+    return
+  }
+
+  const templates = await fetchTemplates()
+  loadTemplateCatalog(templates)
+}
+
+function loadTemplateCatalog(summaries: readonly TemplateSummary[]) {
+  const records = Object.fromEntries(
+    summaries.map(summary => [summary.id, templateRecord(summary)]),
+  )
+  state.templates = records
+  state.history = Object.fromEntries(
+    Object.values(records).map(template => [
+      template.id,
+      [historyVersion(template, '从本地 XML 模板目录加载')],
+    ]),
+  )
+  state.templateTree = buildTemplateTree(Object.values(records))
+  state.activeTemplateId = firstTemplateId() || ''
+  state.openTabs = state.activeTemplateId ? [state.activeTemplateId] : []
+  state.hasLoadedRemoteTemplates = true
+}
+
+function buildTemplateTree(templates: readonly TemplateRecord[]): TemplateTreeNode[] {
+  const root = emptyTemplateTree()[0]
+  const categories = new Map<string, TemplateTreeNode>()
+
+  for (const template of templates) {
+    const categoryNode = readOrCreateCategoryNode(categories, template.category)
+    categoryNode.children = [
+      ...(categoryNode.children || []),
+      {
+        id: template.id,
+        label: template.name,
+        kind: 'template',
+        category: template.category,
+        templateId: template.id,
+        status: template.status,
+      },
+    ]
+  }
+
+  root.children = [...categories.values()]
+  return [root]
+}
+
+function readOrCreateCategoryNode(categories: Map<string, TemplateTreeNode>, category: string) {
+  const existing = categories.get(category)
+  if (existing) {
+    return existing
+  }
+
+  const node: TemplateTreeNode = {
+    id: `category-${category}`,
+    label: category,
+    kind: 'category',
+    category,
+    children: [],
+  }
+  categories.set(category, node)
+  return node
+}
+
+function emptyTemplateTree(): TemplateTreeNode[] {
+  return [
+    {
+      id: templateRootId,
+      label: templateRootLabel,
+      kind: 'root',
+      children: [],
+    },
+  ]
+}
+
 function templateRecord(
-  id: string,
-  name: string,
-  category: string,
-  status: TemplateUploadStatus,
-  version: string,
-  source: string,
-  contentTemplateId?: string,
+  template: TemplateSummary,
+  status: TemplateUploadStatus = '未上传',
 ): TemplateRecord {
   return {
-    id,
-    name,
-    fileName: ensureXmlFileName(name),
-    category,
+    id: template.id,
+    name: template.name,
+    fileName: template.fileName,
+    category: template.category,
     status,
-    version,
+    version: 'v1.0',
     updatedAt: today,
-    source,
-    xml: `<XTextDocument><Body>${name}</Body></XTextDocument>`,
+    source: template.category,
+    xml: `<XTextDocument><Body>${template.name}</Body></XTextDocument>`,
     isDirty: false,
     uploadMessage: status === '已上传' ? '上传完成' : '尚未上传',
-    contentTemplateId,
+    contentTemplateId: template.id,
   }
 }
 

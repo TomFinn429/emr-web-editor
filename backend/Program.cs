@@ -238,7 +238,7 @@ app.MapGet("/api/documents/{id}", (string id, DocumentSessionStore store) =>
         "canvas"));
 });
 
-app.Run("http://localhost:5190");
+app.Run(app.Configuration["Server:Url"] ?? "http://localhost:5190");
 
 static bool IsLoopbackOrigin(string origin)
 {
@@ -779,13 +779,18 @@ sealed class DocumentSessionStore
 
 sealed class TemplateStore
 {
-    private readonly RendererAssets _rendererAssets;
+    private readonly string _templateRoot;
+    private readonly string _templateCategory;
     private readonly string _contentRoot;
 
-    public TemplateStore(RendererAssets rendererAssets, IWebHostEnvironment environment)
+    public TemplateStore(IConfiguration configuration, IWebHostEnvironment environment)
     {
         _contentRoot = environment.ContentRootPath;
-        _rendererAssets = rendererAssets;
+        _templateRoot = ResolveTemplatePath(configuration["Templates:Root"])
+            ?? Path.GetFullPath(Path.Combine(_contentRoot, "renderer-source", "demoDocuments"));
+        _templateCategory = string.IsNullOrWhiteSpace(configuration["Templates:Category"])
+            ? "本地模板"
+            : configuration["Templates:Category"]!;
     }
 
     public IReadOnlyList<TemplateSummaryResponse> ListTemplates()
@@ -826,28 +831,7 @@ sealed class TemplateStore
             ToTemplateId(name),
             name,
             fileName,
-            ResolveCategory(path));
-    }
-
-    private string ResolveCategory(string path)
-    {
-        var directory = Path.GetDirectoryName(path);
-        if (directory is null)
-        {
-            return "demo";
-        }
-
-        if (PathStartsWith(directory, _rendererAssets.ScriptRoot))
-        {
-            return "source";
-        }
-
-        if (PathStartsWith(directory, _rendererAssets.RuntimeRoot))
-        {
-            return "runtime";
-        }
-
-        return "demo";
+            _templateCategory);
     }
 
     private IEnumerable<string> EnumerateTemplateFiles()
@@ -860,10 +844,19 @@ sealed class TemplateStore
 
     private IEnumerable<string> EnumerateTemplateDirectories()
     {
-        yield return Path.Combine(_rendererAssets.ScriptRoot, "demoDocuments");
-        yield return Path.Combine(_rendererAssets.RuntimeRoot, "demoDocuments");
-        yield return Path.Combine(_contentRoot, "renderer-source", "demoDocuments");
-        yield return Path.Combine(_contentRoot, "renderer-runtime", "demoDocuments");
+        yield return _templateRoot;
+    }
+
+    private string? ResolveTemplatePath(string? configured)
+    {
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return null;
+        }
+
+        return Path.GetFullPath(Path.IsPathRooted(configured)
+            ? configured
+            : Path.Combine(_contentRoot, configured));
     }
 
     private static string ToTemplateId(string name)
@@ -879,13 +872,6 @@ sealed class TemplateStore
             .Trim('-');
     }
 
-    private static bool PathStartsWith(string path, string root)
-    {
-        var relativePath = Path.GetRelativePath(root, path);
-        return relativePath == "."
-            || (!relativePath.StartsWith("..", StringComparison.Ordinal)
-                && !Path.IsPathRooted(relativePath));
-    }
 }
 
 sealed class SavedDocumentStore

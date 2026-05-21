@@ -118,7 +118,7 @@ function enumerateTemplateFiles(roots: DevLocalTemplateRoot[]) {
   const result: Array<DevLocalTemplateRoot & { path: string }> = []
 
   for (const entry of roots) {
-    const templateDirectory = path.join(entry.root, 'demoDocuments')
+    const templateDirectory = entry.root
     if (!existsSync(templateDirectory) || !statSync(templateDirectory).isDirectory()) {
       continue
     }
