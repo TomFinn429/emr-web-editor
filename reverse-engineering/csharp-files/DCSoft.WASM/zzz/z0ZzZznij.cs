@@ -1,0 +1,17 @@
+namespace zzz;
+
+public static class z0ZzZznij
+{
+	public static bool z0eek(string p0)
+	{
+		if (!string.IsNullOrEmpty(p0))
+		{
+			p0 = p0.Trim().ToUpper();
+			if (p0 == "055CF2DFAD07B133FA80595E6362ED2F4DFE4084AB8020D0B5240E0C8287C27941C975C3BFC5FAC9E39B1C4EDD1A61A6091B7A347F623F3A69435DD63CA75A9BBCC95B9ACF5ECB8058261658DCB764E9316422BE6F5755BA2A025676673A5E5EE76554C941C93A04B9")
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+}
