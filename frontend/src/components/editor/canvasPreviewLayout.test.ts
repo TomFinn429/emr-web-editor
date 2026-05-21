@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { getCanvasLayerStyle, getSurfaceStyle } from './canvasPreviewLayout'
 
 describe('canvas preview layout styles', () => {
-  it('lets the external renderer use its intrinsic page width', () => {
+  it('keeps the external renderer in a single-page column', () => {
     expect(getSurfaceStyle('external', 1)).toEqual({
-      width: 'max-content',
-      minWidth: 'max-content',
+      width: '795px',
+      minWidth: '795px',
       minHeight: '1123px',
     })
     expect(getCanvasLayerStyle('external', 1.2)).toEqual({

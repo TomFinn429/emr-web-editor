@@ -130,8 +130,8 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__canvas-layer--external {
-  width: max-content;
-  min-width: max-content;
+  width: 795.333px;
+  min-width: 795.333px;
   transform-origin: top center;
 }
 
@@ -141,8 +141,8 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__host--external {
-  width: max-content;
-  min-width: max-content;
+  width: 795.333px;
+  min-width: 795.333px;
 }
 
 .preview-panel__host :deep(.preview-canvas) {
@@ -153,8 +153,8 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__host :deep(.external-renderer-host) {
-  width: max-content !important;
-  min-width: max-content !important;
+  width: 795.333px !important;
+  min-width: 795.333px !important;
   min-height: 1123.333px;
   background: #fff;
   outline: 1px solid #aeb8c2;
@@ -162,9 +162,29 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__host :deep(.external-renderer-host [dctype="page-container"]) {
-  width: max-content !important;
-  min-width: max-content !important;
-  overflow: visible !important;
+  width: 795.333px !important;
+  min-width: 795.333px !important;
+  overflow-x: hidden !important;
+  text-align: left !important;
+}
+
+.preview-panel__host :deep(.external-renderer-host canvas[dctype="page"]) {
+  display: block !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"]) {
+  width: 795.333px !important;
+  min-width: 795.333px !important;
+  overflow-x: hidden !important;
+  text-align: left !important;
+}
+
+.preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"] > [dctype="page"]) {
+  display: block !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .preview-panel__empty {

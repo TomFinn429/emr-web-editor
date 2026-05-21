@@ -7,9 +7,10 @@ const basePageHeight = 1123.333
 export function getSurfaceStyle(mode: RendererMode, zoom: number): CSSProperties {
   const minHeight = `${Math.round(basePageHeight * zoom)}px`
   if (mode === 'external') {
+    const width = `${Math.round(basePageWidth * zoom)}px`
     return {
-      width: 'max-content',
-      minWidth: 'max-content',
+      width,
+      minWidth: width,
       minHeight,
     }
   }
