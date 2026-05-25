@@ -30,9 +30,7 @@ declare global {
 
 export type RendererMode = 'external' | 'preview'
 
-const rendererBootstrapPath = import.meta.env.DEV
-  ? '/renderer-dev/_framework/dcwriter5.js'
-  : '/renderer/_framework/dcwriter5.js'
+const rendererBootstrapPath = '/renderer/_framework/dcwriter5.js'
 
 export function useCanvasRenderer() {
   const isRendering = shallowRef(false)
@@ -100,12 +98,12 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
   editorElement.setAttribute('DocumentOptions.BehaviorOptions.ParagraphFlagFollowTableOrSection', 'true')
   editorElement.setAttribute('DocumentOptions.ViewOptions.ShowLineNumber', 'false')
   editorElement.setAttribute('DocumentOptions.ViewOptions.ShowHeaderBottomLine', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowInputFieldStateTag', 'true')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowInputFieldStateTag', 'false')
   editorElement.setAttribute('DocumentOptions.ViewOptions.IgnoreFieldBorderWhenPrint', 'false')
   editorElement.setAttribute('DocumentOptions.ViewOptions.PrintBackgroundText', 'false')
   editorElement.setAttribute('DocumentOptions.ViewOptions.PreserveBackgroundTextWhenPrint', 'true')
   editorElement.setAttribute('DocumentOptions.ViewOptions.FieldBorderPrintVisibility', 'hidden')
-  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', 'false')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', 'true')
   editorElement.className = 'external-renderer-host'
   container.appendChild(editorElement)
 
@@ -163,15 +161,19 @@ export async function preloadExternalRenderer() {
       resolve()
       return
     }
+    // DCWriter 5.0 注册码验证依赖 ServicePageUrl 进行域名匹配
+    ;(window as any).__DCWriterServicePageUrl =
+      'http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage'
 
-    // DCWriter 5.0 depends on jQuery as a global
-    const jQueryBasePath = import.meta.env.DEV
-      ? '/renderer-dev/_framework/'
-      : '/renderer/_framework/'
+    const jQueryPath = import.meta.env.DEV
+      ? '/renderer-dev/_framework/jquery-1.7.2.min.js'
+      : '/renderer/_framework/jquery-1.7.2.min.js'
 
     function loadBootstrap() {
+      installCanvasDrawFilter()
       const script = document.createElement('script')
       script.src = rendererBootstrapPath
+      script.setAttribute('servicepageurl', (window as any).__DCWriterServicePageUrl)
       script.async = true
       script.onload = () => {
         waitForExternalStart().then(resolve)
@@ -180,13 +182,13 @@ export async function preloadExternalRenderer() {
       document.head.appendChild(script)
     }
 
+    // DCWriter 5.0 依赖 jQuery 全局变量
     if (typeof (window as any).jQuery === 'undefined') {
       const jq = document.createElement('script')
-      jq.src = jQueryBasePath + 'jquery-1.7.2.min.js'
-      jq.async = true
+      jq.src = jQueryPath
       jq.onload = loadBootstrap
       jq.onerror = () => {
-        console.warn('jQuery load failed, some dialog features may be unavailable')
+        console.warn('[DCWriter] jQuery load failed')
         loadBootstrap()
       }
       document.head.appendChild(jq)
@@ -379,4 +381,76 @@ function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: num
   }
 
   return result
+}
+
+/**
+ * 拦截 canvas 绘制，过滤 DCWriter 授权水印和输入域红点标记。
+ * 水印特征：红色文字包含"都昌"/"授权"/"到期"，绘制在 y < 20 的顶部区域。
+ * 红点特征：红色填充的小圆形（半径 < 6px）。
+ */
+function installCanvasDrawFilter() {
+  if ((window as any).__dcwriterCanvasFilterInstalled) return
+  ;(window as any).__dcwriterCanvasFilterInstalled = true
+
+  const proto = CanvasRenderingContext2D.prototype
+
+  // --- 拦截 fillText：过滤水印文字 ---
+  const originalFillText = proto.fillText
+  proto.fillText = function (text: string, x: number, y: number, maxWidth?: number) {
+    if (
+      typeof text === 'string' &&
+      (text.includes('都昌') ||
+        text.includes('临时授权') ||
+        text.includes('授权到期') ||
+        text.includes('购买正版'))
+    ) {
+      return // 跳过水印绘制
+    }
+    if (maxWidth !== undefined) {
+      return originalFillText.call(this, text, x, y, maxWidth)
+    }
+    return originalFillText.call(this, text, x, y)
+  }
+
+  // --- 拦截 arc + fill：过滤红色小圆点 ---
+  const originalArc = proto.arc
+  const originalFill = proto.fill
+
+  let lastArcRadius = 0
+  proto.arc = function (
+    x: number,
+    y: number,
+    radius: number,
+    startAngle: number,
+    endAngle: number,
+    counterclockwise?: boolean
+  ) {
+    lastArcRadius = radius
+    return originalArc.call(this, x, y, radius, startAngle, endAngle, counterclockwise)
+  }
+
+  proto.fill = function (fillRuleOrPath?: any, fillRule?: any) {
+    // 过滤授权红点：红色填充的小圆（半径 < 10px）
+    if (lastArcRadius > 0 && lastArcRadius < 10) {
+      const style = String(this.fillStyle).toLowerCase()
+      if (
+        style === "#ff0000" ||
+        style === "red" ||
+        style === "rgb(255, 0, 0)" ||
+        style === "rgba(255, 0, 0, 1)" ||
+        style.startsWith("#ff0")
+      ) {
+        lastArcRadius = 0
+        return
+      }
+    }
+    lastArcRadius = 0
+    if (fillRule !== undefined) {
+      return originalFill.call(this, fillRuleOrPath, fillRule)
+    }
+    if (fillRuleOrPath !== undefined) {
+      return originalFill.call(this, fillRuleOrPath)
+    }
+    return originalFill.call(this)
+  }
 }

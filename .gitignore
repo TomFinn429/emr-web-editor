@@ -38,3 +38,4 @@ frontend/*-run.err.log
 .superpowers/
 .worktrees/
 frontend/pnpm-lock.yaml
+his-prelogin-network.txt
