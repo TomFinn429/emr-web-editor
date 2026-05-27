@@ -73,7 +73,7 @@ describe('documentValidationService', () => {
     expect(validateDocumentXml('<XInputField />')).toEqual([])
   })
 
-  it('validates required EMRWriterLite Element input fields with child metadata', () => {
+  it('validates required 编辑器 Element input fields with child metadata', () => {
     const xml = `
 <XTextDocument xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <XElements>

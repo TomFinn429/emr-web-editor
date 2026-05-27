@@ -4,7 +4,7 @@
 
 当前 `emr-web-editor-demo` 已完成电子病历 XML 的本地导入、外部 `WriterControlForWASM` 加载、Canvas 降级预览、打印预览和正式打印接入。它目前更接近“预览/打印 demo”，还不是完整编辑器。
 
-本阶段目标是参考 `D:\DCWriterLite\EMRWriterLite`，将 demo 演进为一个可实际编辑临床文书的 Web 编辑器 MVP。底层编辑、排版、命令、序列化和打印能力优先复用 EMRWriterLite/WriterControl；Vue 前端负责产品化编辑器壳层、状态编排、模板入口、保存、校验和用户交互。
+本阶段目标是将 demo 演进为一个可实际编辑临床文书的 Web 编辑器 MVP。底层编辑、排版、命令、序列化和打印能力优先复用从 DCWriter 5.0 逆向还原的 WriterControl 引擎；Vue 前端负责产品化编辑器壳层、状态编排、模板入口、保存、校验和用户交互。
 
 本阶段命名为：**EMR Web Editor MVP：基于 WriterControl 的临床文书编辑器壳层**。
 
@@ -15,7 +15,7 @@
 采用“临床文书编辑器 MVP”范围：
 
 - 不停留在基础预览或简单文字编辑。
-- 不在第一阶段全量复刻 EMRWriterLite 首页和所有复杂能力。
+- 不在第一阶段全量复刻 WriterControl 引擎 首页和所有复杂能力。
 - 优先补齐临床文书编辑闭环：模板加载、常用编辑、临床控件、表格、保存、校验、打印。
 
 ### 2.2 保存边界
@@ -41,14 +41,14 @@
 - 权限/痕迹全链路。
 - PDF 高级导出。
 - 区域打印和复杂打印策略。
-- 全量 EMRWriterLite 工具栏复刻。
+- 全量 WriterControl 引擎 工具栏复刻。
 - 复杂临床质控规则。
 
 ### 2.4 模板入口
 
 采用“左侧示例模板列表 + 本地导入”：
 
-- 左侧提供 EMRWriterLite `demoDocuments` 示例模板列表。
+- 左侧提供 WriterControl 引擎 `demoDocuments` 示例模板列表。
 - 用户可点击模板加载 XML。
 - 保留本地 XML 文件导入。
 - 最近打开记录暂不纳入 v1。
@@ -78,7 +78,7 @@
 
 Vue 前端负责完整应用壳层，底层通过 `WriterControlAdapter` 统一访问 WriterControl 能力。业务组件不得直接散落调用 `LoadDocumentFromString`、`DCExecuteCommand`、`GetCommandStatus`、`SaveDocumentToString`、`PrintDocument` 等底层 API。
 
-这样可以保留 EMRWriterLite 的核心编辑能力，同时避免把原始 `Index.html` 的大量原生脚本逻辑直接搬进 Vue 工程。
+这样可以保留 WriterControl 引擎 的核心编辑能力，同时避免把原始 `Index.html` 的大量原生脚本逻辑直接搬进 Vue 工程。
 
 ## 4. 模块设计
 
@@ -253,7 +253,7 @@ v1 后端保持轻量，优先服务模板和保存闭环。
 
 v1 完成后至少满足：
 
-- 能从左侧模板列表加载 EMRWriterLite 示例 XML。
+- 能从左侧模板列表加载 WriterControl 引擎 示例 XML。
 - 能本地导入 XML 并进入可编辑状态。
 - 能执行常用格式命令、临床控件插入命令和表格编辑命令。
 - 编辑后状态栏显示“未保存”，保存成功后恢复“已保存”。

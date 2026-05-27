@@ -1,5 +1,5 @@
 Error decompiling @06000011 Interop.Sys.GetEnv
-in assembly "D:\DCWriterLite\emr-web-editor-demo\.worktrees\emr-web-editor-mvp\System.Private.CoreLib.dll"
+in assembly "./System.Private.CoreLib.dll"
  ---> System.Collections.Generic.KeyNotFoundException: The given key '0' was not present in the dictionary.
    at System.ThrowHelper.ThrowKeyNotFoundException[T](T key) in offset 0
    at System.Collections.Generic.Dictionary`2.get_Item(TKey key) in offset 23

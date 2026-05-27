@@ -4,7 +4,7 @@
     "name": "WriterControl_Task.js",
     "status": "OK",
     "bytes": 11530,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Task.js",
+    "localPath": "js\\WriterControl_Task.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Task.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -16,7 +16,7 @@
     "name": "dotnet.timezones.blat",
     "status": "OK",
     "bytes": 342771,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\icu\\dotnet.timezones.blat",
+    "localPath": "icu\\dotnet.timezones.blat",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=dotnet.timezones.blat&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -29,7 +29,7 @@
     "name": "Microsoft.JSInterop.dll",
     "status": "OK",
     "bytes": 40448,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\Microsoft.JSInterop.dll",
+    "localPath": "dll\\Microsoft.JSInterop.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=Microsoft.JSInterop.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -42,7 +42,7 @@
     "name": "WriterControl_KnowledgeBase.js",
     "status": "OK",
     "bytes": 21654,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_KnowledgeBase.js",
+    "localPath": "js\\WriterControl_KnowledgeBase.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_KnowledgeBase.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -54,7 +54,7 @@
     "name": "PageContentDrawer.js",
     "status": "OK",
     "bytes": 60919,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\PageContentDrawer.js",
+    "localPath": "js\\PageContentDrawer.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=PageContentDrawer.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -66,7 +66,7 @@
     "name": "WriterControl_IO.js",
     "status": "OK",
     "bytes": 59044,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_IO.js",
+    "localPath": "js\\WriterControl_IO.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_IO.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -78,7 +78,7 @@
     "name": "System.ComponentModel.TypeConverter.dll",
     "status": "OK",
     "bytes": 81920,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.ComponentModel.TypeConverter.dll",
+    "localPath": "dll\\System.ComponentModel.TypeConverter.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.ComponentModel.TypeConverter.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -91,7 +91,7 @@
     "name": "WriterControl_DialogStaticResources.js",
     "status": "OK",
     "bytes": 296510,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_DialogStaticResources.js",
+    "localPath": "js\\WriterControl_DialogStaticResources.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_DialogStaticResources.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -103,7 +103,7 @@
     "name": "blazor.webassembly.js",
     "status": "OK",
     "bytes": 109987,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\blazor.webassembly.js",
+    "localPath": "js\\blazor.webassembly.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=blazor.webassembly.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -115,7 +115,7 @@
     "name": "WriterControl_DrawFu.js",
     "status": "OK",
     "bytes": 371750,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_DrawFu.js",
+    "localPath": "js\\WriterControl_DrawFu.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_DrawFu.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -127,7 +127,7 @@
     "name": "WriterControl_Rule.js",
     "status": "OK",
     "bytes": 17073,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Rule.js",
+    "localPath": "js\\WriterControl_Rule.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Rule.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -139,7 +139,7 @@
     "name": "DCSoft.WASM.dll",
     "status": "OK",
     "bytes": 4136448,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\DCSoft.WASM.dll",
+    "localPath": "dll\\DCSoft.WASM.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=DCSoft.WASM.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -152,7 +152,7 @@
     "name": "System.IO.Compression.dll",
     "status": "OK",
     "bytes": 75776,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.IO.Compression.dll",
+    "localPath": "dll\\System.IO.Compression.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.IO.Compression.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -165,7 +165,7 @@
     "name": "icudt_no_CJK.dat",
     "status": "OK",
     "bytes": 1107168,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\icu\\icudt_no_CJK.dat",
+    "localPath": "icu\\icudt_no_CJK.dat",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=icudt_no_CJK.dat&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "blazor.boot.json/runtime"
@@ -177,7 +177,7 @@
     "name": "WriterControl_Paint.js",
     "status": "OK",
     "bytes": 115779,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Paint.js",
+    "localPath": "js\\WriterControl_Paint.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Paint.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -189,7 +189,7 @@
     "name": "WriterControl_Print.js",
     "status": "OK",
     "bytes": 252258,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Print.js",
+    "localPath": "js\\WriterControl_Print.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Print.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -201,7 +201,7 @@
     "name": "WriterControl_ListBoxControl.js",
     "status": "OK",
     "bytes": 101445,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_ListBoxControl.js",
+    "localPath": "js\\WriterControl_ListBoxControl.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_ListBoxControl.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -213,7 +213,7 @@
     "name": "WriterControl_FontList.js",
     "status": "OK",
     "bytes": 719060,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_FontList.js",
+    "localPath": "js\\WriterControl_FontList.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_FontList.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -225,7 +225,7 @@
     "name": "chunk-libs.7c23ef8d.js",
     "status": "OK",
     "bytes": 2236930,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\chunk-libs.7c23ef8d.js",
+    "localPath": "js\\chunk-libs.7c23ef8d.js",
     "url": "http://10.0.15.11:8766/dist_test/static/js/chunk-libs.7c23ef8d.js",
     "sources": [
       "index.html",
@@ -238,7 +238,7 @@
     "name": "chunk-elementUI.214a6442.js",
     "status": "OK",
     "bytes": 780011,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\chunk-elementUI.214a6442.js",
+    "localPath": "js\\chunk-elementUI.214a6442.js",
     "url": "http://10.0.15.11:8766/dist_test/static/js/chunk-elementUI.214a6442.js",
     "sources": [
       "index.html",
@@ -251,7 +251,7 @@
     "name": "dcbg.cce8204a.jpg",
     "status": "OK",
     "bytes": 1587736,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\images\\dcbg.cce8204a.jpg",
+    "localPath": "images\\dcbg.cce8204a.jpg",
     "url": "http://10.0.15.11:8766/dist_test/static/img/dcbg.cce8204a.jpg",
     "sources": [
       "playwright-network"
@@ -263,7 +263,7 @@
     "name": "loading.css",
     "status": "OK",
     "bytes": 1517,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\css\\loading.css",
+    "localPath": "css\\loading.css",
     "url": "http://10.0.15.11:8766/dist_test/static/css/loading.css",
     "sources": [
       "index.html",
@@ -276,7 +276,7 @@
     "name": "icudt_EFIGS.dat",
     "status": "OK",
     "bytes": 550832,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\icu\\icudt_EFIGS.dat",
+    "localPath": "icu\\icudt_EFIGS.dat",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=icudt_EFIGS.dat&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "blazor.boot.json/runtime"
@@ -288,7 +288,7 @@
     "name": "WriterContorl_TrendChart.js",
     "status": "OK",
     "bytes": 88098,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterContorl_TrendChart.js",
+    "localPath": "js\\WriterContorl_TrendChart.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterContorl_TrendChart.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -300,7 +300,7 @@
     "name": "System.Memory.dll",
     "status": "OK",
     "bytes": 15360,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Memory.dll",
+    "localPath": "dll\\System.Memory.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Memory.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -313,7 +313,7 @@
     "name": "System.Collections.Specialized.dll",
     "status": "OK",
     "bytes": 11776,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Collections.Specialized.dll",
+    "localPath": "dll\\System.Collections.Specialized.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Collections.Specialized.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -326,7 +326,7 @@
     "name": "System.Private.CoreLib.dll",
     "status": "OK",
     "bytes": 1349120,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Private.CoreLib.dll",
+    "localPath": "dll\\System.Private.CoreLib.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Private.CoreLib.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -339,7 +339,7 @@
     "name": "System.Net.Http.dll",
     "status": "OK",
     "bytes": 132096,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Net.Http.dll",
+    "localPath": "dll\\System.Net.Http.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Net.Http.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -352,7 +352,7 @@
     "name": "System.Private.Uri.dll",
     "status": "OK",
     "bytes": 65536,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Private.Uri.dll",
+    "localPath": "dll\\System.Private.Uri.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Private.Uri.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -365,7 +365,7 @@
     "name": "TemperatureControl_Data.js",
     "status": "OK",
     "bytes": 29949,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\TemperatureControl_Data.js",
+    "localPath": "js\\TemperatureControl_Data.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=TemperatureControl_Data.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -377,7 +377,7 @@
     "name": "System.Collections.NonGeneric.dll",
     "status": "OK",
     "bytes": 13824,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Collections.NonGeneric.dll",
+    "localPath": "dll\\System.Collections.NonGeneric.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Collections.NonGeneric.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -390,7 +390,7 @@
     "name": "index.html",
     "status": "OK",
     "bytes": 1602,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\html\\index.html",
+    "localPath": "html\\index.html",
     "url": "http://10.0.15.11:8766/dist_test/index.html",
     "sources": [
       "entry",
@@ -403,7 +403,7 @@
     "name": "WriterContorl_FlowChart.js",
     "status": "OK",
     "bytes": 122492,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterContorl_FlowChart.js",
+    "localPath": "js\\WriterContorl_FlowChart.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterContorl_FlowChart.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -415,7 +415,7 @@
     "name": "WriterControl_CalculateControl.js",
     "status": "OK",
     "bytes": 9223,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_CalculateControl.js",
+    "localPath": "js\\WriterControl_CalculateControl.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_CalculateControl.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -427,7 +427,7 @@
     "name": "System.Collections.dll",
     "status": "OK",
     "bytes": 33792,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Collections.dll",
+    "localPath": "dll\\System.Collections.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Collections.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -440,7 +440,7 @@
     "name": "app.28a7cbe1.js",
     "status": "OK",
     "bytes": 2954613,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\app.28a7cbe1.js",
+    "localPath": "js\\app.28a7cbe1.js",
     "url": "http://10.0.15.11:8766/dist_test/static/js/app.28a7cbe1.js",
     "sources": [
       "index.html",
@@ -453,7 +453,7 @@
     "name": "System.Xml.ReaderWriter.dll",
     "status": "OK",
     "bytes": 5120,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Xml.ReaderWriter.dll",
+    "localPath": "dll\\System.Xml.ReaderWriter.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Xml.ReaderWriter.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -466,7 +466,7 @@
     "name": "System.Linq.dll",
     "status": "OK",
     "bytes": 8192,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Linq.dll",
+    "localPath": "dll\\System.Linq.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Linq.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -479,7 +479,7 @@
     "name": "favicon.ico",
     "status": "OK",
     "bytes": 1933,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\images\\favicon.ico",
+    "localPath": "images\\favicon.ico",
     "url": "http://10.0.15.11:8766/dist_test/favicon.ico",
     "sources": [
       "index.html"
@@ -491,7 +491,7 @@
     "name": "blazor.boot.json",
     "status": "OK",
     "bytes": 3468,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\json\\blazor.boot.json",
+    "localPath": "json\\blazor.boot.json",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=blazor.boot.json&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -504,7 +504,7 @@
     "name": "WriterControl_Event.js",
     "status": "OK",
     "bytes": 13857,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Event.js",
+    "localPath": "js\\WriterControl_Event.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Event.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -516,7 +516,7 @@
     "name": "WriterControl_DateTimeControl.js",
     "status": "OK",
     "bytes": 177963,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_DateTimeControl.js",
+    "localPath": "js\\WriterControl_DateTimeControl.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_DateTimeControl.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -528,7 +528,7 @@
     "name": "WriterControl_Main.js",
     "status": "OK",
     "bytes": 74702,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Main.js",
+    "localPath": "js\\WriterControl_Main.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Main.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -540,7 +540,7 @@
     "name": "dcwriter5.js",
     "status": "OK",
     "bytes": 20960,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\dcwriter5.js",
+    "localPath": "js\\dcwriter5.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=dcwriter5.js",
     "sources": [
       "index.html",
@@ -553,7 +553,7 @@
     "name": "WriterControl_DrawD3.js",
     "status": "OK",
     "bytes": 778602,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_DrawD3.js",
+    "localPath": "js\\WriterControl_DrawD3.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_DrawD3.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -565,7 +565,7 @@
     "name": "WriterControl_EF.js",
     "status": "OK",
     "bytes": 43875,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_EF.js",
+    "localPath": "js\\WriterControl_EF.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_EF.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -577,7 +577,7 @@
     "name": "System.Text.Json.dll",
     "status": "OK",
     "bytes": 337408,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Text.Json.dll",
+    "localPath": "dll\\System.Text.Json.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Text.Json.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -590,7 +590,7 @@
     "name": "WriterControl_API.js",
     "status": "OK",
     "bytes": 904347,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_API.js",
+    "localPath": "js\\WriterControl_API.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_API.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -602,7 +602,7 @@
     "name": "WriterControl_UI.js",
     "status": "OK",
     "bytes": 322032,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_UI.js",
+    "localPath": "js\\WriterControl_UI.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_UI.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -614,7 +614,7 @@
     "name": "System.dll",
     "status": "OK",
     "bytes": 5120,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.dll",
+    "localPath": "dll\\System.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -627,7 +627,7 @@
     "name": "jquery-1.7.2.min.js",
     "status": "OK",
     "bytes": 94840,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\jquery-1.7.2.min.js",
+    "localPath": "js\\jquery-1.7.2.min.js",
     "url": "http://10.0.15.11:8766/dist_test/static/js/jquery-1.7.2.min.js",
     "sources": [
       "index.html",
@@ -640,7 +640,7 @@
     "name": "TemperatureControl_Designer.js",
     "status": "OK",
     "bytes": 96267,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\TemperatureControl_Designer.js",
+    "localPath": "js\\TemperatureControl_Designer.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=TemperatureControl_Designer.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -652,7 +652,7 @@
     "name": "WriterControl_QueryListTableControl.js",
     "status": "OK",
     "bytes": 48808,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_QueryListTableControl.js",
+    "localPath": "js\\WriterControl_QueryListTableControl.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_QueryListTableControl.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -664,7 +664,7 @@
     "name": "configs.js",
     "status": "OK",
     "bytes": 639,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\configs.js",
+    "localPath": "js\\configs.js",
     "url": "http://10.0.15.11:8766/dist_test/configs.js",
     "sources": [
       "index.html",
@@ -677,7 +677,7 @@
     "name": "System.Runtime.dll",
     "status": "OK",
     "bytes": 10752,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Runtime.dll",
+    "localPath": "dll\\System.Runtime.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Runtime.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -690,7 +690,7 @@
     "name": "System.Text.Encodings.Web.dll",
     "status": "OK",
     "bytes": 30208,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Text.Encodings.Web.dll",
+    "localPath": "dll\\System.Text.Encodings.Web.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Text.Encodings.Web.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -703,7 +703,7 @@
     "name": "System.Runtime.InteropServices.JavaScript.dll",
     "status": "OK",
     "bytes": 43008,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Runtime.InteropServices.JavaScript.dll",
+    "localPath": "dll\\System.Runtime.InteropServices.JavaScript.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Runtime.InteropServices.JavaScript.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -716,7 +716,7 @@
     "name": "System.ComponentModel.Primitives.dll",
     "status": "OK",
     "bytes": 8704,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.ComponentModel.Primitives.dll",
+    "localPath": "dll\\System.ComponentModel.Primitives.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.ComponentModel.Primitives.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -729,7 +729,7 @@
     "name": "icudt_CJK.dat",
     "status": "OK",
     "bytes": 956416,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\icu\\icudt_CJK.dat",
+    "localPath": "icu\\icudt_CJK.dat",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=icudt_CJK.dat&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -742,7 +742,7 @@
     "name": "DCTools20221228.js",
     "status": "OK",
     "bytes": 713875,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\DCTools20221228.js",
+    "localPath": "js\\DCTools20221228.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=DCTools20221228.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -754,7 +754,7 @@
     "name": "System.Collections.Concurrent.dll",
     "status": "OK",
     "bytes": 21504,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Collections.Concurrent.dll",
+    "localPath": "dll\\System.Collections.Concurrent.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Collections.Concurrent.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -767,7 +767,7 @@
     "name": "System.ComponentModel.dll",
     "status": "OK",
     "bytes": 5632,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.ComponentModel.dll",
+    "localPath": "dll\\System.ComponentModel.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.ComponentModel.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -780,7 +780,7 @@
     "name": "Microsoft.JSInterop.WebAssembly.dll",
     "status": "OK",
     "bytes": 11264,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\Microsoft.JSInterop.WebAssembly.dll",
+    "localPath": "dll\\Microsoft.JSInterop.WebAssembly.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=Microsoft.JSInterop.WebAssembly.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -793,7 +793,7 @@
     "name": "element-icons.535877f5.woff",
     "status": "OK",
     "bytes": 28200,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\fonts\\element-icons.535877f5.woff",
+    "localPath": "fonts\\element-icons.535877f5.woff",
     "url": "http://10.0.15.11:8766/dist_test/static/fonts/element-icons.535877f5.woff",
     "sources": [
       "playwright-network"
@@ -805,7 +805,7 @@
     "name": "DC.5e4a413c.png",
     "status": "OK",
     "bytes": 72633,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\images\\DC.5e4a413c.png",
+    "localPath": "images\\DC.5e4a413c.png",
     "url": "http://10.0.15.11:8766/dist_test/static/img/DC.5e4a413c.png",
     "sources": [
       "playwright-network"
@@ -817,7 +817,7 @@
     "name": "dotnet.wasm",
     "status": "OK",
     "bytes": 25693179,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\wasm\\dotnet.wasm",
+    "localPath": "wasm\\dotnet.wasm",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=dotnet.wasm&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -831,7 +831,7 @@
     "name": "WriterControl_ToolBar.js",
     "status": "OK",
     "bytes": 148465,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_ToolBar.js",
+    "localPath": "js\\WriterControl_ToolBar.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_ToolBar.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -843,7 +843,7 @@
     "name": "WriterControl_Dialog.js",
     "status": "OK",
     "bytes": 940538,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_Dialog.js",
+    "localPath": "js\\WriterControl_Dialog.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_Dialog.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -855,7 +855,7 @@
     "name": "System.Private.Xml.dll",
     "status": "OK",
     "bytes": 502784,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Private.Xml.dll",
+    "localPath": "dll\\System.Private.Xml.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Private.Xml.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -868,7 +868,7 @@
     "name": "System.ObjectModel.dll",
     "status": "OK",
     "bytes": 6656,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.ObjectModel.dll",
+    "localPath": "dll\\System.ObjectModel.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.ObjectModel.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -881,7 +881,7 @@
     "name": "app.199546f2.css",
     "status": "OK",
     "bytes": 494827,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\css\\app.199546f2.css",
+    "localPath": "css\\app.199546f2.css",
     "url": "http://10.0.15.11:8766/dist_test/static/css/app.199546f2.css",
     "sources": [
       "index.html",
@@ -894,7 +894,7 @@
     "name": "System.Threading.dll",
     "status": "OK",
     "bytes": 5632,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Threading.dll",
+    "localPath": "dll\\System.Threading.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Threading.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -907,7 +907,7 @@
     "name": "dotnet.js",
     "status": "OK",
     "bytes": 294085,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\dotnet.js",
+    "localPath": "js\\dotnet.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=dotnet.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -920,7 +920,7 @@
     "name": "System.Net.Primitives.dll",
     "status": "OK",
     "bytes": 8704,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Net.Primitives.dll",
+    "localPath": "dll\\System.Net.Primitives.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Net.Primitives.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",
@@ -933,7 +933,7 @@
     "name": "WriterControl_DOMPackage.js",
     "status": "OK",
     "bytes": 49111,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\js\\WriterControl_DOMPackage.js",
+    "localPath": "js\\WriterControl_DOMPackage.js",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=WriterControl_DOMPackage.js&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network"
@@ -945,7 +945,7 @@
     "name": "chunk-elementUI.0e3a750b.css",
     "status": "OK",
     "bytes": 1131,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\css\\chunk-elementUI.0e3a750b.css",
+    "localPath": "css\\chunk-elementUI.0e3a750b.css",
     "url": "http://10.0.15.11:8766/dist_test/static/css/chunk-elementUI.0e3a750b.css",
     "sources": [
       "index.html",
@@ -958,7 +958,7 @@
     "name": "chunk-libs.dc5c95d6.css",
     "status": "OK",
     "bytes": 255093,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\css\\chunk-libs.dc5c95d6.css",
+    "localPath": "css\\chunk-libs.dc5c95d6.css",
     "url": "http://10.0.15.11:8766/dist_test/static/css/chunk-libs.dc5c95d6.css",
     "sources": [
       "index.html",
@@ -971,7 +971,7 @@
     "name": "System.Text.RegularExpressions.dll",
     "status": "OK",
     "bytes": 16384,
-    "localPath": "D:\\DCWriterLite\\emr-web-editor-demo\\.worktrees\\emr-web-editor-mvp\\reverse-engineering\\full-prelogin-package\\dll\\System.Text.RegularExpressions.dll",
+    "localPath": "dll\\System.Text.RegularExpressions.dll",
     "url": "http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage?wasmres=System.Text.RegularExpressions.dll&ver=20260327143150_409&flag=293105&wasmrootpath=http%3A%2F%2F10.0.15.23%3A8084%2FMyWriter%2FMoreHandleDCWriterServicePage",
     "sources": [
       "playwright-network",

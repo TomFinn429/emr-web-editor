@@ -10,7 +10,7 @@ describe('useDocumentSession', () => {
       id: 'admission',
       name: 'Admission Record',
       fileName: 'Admission Record.xml',
-      category: 'EMRWriterLite',
+      category: 'ClinicalDoc',
       xml: '<XTextDocument />',
     })
 
@@ -183,7 +183,7 @@ describe('useDocumentSession', () => {
       id: 'admission',
       name: 'Admission Record',
       fileName: 'Admission Record.xml',
-      category: 'EMRWriterLite',
+      category: 'ClinicalDoc',
       xml: '<XTextDocument />',
     })
     session.setValidationIssues([

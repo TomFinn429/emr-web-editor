@@ -39,3 +39,4 @@ frontend/*-run.err.log
 .worktrees/
 frontend/pnpm-lock.yaml
 his-prelogin-network.txt
+.backup/

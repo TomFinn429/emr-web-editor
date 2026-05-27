@@ -17,7 +17,7 @@ describe('writerPrint', () => {
     })
   })
 
-  it('prints all pages through the EMRWriterLite writer API', () => {
+  it('prints all pages through the 编辑器引擎 writer API', () => {
     const target: WriterPrintTarget = {
       PrintDocument: vi.fn(() => true),
     }
@@ -37,7 +37,7 @@ describe('writerPrint', () => {
     expect(target.Print).toHaveBeenCalledWith({ PrintRange: 'AllPages' })
   })
 
-  it('opens and closes print preview through the EMRWriterLite writer API', () => {
+  it('opens and closes print preview through the 编辑器引擎 writer API', () => {
     const target: WriterPrintTarget = {
       LoadPrintPreview: vi.fn(() => true),
       ClosePrintPreview: vi.fn(() => true),

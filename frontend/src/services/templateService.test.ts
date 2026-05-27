@@ -16,7 +16,7 @@ describe('templateService', () => {
             id: 'admission',
             name: 'Admission Record',
             fileName: 'Admission Record.xml',
-            category: 'EMRWriterLite',
+            category: 'ClinicalDoc',
           },
         ],
       })),
@@ -27,7 +27,7 @@ describe('templateService', () => {
         id: 'admission',
         name: 'Admission Record',
         fileName: 'Admission Record.xml',
-        category: 'EMRWriterLite',
+        category: 'ClinicalDoc',
       },
     ])
   })
@@ -41,7 +41,7 @@ describe('templateService', () => {
           id: 'admission',
           name: 'Admission Record',
           fileName: 'Admission Record.xml',
-          category: 'EMRWriterLite',
+          category: 'ClinicalDoc',
           xml: '<XTextDocument />',
         }),
       })),
@@ -51,7 +51,7 @@ describe('templateService', () => {
       id: 'admission',
       name: 'Admission Record',
       fileName: 'Admission Record.xml',
-      category: 'EMRWriterLite',
+      category: 'ClinicalDoc',
       xml: '<XTextDocument />',
     })
   })
@@ -76,7 +76,7 @@ describe('templateService', () => {
         id: 'a b',
         name: 'Template With Space',
         fileName: 'Template With Space.xml',
-        category: 'EMRWriterLite',
+        category: 'ClinicalDoc',
         xml: '<XTextDocument />',
       }),
     }))

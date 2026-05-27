@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the EMR Web Editor MVP: a Vue editor shell that reuses EMRWriterLite/WriterControl for clinical document editing, templates, commands, validation, saving, preview, and printing.
+**Goal:** Build the EMR Web Editor MVP: a Vue editor shell that reuses WriterControl/WriterControl for clinical document editing, templates, commands, validation, saving, preview, and printing.
 
 **Architecture:** Keep WriterControl as the editing/rendering kernel and add a typed Vue application shell around it. Frontend code should route all WriterControl calls through `WriterControlAdapter`, all toolbar behavior through a command registry, and all document state through a session composable/store. Backend stays lightweight: it exposes template list/content and a demo save endpoint while continuing to host `/renderer/*`.
 
@@ -139,7 +139,7 @@ sealed class TemplateStore
                     .Replace(' ', '-')
                     .Replace('（', '-')
                     .Replace('）', '-');
-                return new TemplateSummaryResponse(id, Path.GetFileNameWithoutExtension(fileName), fileName, "EMRWriterLite");
+                return new TemplateSummaryResponse(id, Path.GetFileNameWithoutExtension(fileName), fileName, "WriterControl");
             })
             .OrderBy(template => template.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -646,25 +646,25 @@ describe('templateService', () => {
   it('fetches template summaries', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
-      json: async () => [{ id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'EMRWriterLite' }],
+      json: async () => [{ id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'WriterControl' }],
     })))
 
     await expect(fetchTemplates()).resolves.toEqual([
-      { id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'EMRWriterLite' },
+      { id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'WriterControl' },
     ])
   })
 
   it('fetches template content', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
-      json: async () => ({ id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'EMRWriterLite', xml: '<XTextDocument />' }),
+      json: async () => ({ id: 'admission', name: 'Admission Record', fileName: 'Admission Record.xml', category: 'WriterControl', xml: '<XTextDocument />' }),
     })))
 
     await expect(fetchTemplateContent('admission')).resolves.toEqual({
       id: 'admission',
       name: 'Admission Record',
       fileName: 'Admission Record.xml',
-      category: 'EMRWriterLite',
+      category: 'WriterControl',
       xml: '<XTextDocument />',
     })
   })
@@ -1057,7 +1057,7 @@ describe('useDocumentSession', () => {
       id: 'admission',
       name: 'Admission Record',
       fileName: 'Admission Record.xml',
-      category: 'EMRWriterLite',
+      category: 'WriterControl',
       xml: '<XTextDocument />',
     })
 
@@ -1764,7 +1764,7 @@ If the implementation adds new startup, template, save, or validation usage that
 ```markdown
 ## EMR Web Editor MVP
 
-- 左侧模板列表可加载 EMRWriterLite 示例文档。
+- 左侧模板列表可加载 WriterControl 示例文档。
 - 顶部 Ribbon 提供常用编辑、插入、表格和打印命令。
 - 保存支持本地 XML 下载和后端 demo 保存接口。
 - 保存前会执行基础必填项校验。
@@ -1808,4 +1808,4 @@ Expected: only intentional tracked changes remain, and each completed task has a
   - Runtime verification: Task 8 and Task 9.
 - No placeholders: every task names exact files, commands, expected outcomes, and concrete code or contracts.
 - Type consistency: `EditorCommandId`, `WriterCommandPayload`, `ValidationIssue`, `TemplateSummary`, `TemplateContent`, and save response types are defined before later tasks use them.
-- Scope control: permissions, traces, PDF export, advanced print, recent files, AI, and full EMRWriterLite cloning remain out of v1.
+- Scope control: permissions, traces, PDF export, advanced print, recent files, AI, and full WriterControl cloning remain out of v1.
