@@ -21,9 +21,10 @@ export default defineConfig({
     vue(),
   ],
   server: {
-    host: '0.0.0.0',
-    port: 5173,
+    host: '127.0.0.1',
+    port: 5174,
     strictPort: false,
+    open: '/?stage=month-2-import-preview',
     proxy: {
       '/api': {
         target: 'http://localhost:5190',
