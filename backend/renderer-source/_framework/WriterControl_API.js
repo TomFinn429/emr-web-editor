@@ -1,4 +1,4 @@
-﻿// 2025-3-3
+// 2025-3-3
 /**
  * 编辑器自定义属性：
  * @UserDefinedOptions ["NotScrollWithCaret","true/false","为true时页面不再跟随光标跳转"]
@@ -6,6 +6,7 @@
  * @UserDefinedOptions ["AutoMaticCorrectionRepeatID","true/false","为true时自动修正id"]
  * @UserDefinedOptions ["ClickCommentAreaFocusCaret","true/false","为true时编辑器属性点击批注部分编辑器不再自动获取焦点"]
  * @UserDefinedOptions ["DropdownListIsShowUsingSearchContent","true/false","设置搜索不到内容时，是否展示使用此文本按钮"]
+ * @UserDefinedOptions ["PrintImageScale","Number","调用PrintAsImage时返回的图片质量,值越大质量越高(推荐5以内的数字)"]
  * @UserDefinedOptions ["MobileDisableAutoSoftKeyboard","true/false","移动端除了手动点击之外不会再获取焦点"]
  * @UserDefinedOptions ["MobileDisableSoftKeyboard","true/false","移动端是否需要禁止软键盘"]
  * @UserDefinedOptions ["ReadonlyAutoFocus","false/xandyaxis/yaxis","移动端表单模式下单击非输入域下不会主动让最近的输入域获取焦点,false和xandyaxis为控制x轴和y轴,yaxis为控制y轴"]
@@ -35,6 +36,9 @@
  * @UserDefinedOptions ["PasteAllowDeletionAndEditing", "true/false", "粘贴时存在不可删除不可编辑元素时是否保留"]
  * @UserDefinedOptions ["AllowExternalForceToTakeOverTheCursor", "true/false", "允许客户在1秒内2次在编辑器外获取焦点时编辑器不在继续获取光标"]
  * @UserDefinedOptions ["DataTimeInputFieldElementClickToAssignValue", "true/false", "允许时间日期格式的输入域单击日期时自动赋值"]
+ * @UserDefinedOptions ["DropdownListMultiSelectFooterVisible", "true/false", "多选下拉底部工具条是否可见，默认为显示(true)"]
+ * @UserDefinedOptions ["DisableClipboardRead", "true/false", "为true时代码粘贴时禁止读取剪切板权限，不影响ctrl+v粘贴功能"]
+ * @UserDefinedOptions ["DropdownListEnterSelectFirst", "true/false", "为true时Enter键默认选中第一个选项"]
 */
 
 /**
@@ -65,7 +69,7 @@
  * @WriterEventFunction ["EventPrintPreviewContextMenu","rootElement, eventArgs","打印预览时，右击触发的事件，可以用来制作打印预览的右键菜单"]
  * @WriterEventFunction ["SetPreviewContextMenu","rootElement, eventArgs","打印预览时，右击触发的事件，可以用来制作打印预览的右键菜单"]
  * @WriterEventFunction ["EventInsertMultipleCheckBoxOrRadioAfter","options","对话框插入一组多选或单选框后触发的事件"]
- * 
+ * @WriterEventFunction ["EventDownloadSingleFontFile","fontTask, setFontContentCallback","自定义字体文件下载事件处理器，如果设置了此函数，将覆盖默认的下载单个字体文件并设置到DotNet环境中的行为"]
  * 
 */
 
@@ -108,8 +112,14 @@ import { WriterControl_IO } from "./WriterControl_IO.js";
 import { WriterControl_Dialog } from "./WriterControl_Dialog.js";
 import { WriterControl_Event } from "./WriterControl_Event.js";
 import { PageContentDrawer } from "./PageContentDrawer.js";
+import { TemperatureControl_Data, TemperatureControl_XMLToJSON } from "./TemperatureControl_Data.js";
+import { WriterControl_DrawFu } from "./WriterControl_DrawFu.js";
+import { TemperatureControl_Designer } from "./TemperatureControl_Designer.js";
+import { jspdf } from "./WriterControl_DrawD3.js";
 import { WriterControl_FontList } from "./WriterControl_FontList.js";
 import { WriterControl_ToolBar } from "./WriterControl_ToolBar.js";
+import { WriterControl_TrendChart } from "./WriterContorl_TrendChart.js";
+import { WriterContorl_FlowChart } from "./WriterContorl_FlowChart.js";
 
 /**
  * 用于接口调用时计算调用时间，并触发EventInterfaceLog事件
@@ -144,9 +154,12 @@ let DCEventInterfaceLogFunction = function (rootElement, apiName, startTime, Def
  */
 let DCGetAllowOperateDOM = function (rootElement) {
     let flag = true;
+    var ReadViewMode = rootElement.ReadViewMode;//阅读模式
     var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-     //当前存在其中一个模式，即不可修改dom，返回false
-    if (IsPrintPreview) {
+    var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+    var RectInfo = rootElement.RectInfo;//区域选择
+    //当前存在其中一个模式，即不可修改dom，返回false
+    if (ReadViewMode || IsPrintPreview || ExtViewMode || RectInfo) {
         return false;
     }
     return flag;
@@ -179,6 +192,9 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'SetStringResources', startTime);
         };
 
+        rootElement.ReportStaticFieldValues = function () {
+            rootElement.__DCWriterReference.invokeMethod("ReportStaticFieldValues");
+        };
         /**
          * @name SetFontSource
          * @type Function
@@ -190,7 +206,7 @@ export let WriterControl_API = {
          */
         rootElement.SetFontSource = function (strFontName, strUrl) {
             // 判断是否为移动端，如果是才执行
-            if ('ontouchstart' in rootElement.ownerDocument.documentElement) {
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                 WriterControl_Paint.SetFontSource(strFontName, strUrl);
             }
         };
@@ -240,7 +256,9 @@ export let WriterControl_API = {
          * @change ["2023-09-14","改进API日志","yyf" ]
          * @classification file
          */
-        rootElement.DownloadAPIRecordData = function () { return WriterControl_UI.DownloadAPIRecordData(rootElement); };
+        rootElement.DownloadAPIRecordData = function (option) {
+            return WriterControl_UI.DownloadAPIRecordData(rootElement, option);
+        };
         /**
        * @name GetloadAPIRecordData
        * @type function
@@ -253,7 +271,7 @@ export let WriterControl_API = {
        */
         rootElement.GetloadAPIRecordData = function (callBack = null) {
             if (callBack) {
-                WriterControl_UI.DownloadAPIRecordData(rootElement, callBack);
+                WriterControl_UI.DownloadAPIRecordData(rootElement, { callBack: callBack });
             }
         };
 
@@ -264,7 +282,24 @@ export let WriterControl_API = {
          * @change ["2023-09-14","改进API日志","yyf" ]
          * @classification file
          */
-        rootElement.PlayAPILogRecords = function () { return WriterControl_UI.PlayAPILogRecords(rootElement); };
+        rootElement.PlayAPILogRecords = function (options) { return WriterControl_UI.PlayAPILogRecords(rootElement, options); };
+        /**
+        * @name PrintAsPDF
+        * @type function
+        * @apinameZh 打印为PDF文件
+        * @param ["options","object","打印选项","","",true]
+        * @param ["callBack","function","操作成功后的回调函数，参数为包含PDF的blob对象，如果未指定回调函数则下载文件。","","",true]
+        * @returns ["result","boolean","操作是否成功"]
+        * @classification print
+        */
+        rootElement.PrintAsPDF = function (options, callBack) {
+            var startTime = new Date();
+            var result = WriterControl_Print.PrintAsPDF(rootElement, options, callBack);
+            DCEventInterfaceLogFunction(rootElement, 'PrintAsPDF', startTime);
+
+            return result;
+        };
+
         /**
          * @name FocusElementById
          * @type function
@@ -277,6 +312,44 @@ export let WriterControl_API = {
          */
         rootElement.FocusElementById = function (id, scrollMode = "Middle") {
             var startTime = new Date();
+            if (rootElement.IsWriterPrintPreviewControlForWASM) {
+                var info = rootElement.__DCWriterReference.invokeMethod("GetElementLayoutInfoByID", id);
+                if (info != null) {
+                    var pContainer = WriterControl_Print.GetPrintPrewViewPageContainer(rootElement);;
+                    if (pContainer != null) {
+                        var allPagesTop = 0;
+                        for (var node = pContainer.firstChild; node != null; node = node.nextSibling) {
+                            if (node.nodeName == "svg" && node.PageIndex == info.PageIndex) {
+                                //加上目标页的Top值
+                                allPagesTop += info.Top;
+                                pContainer.scrollTo({
+                                    top: allPagesTop,
+                                    behavior: "smooth"
+                                });
+                                return true;
+                            } else {
+                                //计算目标页前面的页的滚动总高度
+                                allPagesTop += parseFloat(node.clientHeight) + (parseFloat(node.style.marginTop) || 5) + (parseFloat(node.style.marginBottom) || 5) + (parseFloat(node.style.borderTopWidth) || 1) + (parseFloat(node.style.borderBottomWidth) || 1);
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                // //处理在聚焦前把光标显示出来
+                // if (rootElement.oldCaretOption) {
+                //     WriterControl_UI.ShowCaret(
+                //         rootElement.oldCaretOption.containerID,
+                //         rootElement.oldCaretOption.intPageIndex,
+                //         rootElement.oldCaretOption.intDX,
+                //         rootElement.oldCaretOption.intDY,
+                //         rootElement.oldCaretOption.intWidth,
+                //         rootElement.oldCaretOption.intHeight,
+                //         rootElement.oldCaretOption.bolVisible,
+                //         rootElement.oldCaretOption.bolReadonly
+                //     );
+                // }
+
                 //先给一个临时变量，用于记录跳转模式，并用于是否需要矫正位置
                 rootElement.FocusElementByIdScrollMode = scrollMode;
                 //在调用接口
@@ -289,6 +362,7 @@ export let WriterControl_API = {
                 }
                 DCEventInterfaceLogFunction(rootElement, 'FocusElementById', startTime);
                 return result;
+            }
             return false;
         };
         /**
@@ -310,6 +384,72 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'LocalPrintDocuments', startTime);
             return result;
         };
+        //新增新函数处理四代五代BS本地打印合并小程序的需求，恢复之前本地打印接口，使旧版WINFORM不需要升级即可处理本地侦听请求
+        rootElement.LocalPrintDocuments2 = function (options, callBack, getprinter = false) {
+            var startTime = new Date();
+            if (options === null || typeof (options) !== "object") {
+                options = new Object();
+            }
+            options.AdvancedMergeMode = true;
+            var result = WriterControl_Print.PrintToServer(rootElement, null, options, callBack, getprinter);
+            DCEventInterfaceLogFunction(rootElement, 'LocalPrintDocuments', startTime);
+            return result;
+        };
+
+        /**
+         * @name PostDataToLocalServer
+         * @type function
+         * @apinameZh 发送数据到前端本地打印侦听程序实现自定义处理
+         * @param ["参数1","string","datastring 传递的自定义字符串","","本参数需要注意。。。",true]
+         * @change ["2025-06-19","创建API","wyc" ]
+         * @describe 必须设置编辑器控件的PrintServerPageUrl属性。
+         * @returns ["result","boolean","操作是否成功"]
+         * @classification print
+         */
+        rootElement.PostDataToLocalServer = function (datastring, callBack) {
+            var startTime = new Date();
+            if (typeof (datastring) === "string" && datastring.length > 0) {
+                var strPrintServicePageUrl = rootElement.getAttribute("printservicepageurl");
+                if (strPrintServicePageUrl == null || strPrintServicePageUrl.length == 0) {
+                    console.warn("DCWriter:未指定打印服务器的地址。");
+                    return false;
+                }
+                var postData = {
+                    ExtraDataString: datastring
+                };
+                if (jQuery.support) {
+                    jQuery.support.cors = true;
+                }
+                jQuery.ajax(
+                    strPrintServicePageUrl,
+                    {
+                        async: true,
+                        data: JSON.stringify(postData),
+                        method: "POST",
+                        type: "POST",
+                        processData: false,
+                        crossDomain: true,
+                        xhrFields: {
+                            withCredentials: false
+                        },
+                        error: function (xhr, status, error) {
+                            // 处理失败的响应
+                            //console.error("localprint失败", error);
+                            if (callBack != null && typeof (callBack) == "function") {
+                                callBack.call(rootElement, false);
+                            }
+                        }
+                    })
+                    .done(function (data, textStatus, jqXHR) {
+                        if (callBack != null && typeof (callBack) == "function") {
+                            callBack.call(rootElement, data);
+                        }
+                    });
+                return true;
+            }
+            return false;
+        };
+
         /**
          * @name PrintAsHtml
          * @type function
@@ -507,6 +647,14 @@ export let WriterControl_API = {
                             if (thisPage) {
                                 var topInOwnerPage = parseFloat((subAttr.TopInOwnerPage / 300 * 96.00001209449 * ZoomRate).toFixed(2));
                                 var leftInOwnerPage = parseFloat((subAttr.LeftInOwnerPage / 300 * 96.00001209449 * ZoomRate).toFixed(2));
+                                // 修复普通视图模式下病程记录定位问题【DUWRITER5_0-4549】
+                                var bolNormalViewMode = rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode");
+                                if (bolNormalViewMode && subAttr.OwnerPageIndex > 0) {
+                                    var HeaderNode = rootElement.DocumentHeader;
+                                    var HeaderNodeProps = rootElement.GetElementProperties(HeaderNode);
+                                    var TopInOwnerPageNotHeader = subAttr.TopInOwnerPage - (HeaderNodeProps.TopInOwnerPage + HeaderNodeProps.Height);
+                                    topInOwnerPage = parseFloat((TopInOwnerPageNotHeader / 300 * 96.00001209449 * ZoomRate).toFixed(2));
+                                }
                                 pageContainer.scrollTo(thisPage.offsetLeft + leftInOwnerPage, thisPage.offsetTop + topInOwnerPage);
                             }
                         }
@@ -539,25 +687,6 @@ export let WriterControl_API = {
                                 }
                             }
                         }
-                        // // 获取病程的属性 OwnerPageIndex
-                        // var subAttr = rootElement.GetElementProperties(id);
-                        // if (subAttr && typeof subAttr.OwnerPageIndex == "number") {
-                        //     /** 病程所在的svg元素 */
-                        //     var thisPage = allSvg[subAttr.OwnerPageIndex];
-                        //     // 目前不清楚获取到的svg元素是否是病程所在的元素
-                        //     if (thisPage) {
-                        //         if (!subNode || subNode.ownerSVGElement != thisPage) {
-                        //             // 存在该ID的病程，但是暂时没有渲染出来 || 获取到该ID的病程不是第一个，是分页后面的
-                        //             if (thisPage._isRendered == false) {
-                        //                 // svg元素未渲染，进行渲染svg元素
-                        //                 WriterControl_Print.InnerDrawOnePage(thisPage, true);
-                        //                 thisPage._isRendered = true;
-                        //             }
-                        //             // 重新查找该ID的病程
-                        //             subNode = thisPage.querySelector("[id='" + id + "']");
-                        //         }
-                        //     }
-                        // }
                         // 如果子节点存在，则尝试滚动到该子节点的位置
                         if (subNode) {
                             try {
@@ -680,6 +809,200 @@ export let WriterControl_API = {
     },
     //*****************************************************************************************************
     //*****************************************************************************************************
+    //*****************************************************************************************************
+    //*****************************************************************************************************
+
+    /**
+     * 为打印预览控件而初始化根元素
+     * @param {HTMLElement} rootElement 编辑器根元素
+     * @param {any} refDCWriter
+     */
+    BindControlForWriterPrintPreviewControlForWASM: function (rootElement, refDCWriter) {
+        rootElement.__DCWriterReference = refDCWriter;
+        rootElement.IsWriterPrintPreviewControlForWASM = true;
+        /**
+         * 为打印预览添加文档
+         * @param {object} parameters 混合合并的参数对象，定义同编辑器GetPrintPreviewHTML2的接口
+         * @returns {boolean} 操作是否成功
+         */
+        rootElement.AddDocumentsByMixedFiles = function (parameters) {
+            return WriterControl_IO.AddDocumentsByMixedFiles(rootElement, parameters);
+        };
+        /**
+         * 为打印预览添加文档
+         * @param {string} strFileContent 文件内容
+         * @param {string} strFileFormat 文件格式
+         * @param {boolean} useBase64 是否使用BASE64
+         * @returns {boolean} 操作是否成功
+         */
+        rootElement.AddDocumentByText = function (strFileContent, strFileFormat, useBase64) {
+            return WriterControl_IO.AddDocumentByText(rootElement, strFileContent, strFileFormat, useBase64);
+        };
+        /**
+         * 执行多文档的打印预览
+         * @param {any} options 打印选项
+         */
+        rootElement.InvalidatePreview = function (options) {
+            WriterControl_Print.InvalidatePreview(rootElement, options);
+        };
+
+        /**
+         * 为打印预览批量添加合并子文档
+         * @param {object} options 对象参数规格同编辑器四代兼容接口AppendSubDocuments的参数对象
+         * @returns {boolean} 操作是否成功
+         * @change ["2024-9-10","创建API","wyc" ]
+         */
+        rootElement.AppendSubDocuments = function (options) {
+            var tick = new Date().valueOf();
+            rootElement.__LastLoadDocumentTime = new Date().valueOf();
+            var result = rootElement.__DCWriterReference.invokeMethod("AppendSubDocumentsForPrintPreview", options);
+            tick = new Date().valueOf() - tick;
+            // console.log("加载文档花费毫秒:" + tick);
+            return result;
+        };
+
+        /**
+        * 清空打印预览控件
+        * */
+        rootElement.ClearDocument = function () {
+            var pages = WriterControl_UI.GetPageContainer(rootElement);
+            if (pages != null) {
+                while (pages.firstChild != null) {
+                    pages.removeChild(pages.firstChild);
+                }
+            }
+            rootElement.__DCWriterReference.invokeMethod("ClearDocumentForWriterPrintPreviewControl");
+            //rootElement.__DCWriterReference.invokeMethod("PrintDocument");
+
+            //[DUWRITER5_0-4846] 20251016 lxy 删除无用的svg
+            var allSvg = rootElement.querySelectorAll('svg[dctype="page"]');
+            for (var i = 0; i < allSvg.length; i++) {
+                allSvg[i] && allSvg[i].remove();
+            }
+
+        };
+
+        rootElement.SetAutoZoom = function (callback, eventArgs, noAddAttr) {
+        };
+        rootElement.CollectrResizeCanvas = function (element) { };
+        rootElement.IsPrintPreview = function () {
+            return true;
+        };
+        /**
+         * 设置文档的续打状态
+         * @name SetJumpPrintMode
+         * @type function
+         * @apinameZh 打印预览控件中设置文档的续打状态
+         * @classification print
+         * @param ["params","boolean","打开或者关闭打印预览控件续打","","","true"]
+         * @change ["2024-09-09","打印预览控件增加接口SetJumpPrintMode","xuyiming" ]
+         * @returns ["result","boolean","操作是否成功"]
+         * @describe <span style="color:red;">目前续打打印时没有隐藏页眉页脚，需要后续添加</span>。
+         */
+        rootElement.SetJumpPrintMode = function (isJump) {
+            var startTime = new Date();
+            // let result = rootElement.__DCWriterReference.invokeMethod("SetJumpPrintMode", isJump);
+            let result = WriterControl_Print.SetJumpPrintModeInWriterPrintPreviewControlForWASM(rootElement, isJump);
+            DCEventInterfaceLogFunction(rootElement, 'SetJumpPrintMode', startTime);
+            return result;
+        };
+
+        /**
+         * @name GetJumpPrintInfo
+         * @type function
+         * @apinameZh 打印预览控件中获取续打信息
+         * @classification print
+         * @change ["2024-09-09","打印预览控件增加接口GetJumpPrintInfo","xuyiming" ]
+         * @returns ["result","object","pageindex打印开始页序号<br/>position打印开始位置<br/>endpageindex打印结束页序号<br/>endposition打印结束位置"]
+         */
+        rootElement.GetJumpPrintInfo = function () {
+            var startTime = new Date();
+            let result = {};
+            if (rootElement && rootElement.JumpPrintInfo) {
+                result = rootElement.JumpPrintInfo.Info;
+            }
+            DCEventInterfaceLogFunction(rootElement, 'GetJumpPrintInfo', startTime);
+            return result;
+        };
+
+        /**
+        * @name SetJumpPrintInfo
+        * @type function
+        * @apinameZh 打印预览控件中设置续打信息
+        * @classification print
+        * @param ["params","object","续打信息","","包含：pageindex打印开始页序号<br/>position打印开始位置<br/>endpageindex打印结束页序号<br/>endposition打印结束位置","true"]
+        * @change ["2024-09-09","打印预览控件增加接口SetJumpPrintInfo","xuyiming" ]
+        * @returns ["result","Boolean","返回操作是否成功"]
+        */
+        rootElement.SetJumpPrintInfo = function (params) {
+            var startTime = new Date();
+            let result = false;
+            if (rootElement && rootElement.JumpPrintInfo && typeof (rootElement.JumpPrintInfo.SetJumpPrintInfo) == "function") {
+                result = rootElement.JumpPrintInfo.SetJumpPrintInfo(rootElement, params);
+            }
+            DCEventInterfaceLogFunction(rootElement, 'SetJumpPrintInfo', startTime);
+            return result;
+        };
+
+        /**
+        * @name GetPrintPreviewPageCount
+        * @type function
+        * @apinameZh 获取打印预览控件的总页数
+        * @classification print
+        * @change ["2024-09-19","新增接口","lixinyu" ]
+        * @returns ["PageCount","Number","返回打印预览控件的总页数"]
+        */
+        rootElement.GetPrintPreviewPageCount = function () {
+            var startTime = new Date();
+            let pageCount = rootElement.querySelectorAll('svg[dctype="page"]').length;
+            DCEventInterfaceLogFunction(rootElement, 'GetPrintPreviewPageCount', startTime);
+            return pageCount ? pageCount : 0;
+        };
+
+
+        //     /** 
+        //    * 续打位置
+        //    * @name JumpPrintPosition
+        //    * @type {object.defineProperty}
+        //    */
+        //     Object.defineProperty(rootElement, "JumpPrintPosition", {
+        //         get() {
+        //             var startTime = new Date();
+        //             let result = this.__DCWriterReference.invokeMethod("get_JumpPrintPosition");
+        //             DCEventInterfaceLogFunction(rootElement, 'JumpPrintPosition', startTime, true);
+        //             return result;
+        //         },
+        //         set(value) {
+        //             var startTime = new Date();
+        //             this.__DCWriterReference.invokeMethod("set_JumpPrintPosition", value);
+        //             DCEventInterfaceLogFunction(rootElement, 'set_JumpPrintPosition', startTime, true);
+        //         }
+        //     });
+
+        //     /**
+        //      * 是否允许续打
+        //     * @name EnableJumpPrint
+        //     * @type {object.defineProperty}
+        //     */
+        //     Object.defineProperty(rootElement, "EnableJumpPrint", {
+        //         get() {
+        //             var startTime = new Date();
+        //             let result = this.__DCWriterReference.invokeMethod("get_EnableJumpPrint");
+        //             DCEventInterfaceLogFunction(rootElement, 'get_EnableJumpPrint', startTime, true);
+        //             return result;
+        //         },
+        //         set(value) {
+        //             var startTime = new Date();
+        //             this.__DCWriterReference.invokeMethod("set_EnableJumpPrint", value);
+        //             DCEventInterfaceLogFunction(rootElement, 'set_EnableJumpPrint', startTime, true);
+        //         }
+        //     });
+
+        document.WriterPrintPreviewControl = rootElement;
+        if (rootElement.ownerDocument !== document) {
+            rootElement.ownerDocument.WriterPrintPreviewControl = rootElement;
+        }
+    },
 
 
     /**
@@ -689,7 +1012,23 @@ export let WriterControl_API = {
      */
     BindControlForWriterControlForWASM: function (rootElement, refDCWriter) {
         rootElement.__DCWriterReference = refDCWriter;
+        rootElement.IsWriterPrintPreviewControlForWASM = false;
 
+        /**@name SetContentElementFlagImage
+         * @type function
+         * @appnameZh 设置容器类元素的标记图片
+         * @param["strID" ,"string" , "string 类型的容器类元素的编号、int型的handle对象,容器类元素包括文档节、单元格、正文、页眉页脚，如果为空则使用当前光标所在的容器元素"]
+         * @param["strContentAlignment","string","对齐方式，包括TopLeft,TopRight,CenterLeft,CenterRight,BottomLeft,BottomRight,默认为TopRight"]
+         * @param["strImageBase64","string","图片的BASE64字符串，可以以为空，只支持BMP,JPEG,PNG格式"]
+         * @returns { boolean }操作是否成功
+         */
+        rootElement.SetContentElementFlagImage = function (strID, strContentAlignment, strImageBase64) {
+            if (typeof strID === "number" && Number.isInteger(strID)) {
+                return rootElement.__DCWriterReference.invokeMethod("SetContentElementFlagImageByHandle", strID, strContentAlignment, strImageBase64);
+            } else {
+                return rootElement.__DCWriterReference.invokeMethod("SetContentElementFlagImage", strID, strContentAlignment, strImageBase64);
+            }
+        };
         /**
          * @name GetCurrentContentInfo
          * @type function
@@ -699,7 +1038,20 @@ export let WriterControl_API = {
         rootElement.GetCurrentContentInfo = function () {
             return rootElement.__DCWriterReference.invokeMethod("GetCurrentContentInfo");
         };
-
+        /**
+         * @name SetRuntimeFontName
+         * @type function
+         * @apnameZh 设置运行时字体
+         * @param["originalFontName","string","原始字体名"]
+         * @param["runtimeFontName","string","运行时替换的字体名"]
+         * @description 设置运行时字体，当文档中存在originalFontName字体时，替换为runtimeFontName字体进行显示和打印，但保存XML时不改变原始字体名。
+         */
+        rootElement.SetRuntimeFontName = function (originalFontName, runtimeFontName) {
+            return rootElement.__DCWriterReference.invokeMethod(
+                "SetRuntimeFontName",
+                originalFontName,
+                runtimeFontName);
+        };
         /**
          * @name getModifiedTableRows
          * @type function
@@ -717,6 +1069,27 @@ export let WriterControl_API = {
                 result = rootElement.__DCWriterReference.invokeMethod("GetModifiedTableRows", tableelement);
             }
             DCEventInterfaceLogFunction(rootElement, 'getModifiedTableRows', startTime);
+            return result;
+        };
+
+        /**
+         * @name IsEmptyContainerElement
+         * @type function
+         * @appnameZh 判断元素是否为空内容的容器元素
+         * @param ["element","object","指定元素的id或nativehandle或后台引用对象","","",null]
+         * @classification view
+         * @returns ["result","object","若为null代表传递的不是容器元素，否则为布尔值表示元素是否为空"]
+         * @change ["2026-3-9","新增接口","wyc" ]
+         */
+        rootElement.IsEmptyContainerElement = function (element) {
+            var startTime = new Date();
+            var result = null;
+            if (DCTools20221228.IsDotnetReferenceElement(element) === true) {
+                result = rootElement.__DCWriterReference.invokeMethod("IsEmptyContainerElement2", element);
+            } else {
+                result = rootElement.__DCWriterReference.invokeMethod("IsEmptyContainerElement", element);
+            }
+            DCEventInterfaceLogFunction(rootElement, 'IsEmptyContainerElement', startTime);
             return result;
         };
 
@@ -1551,6 +1924,66 @@ export let WriterControl_API = {
             }
         });
 
+        /**
+         * @name ReadViewMode
+         * @type Property
+         * @classification view
+         * @apinameZh 阅读视图模式
+         * @valueType Boolean
+         * @usersModify 可修改
+         * @param ["FileFormat","Boolean","文档是否阅读视图模式","false","设置文档是否阅读视图模式","是"]
+         */
+        Object.defineProperty(rootElement, "ReadViewMode", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_ReadViewMode");
+                DCEventInterfaceLogFunction(rootElement, 'ReadViewMode', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                //在预览模式、区域选择、续打模式下不允许设置为阅读模式
+                var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
+                var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+                var RectInfo = rootElement.RectInfo;//区域选择
+                if (IsPrintPreview || ExtViewMode || RectInfo) {
+                    return false;
+                }
+                // this.__DCWriterReference.invokeMethod("set_ReadViewMode", value);
+                // 修复设置ReadViewMode无效的问题【DUWRITER5_0-4449】：将设置ReadViewMode的代码修改成DCExecuteCommand("ReadViewMode")
+                let nowReadViewMode = this.__DCWriterReference.invokeMethod("get_ReadViewMode");
+                if (nowReadViewMode == value) {
+                    return false;
+                }
+                this.__DCWriterReference.invokeMethod("DCExecuteCommand", "ReadViewMode", false, null);
+                DCEventInterfaceLogFunction(rootElement, 'set_ReadViewMode', startTime, true);
+                return true;
+            }
+        });
+
+        /**
+         * @name HeaderFooterReadonly
+         * @type Property
+         * @classification file
+         * @apinameZh 页眉页脚只读
+         * @valueType Boolean
+         * @usersModify 可修改
+         * @param ["FileFormat","Boolean","文档是否页眉页脚只读","false","设置文档是否页眉页脚只读","是"]
+         */
+        Object.defineProperty(rootElement, "HeaderFooterReadonly", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_HeaderFooterReadonly");
+                DCEventInterfaceLogFunction(rootElement, 'HeaderFooterReadonly', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                this.__DCWriterReference.invokeMethod("set_HeaderFooterReadonly", value);
+                DCEventInterfaceLogFunction(rootElement, 'set_HeaderFooterReadonly', startTime, true);
+
+            }
+        });
 
         /**
          * @name AcceptDataFormats
@@ -1692,7 +2125,28 @@ export let WriterControl_API = {
                 return result;
             }
         });
-         
+
+        /**
+         * @name CurrentBold
+         * @type Property
+         * @classification view
+         * @apinameZh 当前光标所在的粗体样式
+         * @valueType Boolean
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentBold", {
+            get() {
+                var startTime = new Date();
+                var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
+                if (IsOperateDOM) {
+                    let result = this.__DCWriterReference.invokeMethod("get_CurrentBold");
+                    DCEventInterfaceLogFunction(rootElement, 'CurrentBold', startTime, true);
+                    return result;
+                }
+                return null;
+            }
+        });
+
         /**
          * @name CurrentComment
          * @type Property
@@ -1710,6 +2164,60 @@ export let WriterControl_API = {
             }
         });
 
+        /**
+         * @name CurrentFontName
+         * @type Property
+         * @classification cursor
+         * @apinameZh 当前光标所在的字体名称
+         * @valueType string
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentFontName", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentFontName");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentFontName', startTime, true);
+                return result;
+            }
+        });
+
+        /**
+         * @name CurrentFontSize
+         * @type Property
+         * @classification cursor
+         * @apinameZh 当前光标所在的字体大小
+         * @valueType number
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentFontSize", {
+            get() {
+                var startTime = new Date();
+                let result = "";
+                if (this.__DCWriterReference) {
+                    result = this.__DCWriterReference.invokeMethod("get_CurrentFontSize");
+                }
+                //let result = this.__DCWriterReference.invokeMethod("get_CurrentFontSize");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentFontSize', startTime, true);
+                return result;
+            }
+        });
+
+        /**
+        * @name CurrentItalic
+        * @type Property
+        * @classification cursor
+        * @apinameZh 当前光标所在的斜体样式
+        * @valueType string
+        * @usersModify 不可修改
+        */
+        Object.defineProperty(rootElement, "CurrentItalic", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentItalic");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentItalic', startTime, true);
+                return result;
+            }
+        });
         /**
         * @name CurrentPageBorderColor
         * @type Property
@@ -1807,6 +2315,74 @@ export let WriterControl_API = {
                     return result;
                 }
                 return null;
+            }
+        });
+
+        /**
+         * @name CurrentSubscript
+         * @type Property
+         * @classification cursor
+         * @apinameZh 当前光标所在的下标样式
+         * @valueType string
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentSubscript", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentSubscript");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentSubscript', startTime, true);
+                return result;
+            }
+        });
+
+        /**
+         * @name CurrentSuperscript
+         * @type Property
+         * @classification cursor
+         * @apinameZh 当前光标所在的上标样式
+         * @valueType string
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentSuperscript", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentSuperscript");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentSuperscript', startTime, true);
+                return result;
+            }
+        });
+
+        /**
+         * @name CurrentUnderline
+         * @type Property
+         * @classification cursor
+         * @apinameZh 当前光标所在的下划线样式
+         * @valueType string
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentUnderline", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentUnderline");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentUnderline', startTime, true);
+                return result;
+            }
+        });
+
+        /**
+         * @name CurrentUser
+         * @type Property
+         * @classification file
+         * @apinameZh 当前用户信息
+         * @valueType object
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "CurrentUser", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_CurrentUser");
+                DCEventInterfaceLogFunction(rootElement, 'CurrentUser', startTime, true);
+                return result;
             }
         });
 
@@ -2123,6 +2699,110 @@ export let WriterControl_API = {
                 var startTime = new Date();
                 this.__DCWriterReference.invokeMethod("set_IsAdministrator", value);
                 DCEventInterfaceLogFunction(rootElement, 'set_IsAdministrator', startTime, true);
+            }
+        });
+
+        /**
+        * @name JumpPrint
+        * @type Property
+        * @classification print
+        * @apinameZh 续打信息
+        * @valueType object
+        * @usersModify 可修改
+        * @param ["JumpPrint","object","续打信息","","设置续打信息","是"]
+      */
+        // 返回的数据及释义:
+        // {
+        //     HasValidateInfo: 是否存在有效的信息;
+        //     Mode: 续打模式，包含Disable禁止续打、Normal常规续打模式, 鼠标定位选择续打位置、Offset整体偏移续打模式，鼠标定位偏移续打位置、 Append增量续打模式，程序设置续打的页数和位置，第一页不忽略标题行;
+        //     Enabled: 是否允许续打;
+        //     Page: 发生续打的页面对象;
+        //     PageIndex: 发生续打的页面号;
+        //     NativePosition: 原始续打位置;
+        //     Position: 实际使用的续打位置离续打页面顶端的距离;
+        //     StartPositionMode: 续打位置模式，包含Position由Position属性明确指定续打位置、ElementTop指定文档元素的顶端位置、ElementBottom指定文档元素的低端位置;
+        //     StartElement: 确定续打位置使用的文档元素对象。当StartPositionMode属性为ElementTop或ElementBottom时该属性才有效。
+        //     EndPositionMode: 续打位置模式，包含Position由Position属性明确指定续打位置、ElementTop指定文档元素的顶端位置、ElementBottom指定文档元素的低端位置;
+        //     EndElement: 确定续打位置使用的文档元素对象。当EndPositionMode属性为ElementTop或ElementBottom时该属性才有效。
+        //     AbsPosition: 续打的绝对位置;
+        //     NativeEndPosition: 原始续打结束位置, 如果小于等于Position值就无效;
+        //     EndPosition: 实际使用的续打结束位置离续打页面顶端的距离, 如果小于等于Position值就无效;
+        //     EndPageIndex: 续打结束位置处的页码;
+        // }
+        Object.defineProperty(rootElement, "JumpPrint", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_JumpPrint");
+                DCEventInterfaceLogFunction(rootElement, 'JumpPrint', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                this.__DCWriterReference.invokeMethod("set_JumpPrint", value);
+                DCEventInterfaceLogFunction(rootElement, 'set_JumpPrint', startTime, true);
+            }
+        });
+
+        /**
+         * @name JumpPrintEndPosition
+         * @type Property
+         * @classification print
+         * @apinameZh 续打结束位置
+         * @valueType number
+         * @usersModify 可修改
+         * @param ["JumpPrint","number","续打结束位置","","设置续打结束位置","是"]
+         */
+        Object.defineProperty(rootElement, "JumpPrintEndPosition", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_JumpPrintEndPosition");
+                DCEventInterfaceLogFunction(rootElement, 'JumpPrintEndPosition', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                this.__DCWriterReference.invokeMethod("set_JumpPrintEndPosition", value);
+                DCEventInterfaceLogFunction(rootElement, 'set_JumpPrintEndPosition', startTime, true);
+            }
+        });
+
+        /**
+         * @name JumpPrintPosition
+         * @type Property
+         * @classification print
+         * @apinameZh 续打位置
+         * @valueType number
+         * @usersModify 可修改
+         * @param ["JumpPrint","number","续打位置","","设置续打位置","是"]
+         */
+        Object.defineProperty(rootElement, "JumpPrintPosition", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_JumpPrintPosition");
+                DCEventInterfaceLogFunction(rootElement, 'JumpPrintPosition', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                this.__DCWriterReference.invokeMethod("set_JumpPrintPosition", value);
+                DCEventInterfaceLogFunction(rootElement, 'set_JumpPrintPosition', startTime, true);
+            }
+        });
+
+        /** 
+         * @name JumpPrintPositionForPrintPreview
+         * @type Property
+         * @classification print
+         * @apinameZh 获得打印预览时的续打位置
+         * @valueType number
+         * @usersModify 不可修改
+         */
+        Object.defineProperty(rootElement, "JumpPrintPositionForPrintPreview", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_JumpPrintPositionForPrintPreview");
+                DCEventInterfaceLogFunction(rootElement, 'JumpPrintPositionForPrintPreview', startTime, true);
+                return result;
             }
         });
 
@@ -2630,6 +3310,30 @@ export let WriterControl_API = {
             }
         });
 
+
+        /**
+       * @name ExtViewMode
+       * @type Property
+       * @classification print
+       * @apinameZh 获得控件的续打模式状态
+       * @valueType string
+       * @usersModify 可修改
+       * @param ["ExtViewMode","string","获得控件的续打模式状态","","设置获得控件的续打模式状态","是"]
+       */
+        Object.defineProperty(rootElement, "ExtViewMode", {
+            get() {
+                var startTime = new Date();
+                let result = this.__DCWriterReference.invokeMethod("get_ExtViewMode");
+                DCEventInterfaceLogFunction(rootElement, 'ExtViewMode', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                this.__DCWriterReference.invokeMethod("set_ExtViewMode", value);
+                DCEventInterfaceLogFunction(rootElement, 'set_ExtViewMode', startTime, true);
+            }
+        });
+
         /**
        * @name BodyText
        * @type Property
@@ -2725,6 +3429,11 @@ export let WriterControl_API = {
             var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
             if (IsOperateDOM) {
                 result = rootElement.__DCWriterReference.invokeMethod("ClearContent");
+
+                if (result) {
+                    rootElement.ClearOldVisibleElements();
+                }
+
                 DCEventInterfaceLogFunction(rootElement, 'ClearContent', startTime);
             }
             return result;
@@ -2849,17 +3558,14 @@ export let WriterControl_API = {
        */
         rootElement.Cut = function () {
             var startTime = new Date();
-            var datas = '';
-            var ref9 = rootElement.__DCWriterReference;
-            if (ref9 != null) {
-                datas = ref9.invokeMethod(
-                    "DoCut", false, false);
-                if (datas != null) {
-                    WriterControl_UI.SetClipboardData(datas, null, 'cut', rootElement);
-                    return;
-                }
-            }
+            //var datas = '';
+            //var ref9 = rootElement.__DCWriterReference;
+            //if (ref9 != null) {
+            //    datas = ref9.invokeMethod(
+            //        "DoCut", false, false);
+            //}
             //console.log(datas)
+            //WriterControl_UI.SetClipboardData(datas, null, 'cut', rootElement);
             //return rootElement.__DCWriterReference.invokeMethod("Cut", showUI);
             rootElement.ownerDocument.execCommand('cut');
             DCEventInterfaceLogFunction(rootElement, 'Cut', startTime);
@@ -2895,8 +3601,8 @@ export let WriterControl_API = {
             if (rootElement.__DCDisposed == true) {
                 return;// 控件已经被销毁了，无需重复操作。
             }
-            if (rootElement.parentNode != null) {
-                DCTools20221228.ConsoleWarring("南京都昌公司建议先从HTML-DOM中删除DIV元素{" + rootElement.id + "},然后调用它的Dispose()方法，不正确的调用次序容易导致错误。");
+            if (rootElement.ownerDocument != null) {
+                // DCTools20221228.ConsoleWarring("南京都昌公司建议先从HTML-DOM中删除DIV元素{" + rootElement.id + "},然后调用它的Dispose()方法，不正确的调用次序容易导致错误。");
             }
 
             var startTime = new Date();
@@ -2909,6 +3615,30 @@ export let WriterControl_API = {
                 rootElement.__DCWriterReference = null;
                 rootElement.resizeObserver.disconnect(rootElement);
             }
+
+            try {
+                // 移除所有 HTML 属性
+                rootElement.getAttributeNames().forEach((name) => {
+                    rootElement.removeAttribute(name);
+                });
+
+                // 删除挂在元素实例上的自有属性/方法（不可配置的会跳过）
+                Object.getOwnPropertyNames(rootElement).forEach((name) => {
+                    try {
+                        delete rootElement[name];
+                    } catch (err) {
+                        try {
+                            rootElement[k] = undefined;
+                        } catch (err) { }
+                    }
+                });
+                // 通过克隆替换移除所有 addEventListener 绑定
+                var cleanDiv = rootElement.cloneNode(false);
+                rootElement.parentNode.replaceChild(cleanDiv, rootElement);
+                document.WriterControl = cleanDiv;
+            } catch (err) { }
+
+            //console.log(rootElement)
             while (rootElement.firstChild != null) {
                 rootElement.removeChild(rootElement.firstChild);
             }
@@ -2953,8 +3683,9 @@ export let WriterControl_API = {
         rootElement.DocumentValueValidateWithCreateDocumentComments = function () {
             var startTime = new Date();
             let result = false;
+            var ReadViewMode = rootElement.ReadViewMode;//阅读模式
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-            if (IsPrintPreview === false) {
+            if (ReadViewMode === false && IsPrintPreview === false) {
                 result = rootElement.__DCWriterReference.invokeMethod("DocumentValueValidateWithCreateDocumentComments");
                 DCEventInterfaceLogFunction(rootElement, 'DocumentValueValidateWithCreateDocumentComments', startTime);
             }
@@ -2991,15 +3722,63 @@ export let WriterControl_API = {
             return result;
         };
 
+        /**
+        * @name FlashElement
+        * @type function
+        * @classification file
+        * @apinameZh 高亮度提示文档元素 
+        * @param ["ELEMENT","object","文档元素对象",null,"{DCSoft.Writer.Dom.XTextElement}文档元素对象",true]
+        * @param ["autoScroll","boolean","是否自动滚动",false,"",true]
+        */
+        rootElement.FlashElement = function (element, autoScroll) {
+            var startTime = new Date();
+            var strJson = null;
+            //自动滚动到闪烁位置
+            if (autoScroll) {
+                //为了获取rootElement.oldCaretOption位置。先把光标定位到元素上
+                rootElement.FocusElement(element);
+                var pageContainer = rootElement.querySelector('[dctype="page-container"]');
+                // //编辑器内部页面存在滚动
+                if (pageContainer && pageContainer.scrollHeight > pageContainer.clientHeight) {
+                    var oldCaretOption = rootElement.oldCaretOption;
+                    var pageContainerAllCanvas = pageContainer.querySelectorAll('canvas[dctype="page"]');
+                    if (pageContainerAllCanvas && pageContainerAllCanvas.length) {
+                        for (var i = 0; i < pageContainerAllCanvas.length; i++) {
+                            var itemCanvas = pageContainerAllCanvas[i];
+                            if (i == oldCaretOption.intPageIndex) {
+                                pageContainer.scrollTo(
+                                    {
+                                        left: 0,
+                                        top: itemCanvas.offsetTop + oldCaretOption.intDY - 10,
+                                        behavior: "instant"
+                                    });
+                            }
+                        }
+                    }
+                }
+            }
+            setTimeout(function () {
+                //闪烁视图
+                strJson = rootElement.__DCWriterReference.invokeMethod("GetFlashElementInfo", element, autoScroll);
+                if (strJson != null && strJson.length > 0) {
+                    var objJson = JSON.parse(strJson);
+                    // 根据JSON对象来闪烁指定区域
+                    WriterControl_UI.FlashArea(rootElement, objJson);
+                }
+            }, 100);
+
+            DCEventInterfaceLogFunction(rootElement, 'FlashElement', startTime);
+        };
 
         /**
          * @name Focus
          * @type function
          * @classification cursor
          * @apinameZh 编辑器控件获得输入焦点
+         * @param ["bolScrollToView","boolean","是否滚动视图","false","是否滚动视图",false]
          * @returns ["result","boolean","操作是否成功"]
          */
-        rootElement.Focus = function () {
+        rootElement.Focus = function (bolScrollToView = false) {
             var startTime = new Date();
             //处理在聚焦前把光标显示出来
             if (rootElement.oldCaretOption) {
@@ -3016,8 +3795,14 @@ export let WriterControl_API = {
                     "rootElement.Focus"
                 );
             }
-
             let result = rootElement.__DCWriterReference.invokeMethod("Focus");
+            // Focus接口添加bolScrollToView参数表示是否滚动视图到光标处【DUWRITER5_0-4423】
+            if (bolScrollToView === true) {
+                var txtArea = rootElement.querySelector('#txtEdit20221213');
+                if (txtArea && typeof txtArea.scrollIntoView === "function") {
+                    txtArea.scrollIntoView();
+                }
+            }
             DCEventInterfaceLogFunction(rootElement, 'Focus', startTime);
             return result;
         };
@@ -3202,12 +3987,14 @@ export let WriterControl_API = {
         * @apinameZh 获得参数是否有效
         * @param ["parameterName","string","参数名","","",true]
         * @returns ["result","boolean","是否有效"]
+        * @change ["2026-1-5","废弃该接口，底层已无功能支持","wyc" ]
         */
         rootElement.GetDocumentParameterEnabled = function (parameterName) {
-            var startTime = new Date();
-            let result = rootElement.__DCWriterReference.invokeMethod("GetDocumentParameterEnabled", parameterName);
-            DCEventInterfaceLogFunction(rootElement, 'GetDocumentParameterEnabled', startTime);
-            return result;
+            return false;
+            //var startTime = new Date();
+            //let result = rootElement.__DCWriterReference.invokeMethod("GetDocumentParameterEnabled", parameterName);
+            //DCEventInterfaceLogFunction(rootElement, 'GetDocumentParameterEnabled', startTime);
+            //return result;
         };
 
         /**
@@ -3748,6 +4535,9 @@ export let WriterControl_API = {
                     IsBase64String: true
                 };
                 result = WriterControl_IO.LoadDocumentFromString(args);
+                if (result) {
+                    rootElement.ClearOldVisibleElements();
+                }
                 DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromBase64String', startTime);
 
             }
@@ -3772,8 +4562,10 @@ export let WriterControl_API = {
             var result = false;
             //模式判断
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
             //当前存在其中一个模式，即不可修改dom，返回false
-            if (IsPrintPreview) {
+            if (IsPrintPreview || ExtViewMode || RectInfo) {
                 return false;
             }
 
@@ -3794,10 +4586,16 @@ export let WriterControl_API = {
             };
             WriterControl_IO.__LastXmlParserError = null;
             result = WriterControl_IO.LoadDocumentFromString(args);
+            delete args.Data;
+            args = null;
+            rootElement.ClearDocumentParameters();
             if (WriterControl_IO.__LastXmlParserError != null) {
                 if (typeof (errorCallback) == "function") {
                     errorCallback.call(rootElement, WriterControl_IO.__LastXmlParserError);
                 }
+            }
+            if (result) {
+                rootElement.ClearOldVisibleElements();
             }
             DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromString', startTime);
             return result;
@@ -3813,12 +4611,25 @@ export let WriterControl_API = {
         */
         rootElement.IsValidateXML = function (xmlContent) {
             var startTime = new Date();
-            const regex = /^<XTextDocument[\s\S]*<\/XTextDocument>$/;
-            if (regex.test(xmlContent)) {
+            // IsValidateXML方法校验xml文档先处理xmlContent前后的换行和空格【DUWRITER5_0-4741】
+            // 如果不是字符串类型，直接返回false
+            if (!xmlContent || typeof xmlContent !== "string") {
+                DCEventInterfaceLogFunction(rootElement, 'IsValidateXML', startTime);
+                return false;
+            }
+            xmlContent = xmlContent.trim();
+            // 移除可选的XML声明头（如 <?xml version="1.0" encoding="utf-8"?>），然后检查根元素
+            var xmlContentWithoutDeclaration = xmlContent.replace(/^\s*<\?xml[\s\S]*?\?>\s*/i, '');
+            //const regex = /^<XTextDocument[\s\S]*<\/XTextDocument>$/;
+            // regex.test(xmlContent)
+            if (xmlContentWithoutDeclaration.startsWith("<XTextDocument") && xmlContent.endsWith("<\/XTextDocument>")) {
+                // 创建副本用于校验，移除XML非法字符，不影响原始内容【DUWRITER5_0-4866】
+                var xmlContentForValidation = xmlContent.replace(/&#x0;/g, '');
+
                 //errorCode 0是xml正确，1是xml错误，2是无法验证
                 var xmlDoc, errorMessage, errorCode = 0;
                 var parser = new DOMParser();
-                xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+                xmlDoc = parser.parseFromString(xmlContentForValidation, "text/xml");
                 var error = xmlDoc.getElementsByTagName("parsererror");
                 if (error.length > 0) {
                     if (xmlDoc.documentElement.nodeName == "parsererror") {
@@ -4099,6 +4910,11 @@ export let WriterControl_API = {
          */
         rootElement.PrintCurrentPage = function () {
             var startTime = new Date();
+            var RectInfo = rootElement.RectInfo;//区域选择
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            if (RectInfo || ExtViewMode) {
+                return false;
+            }
             WriterControl_Print.Print(rootElement, { PrintRange: "CurrentPage" });
             //rootElement.__DCWriterReference.invokeMethod("PrintCurrentPage");
             DCEventInterfaceLogFunction(rootElement, 'PrintCurrentPage', startTime);
@@ -4224,8 +5040,7 @@ export let WriterControl_API = {
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
             if (IsPrintPreview) {
                 WriterControl_Print.PrintPreviewInvalidateAllView(rootElement);
-            }
-            else {
+            } else {
                 var startTime = new Date();
                 //wyc20230609:换个写法试试
                 rootElement.__DCWriterReference.invokeMethod("RefreshInnerView", false);
@@ -4266,7 +5081,9 @@ export let WriterControl_API = {
         rootElement.RejectUserTrace = function () {
             var startTime = new Date();
             var readonly = rootElement.Readonly;//只读
-            if (readonly ) {
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            if (readonly || ExtViewMode || RectInfo) {
                 //只读、续打、区域选择时禁用此接口
                 return false;
             }
@@ -4322,6 +5139,22 @@ export let WriterControl_API = {
             return result;
         };
 
+
+        /**
+        * @name InsertNurseTableByJson
+        * @type function
+        * @apinameZh 根据指定格式的JSON对象生成指定样式的护理记录单表格DUWRITER5_0-4706
+        * @classification file
+        * @param ["jsonParameter","object","对象参数","","对象参数",null]
+        * @returns ["result","boolean","操作是否成功"]
+        */
+        rootElement.InsertNurseTableByJson = function (jsonParameter) {
+            var startTime = new Date();
+            let result = rootElement.__DCWriterReference.invokeMethod("InsertNurseTableByJson", jsonParameter);
+            DCEventInterfaceLogFunction(rootElement, 'InsertNurseTableByJson', startTime);
+            return result;
+        };
+
         /**
         * @name SaveDocumentToBase64String
         * @type function
@@ -4335,14 +5168,25 @@ export let WriterControl_API = {
         */
         rootElement.SaveDocumentToBase64String = function (options, callBack) {
             var startTime = new Date();
-            if ((typeof (options) === "string" && options === 'pdf') || (options && options.FileFormat && options.FileFormat === 'pdf')) {
+            if ((typeof (options) === "string" && options.toLocaleLowerCase() === 'pdf') ||
+                (options && options.FileFormat && options.FileFormat.toLocaleLowerCase && options.FileFormat.toLocaleLowerCase() === 'pdf')) {
                 //wyc20230811:保存PDF的BASE64的功能改成走四代服务转发
-                var filecontent = rootElement.SaveDocumentToString();
-                var options = {
+                var param = "xml";
+                if (options !== null && typeof (options) === "object") {
+                    param = new Object();
+                    for (var k in options) {
+                        var ik = k.toLocaleLowerCase();
+                        if (ik !== "fileformat" && ik !== "savebase64string") {
+                            param[k] = options[k];
+                        }
+                    }
+                }
+                var filecontent = rootElement.SaveDocumentToString(param);
+                var opt = {
                     "files": [filecontent],
                     "resulttype": "Base64String"
                 };
-                let result = rootElement.GetPDFByFiles(options, callBack);
+                let result = rootElement.GetPDFByFiles(opt, callBack);
                 //let result = rootElement.GetPDFBySingleFiles(null, callBack);
                 DCEventInterfaceLogFunction(rootElement, 'SaveDocumentToBase64String', startTime);
                 return result;
@@ -4351,7 +5195,8 @@ export let WriterControl_API = {
                     //wyc20240408:绕过某些情况保存文档公式结果算不出来的问题DUWRITER5_0-2230
                     || (options == null && callBack == null)
                 ) {
-                    var content = rootElement.__DCWriterReference.invokeMethod("SaveDocumentToBase64String", options);
+                    var content = DCTools20221228.GetResultUTF8String(
+                        rootElement.__DCWriterReference.invokeMethod("SaveDocumentToBase64String", options));
                     content = content.replace('PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4K', '');
                     DCEventInterfaceLogFunction(rootElement, 'SaveDocumentToBase64String', startTime);
                     return content;
@@ -4397,9 +5242,9 @@ export let WriterControl_API = {
             //var tick = new Date().valueOf();
             var content = null;
             if (options && options == 'text') {
-                content = DCTools20221228.UnPackageStringValue(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToText", textOptions));
+                content = DCTools20221228.GetResultUTF8String(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToText", textOptions));
             } else {
-                content = DCTools20221228.UnPackageStringValue(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", options));
+                content = DCTools20221228.GetResultUTF8String(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", options));
             }
             if (options && (options == 'text' || options == 'json' || (typeof options.FileFormat == 'string' && options.FileFormat.toLowerCase() == 'json'))) {
                 //判断json解析是否报错
@@ -4430,6 +5275,7 @@ export let WriterControl_API = {
                     }
                 }
             }
+
             /** 保存的格式字符串 */
             var FileFormatStr = null; // 初始化变量，避免未定义风险;
             if (typeof options === "string") {
@@ -4463,6 +5309,60 @@ export let WriterControl_API = {
             }
             DCEventInterfaceLogFunction(rootElement, 'SaveDocumentToString', startTime);
             return content;
+        };
+
+        /**
+        * @name ValidateContainerWithCreateComments
+        * @type function
+        * @classification file
+        * @apinameZh 对容器元素校验并创建批注
+        * @param ["container","object","容器元素","","容器元素的ID、NativeHandle或.NET引用对象 或容器元素对象数组",true]
+        * @returns ["result","boolean","操作是否成功"]
+        */
+        rootElement.ValidateContainerWithCreateComments = function (container) {
+            var startTime = new Date();
+            var content = null;
+            if (DCTools20221228.IsDotnetReferenceElement(container) === true) {
+                content = rootElement.__DCWriterReference.invokeMethod("ValidateContainerWithCreateComments2", container);
+            }
+            else {
+                content = rootElement.__DCWriterReference.invokeMethod("ValidateContainerWithCreateComments", container);
+            }
+            DCEventInterfaceLogFunction(rootElement, 'ValidateContainerWithCreateComments', startTime);
+            return content;
+        };
+
+        /**
+        * @name SaveContainerToTextString
+        * @type function
+        * @classification file
+        * @apinameZh 获得文档的长图片数据
+        * @param ["container","object","容器元素","","容器元素的ID、NativeHandle或.NET引用对象",true]
+        * @returns ["result","boolean","操作是否成功"]
+        */
+        rootElement.SaveContainerToTextString = function (container, textOptions) {
+            var startTime = new Date();
+            var content = null;
+            if (DCTools20221228.IsDotnetReferenceElement(container) === true) {
+                content = rootElement.__DCWriterReference.invokeMethod("SaveContainerToTextString2", container, textOptions);
+            }
+            else {
+                content = rootElement.__DCWriterReference.invokeMethod("SaveContainerToTextString", container, textOptions);
+            }
+            DCEventInterfaceLogFunction(rootElement, 'SaveContainerToTextString', startTime);
+            return content;
+        };
+
+        /**
+        * @name GetLongImageData
+        * @type function
+        * @classification file
+        * @apinameZh 获得文档的长图片数据
+        * @param ["callBack","function","回调函数","","返回的参数是base64类型",true]
+        * @returns ["result","boolean","操作是否成功"]
+        */
+        rootElement.GetLongImageData = function (callBack) {
+            return WriterControl_IO.GetLongImageData(rootElement, callBack);
         };
 
         /**
@@ -4644,7 +5544,7 @@ export let WriterControl_API = {
 
                         }
                     }
-                } else if (typeof (Value) === "object") {
+                } else if (typeof (Value) === "object" && Value !== null) {
 
                     //单个对象时，将Value中的换行标签<br/>替换为\n
                     Object.keys(Value).forEach(function (key) {
@@ -4671,7 +5571,7 @@ export let WriterControl_API = {
                 isflag = rootElement.__DCWriterReference.invokeMethod("SetDocumentParameterValue", name, Value);
                 DCEventInterfaceLogFunction(rootElement, 'SetDocumentParameterValue', startTime);
             } else {
-                console.log("SetDocumentParameterValue参数格式有误，请检查");
+                console.warn("SetDocumentParameterValue参数格式有误，请检查");
             }
 
             return isflag;
@@ -4831,6 +5731,7 @@ export let WriterControl_API = {
         * @returns ["result","boolean","操作是否成功"]
         * @change ["2024-9-9","后台新增撤销操作","wyc" ]
         * @change ["2024-12-2","增加了一个参数isFocusContainer","lixinyu" ]
+        * @change ["2025-5-28","改进前端传参的兼容性","wyc" ]
         */
         rootElement.SetElementTextByID = function (id, text, isAddTraces = false, isFocusContainer = true) {
             var startTime = new Date();
@@ -4839,10 +5740,23 @@ export let WriterControl_API = {
                 //阅读、预览、续打、区域选择，只读时不能使用此接口
                 return false;
             }
+            if (typeof (text) === "number") {
+                text = text.toString();
+            }
             if (text && text.length) {
                 text = text.replace(/<br\s*\/?>|<\/br>/gi, "\n");
                 //console.log(text);
             }
+            //if (typeof (text) === "string") {
+            //    text = text.replace(/<br\s*\/?>|<\/br>/gi, "\n");
+            //    //console.log(text);
+            //}
+            //else if (typeof (text) === "boolean" || typeof (text) === "number") {
+            //    text = text.toString();
+            //}
+            //else {
+            //    text = null;
+            //}
             let result = false;
             //wyc20230724添加判断：
             if (DCTools20221228.IsDotnetReferenceElement(id) === true) {
@@ -4863,6 +5777,7 @@ export let WriterControl_API = {
         * @param ["id","string","文档元素编号","","元素编号或元素的后台.NET引用对象",true]
         * @param ["visible","boolean","可见性","","",true]
         * @returns ["result","boolean","操作是否成功"]
+        * @change ["2025-06-20","提升参数的兼容性","wyc" ]
         */
         rootElement.SetElementVisible = function (id, visible) {
             var startTime = new Date();
@@ -4872,7 +5787,13 @@ export let WriterControl_API = {
                 //阅读、预览、续打、区域选择，只读时不能使用此接口
                 return false;
             }
-            let result = rootElement.__DCWriterReference.invokeMethod("SetElementVisible", id, visible);
+            let result = false;
+            if (DCTools20221228.IsDotnetReferenceElement(id) === true) {
+                result = rootElement.__DCWriterReference.invokeMethod("SetElementVisible2", id, visible);
+            }
+            else {
+                result = rootElement.__DCWriterReference.invokeMethod("SetElementVisible", id, visible);
+            }
             DCEventInterfaceLogFunction(rootElement, 'SetElementVisible', startTime);
             return result;
         };
@@ -4982,7 +5903,12 @@ export let WriterControl_API = {
         rootElement.ShowAboutDialog = function (flag = true) {
             var startTime = new Date();
             var result = null;
-            result = rootElement.__DCWriterReference.invokeMethod("ShowAboutDialog", flag);
+            result = rootElement.__DCWriterReference.invokeMethod("ShowAboutDialog", false);
+
+            if (flag) {
+                //弹出关于对话框
+                WriterControl_Dialog.AboutMessageDialog(result, rootElement);
+            }
             DCEventInterfaceLogFunction(rootElement, 'ShowAboutDialog', startTime);
             return result;
         };
@@ -5119,6 +6045,22 @@ export let WriterControl_API = {
             }
             DCEventInterfaceLogFunction(rootElement, 'WriteDataFromDataSourceToDocument', startTime);
             return result;
+        };
+
+        /**
+        * @name WriteDataFromDataSourceToDocument2
+        * @type function
+        * @classification datasource
+        * @apinameZh 将JSON对象格式的数据源写入到文档中，不用老版本的XML转换
+        * @param ["dataset","object","绑定的数据集JSON对象","","",true]
+        * @param ["root","object","需要绑定父容器的ID/NativeHandle，为空则绑定全文档","","",true]
+        * @param ["columnBindingNewPage","boolean","横向绑定时新增表格是否另起一页","","",true]
+        */
+        rootElement.WriteDataFromDataSourceToDocument2 = function (dataset, root = null, columnBindingNewPage = true) {
+            var startTime = new Date();
+            rootElement.__DCWriterReference.invokeMethod("WriteDataFromDataSourceToDocument2", dataset, root, columnBindingNewPage);
+            DCEventInterfaceLogFunction(rootElement, 'WriteDataFromDataSourceToDocument2', startTime);
+            return;
         };
 
         /**
@@ -5286,6 +6228,83 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'DocumentGridLineDialog', startTime);
         };
 
+        /**
+        * @name SetDocumentWatermark
+        * @type function
+        * @apinameZh 设置文档水印
+        * @classification editformat
+        * @param ["gridLineInfo","object","文档水印","","",true]
+        */
+        rootElement.SetDocumentWatermark = function (gridLineInfo) {
+            var startTime = new Date();
+            gridLineInfo = WriterControl_Dialog.checkWaterValue(gridLineInfo);
+            if (gridLineInfo == null) {
+                return false;
+            }
+            //处理格式，保证后台不会报错
+            rootElement.__DCWriterReference.invokeMethod("SetDocumentWatermark", gridLineInfo);
+            WriterControl_Paint.UpdateViewForWaterMark(rootElement);
+            DCEventInterfaceLogFunction(rootElement, 'SetDocumentWatermark', startTime);
+
+        };
+
+        /**
+        * @name GetDocumentWatermark
+        * @type function
+        * @apinameZh 获取文档水印
+        * @classification editformat
+        * @returns ["result","boolean","文档水印数据"]
+        */
+        rootElement.GetDocumentWatermark = function () {
+            var startTime = new Date();
+            let result = rootElement.__DCWriterReference.invokeMethod("GetDocumentWatermark");
+            DCEventInterfaceLogFunction(rootElement, 'GetDocumentWatermark', startTime);
+            return result;
+        };
+
+        /**
+        * @name SetDocumentTerminalText
+        * @type function
+        * @apinameZh 设置文档空白占位文本信息
+        * @classification editformat
+        * @param ["terminalTextInfo","object","文档空白占位文本信息","","",true]
+        */
+        rootElement.SetDocumentTerminalText = function (terminalTextInfo) {
+            var startTime = new Date();
+            if (terminalTextInfo == null) {
+                return false;
+            }
+            rootElement.__DCWriterReference.invokeMethod("SetDocumentTerminalText", terminalTextInfo);
+            DCEventInterfaceLogFunction(rootElement, 'SetDocumentTerminalText', startTime);
+            return true;
+        };
+
+        /**
+       * @name GetDocumentTerminalText
+       * @type function
+       * @apinameZh 获取文档空白占位文本信息
+       * @classification editformat
+       * @returns ["result","json","获取文档空白占位文本信息"]
+       */
+        rootElement.GetDocumentTerminalText = function () {
+            var startTime = new Date();
+            let result = rootElement.__DCWriterReference.invokeMethod("GetDocumentTerminalText");
+            DCEventInterfaceLogFunction(rootElement, 'GetDocumentTerminalText', startTime);
+            return result;
+        };
+
+        /**
+       * @name WatermarkDialog
+       * @type function
+       * @apinameZh 打开水印弹框
+       * @classification editformat
+       * @param ["options","object","水印参数","","",true]
+       */
+        rootElement.WatermarkDialog = function (options) {
+            var startTime = new Date();
+            WriterControl_Dialog.WatermarkDialog(options, rootElement);
+            DCEventInterfaceLogFunction(rootElement, 'WatermarkDialog', startTime);
+        };
 
         /**
         * @name CheckboxAndRadioDialog
@@ -5419,6 +6438,20 @@ export let WriterControl_API = {
 
         };
 
+        /**
+        * @name BorderPatternDialog
+        * @type function
+        * @apinameZh 打开边框和底纹属性对话框
+        * @classification structuralelement
+        * @param ["options","object","边框和底纹属性","","",true]
+        */
+        rootElement.BorderPatternDialog = function (options) {
+            var startTime = new Date();
+            WriterControl_Dialog.BorderPatternDialog(options, rootElement);
+            DCEventInterfaceLogFunction(rootElement, 'BorderPatternDialog', startTime);
+
+        };
+
         // （20240507 lxy 与售后确认过）以下医学表达式的接口在实际使用场景中都是使用ctl.DCExecuteCommand("insertmedicalexpression", true, options);
         // 所以暂时关闭以下弹框接口 
         /**
@@ -5533,8 +6566,25 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'formModeDialog', startTime);
         };
 
+        /**
+         * @name contentProtectedModeDialog
+         * @type function
+         * @apinameZh 打开内容保护模式对话框
+         * @classification structuralelement
+         * @param ["options","object","内容保护模式","","",true]
+         */
+        rootElement.contentProtectedModeDialog = function (options) {
+            var startTime = new Date();
+            var IsOperateDOM = DCGetAllowOperateDOM(rootElement);
+            if (IsOperateDOM === false) {
+                //阅读、预览、续打、区域选择，只读时不能使用此接口
+                return false;
+            }
+            WriterControl_Dialog.contentProtectedModeDialog(options, rootElement);
+            DCEventInterfaceLogFunction(rootElement, 'contentProtectedModeDialog', startTime);
+        };
 
-         /**
+        /**
          * @name paragraphDialog
          * @type function
          * @apinameZh 打开段落对话框
@@ -5816,8 +6866,10 @@ export let WriterControl_API = {
         rootElement.AppendSubDocuments = function (subDocumentOption) {
             var startTime = new Date();
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
             //当前存在其中一个模式，即不可修改dom，返回false
-            if (IsPrintPreview) {
+            if (IsPrintPreview || ExtViewMode || RectInfo) {
                 return false;
             }
 
@@ -6015,7 +7067,7 @@ export let WriterControl_API = {
                 var callBack2 = function (base64str) {
                     base64s.push(base64str);
                     sum = sum + 1;
-                    console.log(sum);
+                    // console.log(sum);
                     if (sum == totalsum && typeof (callBack) === "function") {
                         callBack.call(rootElement, base64s);
                     }
@@ -6227,8 +7279,7 @@ export let WriterControl_API = {
         rootElement.SelectionHtml2 = function (containHeaderFooter) {
             var startTime = new Date();
 
-            var hasselection = rootElement.__DCWriterReference.invokeMethod(
-                "HasSelection");
+            var hasselection = rootElement.__DCWriterReference.invokeMethod("HasSelection");
             if (hasselection !== true) {
                 return null;
             }
@@ -6256,6 +7307,8 @@ export let WriterControl_API = {
                 element.style.width = result.Width + "px";
                 element.style.height = result.Height + "px";
                 element.style.overflow = "hidden";
+                element.style.pageBreakAfter = "always";
+                element.style.pageBreakInside = "avoid";
                 element.setAttribute("width", result.Width + "px");
                 element.setAttribute("height", result.Height + "px");
                 element.innerHTML = result.SVGS[i].toString();
@@ -6422,7 +7475,9 @@ export let WriterControl_API = {
         rootElement.ClearAllUserTrace = function () {
             var startTime = new Date();
             var readonly = rootElement.Readonly;//只读
-            if (readonly ) {
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            if (readonly || ExtViewMode || RectInfo) {
                 //只读、续打、区域选择时禁用此接口
                 return false;
             }
@@ -6455,7 +7510,9 @@ export let WriterControl_API = {
         rootElement.CommitUserTrace = function () {
             var startTime = new Date();
             var readonly = rootElement.Readonly;//只读
-            if (readonly) {
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            if (readonly || ExtViewMode || RectInfo) {
                 //只读、续打、区域选择时禁用此接口
                 return false;
             }
@@ -6471,6 +7528,12 @@ export let WriterControl_API = {
         */
         rootElement.CleanViewMode = function () {
             var startTime = new Date();
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            if (ExtViewMode || RectInfo) {
+                //续打、区域选择时禁用此接口
+                return false;
+            }
             rootElement.ExecuteCommand("CleanViewMode", false, null);
             //rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", 'CleanViewMode', false, null);
             DCEventInterfaceLogFunction(rootElement, 'CleanViewMode', startTime);
@@ -6635,7 +7698,8 @@ export let WriterControl_API = {
                 case "spechars":
                     var pattern = /<(.*)>.*<\/\1>|<(.*) \/>|<(.*)\/>/;
                     if (pattern.test(Parameter)) {
-                        alert(window.__DCSR.SpecharsHasHtml);
+                        // alert(window.__DCSR.SpecharsHasHtml);                        
+                        return rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", 'InsertHtml', false, Parameter);
                     }
                     return rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", 'Spechars', bolShowUI, Parameter);
                     break;
@@ -6669,7 +7733,7 @@ export let WriterControl_API = {
                     var file = rootElement.ownerDocument.createElement('input');
                     file.setAttribute('id', 'dcInputFile');
                     file.setAttribute('type', 'file');
-                    file.setAttribute('accept', '.xml');
+                    file.setAttribute('accept', '.xml,.json,.rtf,.html,.htm,.odt,.ofd');
                     file.style.cssText = 'position: relative;left: -2000px; ';
                     rootElement.appendChild(file);
                     file.click();
@@ -6710,6 +7774,14 @@ export let WriterControl_API = {
                                     return;
                                 } else {
                                     WriterControl_Event.RaiseControlEvent(rootElement, "EventAfterDocumentDraw");
+                                }
+                                ////表示为文档正常加载
+                                //if (result === true) {
+                                //    rootElement.RefreshDocument();
+                                //}
+
+                                if (result) {
+                                    rootElement.ClearOldVisibleElements();
                                 }
                                 // 添加FileOpen后的回调函数【DUWRITER5_0-2744】
                                 if (!!callback && typeof (callback) === "function") {
@@ -6764,10 +7836,10 @@ export let WriterControl_API = {
                     result && (rootElement.Modified = true);
                     return result;
                     break;
-                //case "fontborder":
-                //    //字符边框
-                //    return rootElement.__DCWriterReference.invokeMethod("Fontborder");
-                //    break;
+                case "fontborder":
+                    //字符边框
+                    return rootElement.__DCWriterReference.invokeMethod("Fontborder");
+                    break;
                 case "documentvaluevalidatewithcreatedocumentcomments":
                     //批注式文档校验                    
                     return rootElement.__DCWriterReference.invokeMethod("DocumentValueValidateWithCreateDocumentComments");
@@ -6775,6 +7847,7 @@ export let WriterControl_API = {
                 case "filenew":
                     //新建的方法
                     rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", strCommandName, bolShowUI, Parameter);
+                    return WriterControl_Paint.UpdateViewForWaterMark(rootElement);
                     break;
                 case "insertmediaelement":
                     ////在此处处理视频文件是为了写入视频id保证能正常的获取和删除
@@ -6852,6 +7925,9 @@ export let WriterControl_API = {
                             case "tablecolumnproperties":
                                 WriterControl_Dialog.tableColumnDialog(Parameter, rootElement, true);
                                 break;
+                            case "tablecolumnwidthproperties":
+                                WriterControl_Dialog.tableColumnWidthDialog(Parameter, rootElement, true);
+                                break;
                             case "tablecellproperties":
                                 WriterControl_Dialog.tableCellDialog(Parameter, rootElement, true);
                                 break;
@@ -6869,7 +7945,21 @@ export let WriterControl_API = {
                                 WriterControl_Dialog.insertTableDialog(Parameter, rootElement, true, callback);
                                 break;
 
+                            case "formviewmode":
+                                //阅读、预览、续打、区域选择都不能使用
+                                if (IsOperateDOM) {
+                                    //表单模式
+                                    WriterControl_Dialog.formModeDialog(Parameter, rootElement, false);
+                                }
+                                break;
 
+                            case "contentprotect":
+                                //阅读、预览、续打、区域选择都不能使用
+                                if (IsOperateDOM) {
+                                    //内容保护
+                                    WriterControl_Dialog.contentProtectedModeDialog(Parameter, rootElement, false);
+                                }
+                                break;
                             case "insertcheckboxorradio":
                                 WriterControl_Dialog.InsertMultipleCheckBoxOrRadioDialog(Parameter, rootElement);
                                 break;
@@ -6992,6 +8082,22 @@ export let WriterControl_API = {
                                         WriterControl_Dialog.CheckboxAndRadioDialog(element, rootElement, ele);
                                         return true;
                                     }
+                                    if (typename == "xtextnewbarcodeelement") {
+                                        WriterControl_Dialog.BarCodeDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtexttdbarcodeelement") {
+                                        WriterControl_Dialog.QRCodeDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtextlabelelement") {
+                                        WriterControl_Dialog.LabelDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtexthorizontallineelement") {
+                                        WriterControl_Dialog.HorizontalLineDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
                                     if (typename == "xtextimageelement") {
                                         WriterControl_Dialog.ImageDialog(element, rootElement, ele);
                                         return true;
@@ -7000,8 +8106,41 @@ export let WriterControl_API = {
                                         WriterControl_Dialog.PageNumberDialog(element, rootElement, false, ele);
                                         return true;
                                     }
+                                    if (typename == "xtextbuttonelement") {
+                                        WriterControl_Dialog.ButtonDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtextnewmedicalexpressionelement") {
+                                        //右键属性，弹出医学表达式属性对话框
+                                        WriterControl_Dialog.MedicalExpressionDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtextmediaelement") {
+                                        WriterControl_Dialog.MediaDialog(element, rootElement, ele);
+                                        return true;
+                                    }
+                                    if (typename == "xtextcontrolhostelement") {
+                                        WriterControl_Dialog.InsertControlHostDialog(element, rootElement, false, ele);
+                                        return true;
+                                    }
                                 }
                                 return false;
+                            case "normalviewmode":
+                                WriterControl_Paint.RemoveAllPageElements(rootElement);
+                                var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "NormalViewMode", bolShowUI, Parameter);
+                                var pagelayoutmode = rootElement.getAttribute("pagelayoutmode");
+                                if (!pagelayoutmode || pagelayoutmode.trim().toLowerCase() != "singlecolumn") {
+                                    // 先判断当前是否为单栏展示
+                                    var bolNormalViewMode = rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode");
+                                    if (bolNormalViewMode) {
+                                        // 普通视图模式下设置为单栏展示【DUWRITER5_0-4585】
+                                        WriterControl_UI.EditorSetPageLayoutMode(rootElement, "SingleColumn");
+                                    }
+                                }
+                                return result;
+                            case "pageviewmode":
+                                WriterControl_Paint.RemoveAllPageElements(rootElement);
+                                return rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "PageViewMode", bolShowUI, Parameter);
                             //转成大写
                             case "touppercase":
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "touppercase", bolShowUI, Parameter);
@@ -7021,11 +8160,40 @@ export let WriterControl_API = {
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "insertorderedlist", false, Parameter);
                                 return result;
                                 break;
+                            //插入图表
+                            case "insertchartelement":
+                                if (!Parameter) {
+                                    return false;
+                                }
+                                var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "insertchartelement", false, Parameter);
+                                return result;
+                                break;
+
+                            //插入html
+                            case "inserthtml":
+                                if (!Parameter) {
+                                    return false;
+                                }
+                                var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "inserthtml", false, Parameter);
+                                return result;
+                                break;
                             case "printbackcolor"://打印背景色
                                 WriterControl_Dialog.PrintBackColorDialog(Parameter, rootElement, true);
                                 break;
                             case "printcolor"://打印字体色
                                 WriterControl_Dialog.PrintColorDialog(Parameter, rootElement, true);
+                                break;
+                            //插入ControlHost
+                            case "insertcontrolhost":
+                                WriterControl_Dialog.InsertControlHostDialog(Parameter, rootElement, true);
+                                return result;
+                            //插入目录
+                            case "insertdirectoryfield":
+                                WriterControl_Dialog.InsertDirectoryFieldDialog(Parameter, rootElement);
+                                break;
+                            //边框和底纹
+                            case "borderbackgroundformat":
+                                WriterControl_Dialog.BorderPatternDialog(Parameter, rootElement);
                                 break;
                             default:
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", strCommandName, bolShowUI, Parameter);
@@ -7038,6 +8206,17 @@ export let WriterControl_API = {
                     } else {
                         //此处为需要改用ExecuteCommand的接口
                         switch (strCommandName.toLocaleLowerCase()) {
+                            case "charactercircle":
+                                rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", strCommandName, bolShowUI, Parameter);
+                                break;
+                            case "contentprotect":
+                                rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", strCommandName, bolShowUI, Parameter);
+                                break;
+                            case "deletecomment":
+                                var result = rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", "deletecomment", bolShowUI, Parameter);
+                                Boolean(result) && (rootElement.Modified = true);
+                                return result;
+                                break;
                             //当前表格前插入回车
                             case "insertparagraphbeforetable":
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "insertparagraphbeforetable", bolShowUI, Parameter);
@@ -7070,6 +8249,15 @@ export let WriterControl_API = {
                                 break;
                             case "colorforfieldtextcolor"://设置选中文本字体颜色，包括输入域的字体颜色
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", strCommandName, bolShowUI, Parameter);
+                                break;
+                            case "formviewmode":
+                                if (rootElement.FormView() == Parameter) {
+                                    return Parameter;
+                                }
+
+                                var result = rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", strCommandName, false, Parameter);
+                                rootElement.DocumentOptions.BehaviorOptions.FormView = result;
+                                rootElement.ApplyDocumentOptions();//更改选项的值
                                 break;
                             case "inserttable":
                             case "insertcheckboxorradio":
@@ -7145,6 +8333,15 @@ export let WriterControl_API = {
                                 };
                                 rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", strCommandName, bolShowUI, Parameter);
                                 break;
+                            case "insertlabelelement":
+                                var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "insertlabelelement", bolShowUI, Parameter);
+                                return result;
+                                break;
+                                break;
+                            case "insertlabel":
+                                var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "insertlabelelement", bolShowUI, Parameter);
+                                return result;
+                                break;
                             case "printbackcolor"://打印背景色
                                 var result = rootElement.__DCWriterReference.invokeMethod("ExecuteCommand", "printbackcolor", bolShowUI, Parameter);
                                 return result;
@@ -7166,6 +8363,29 @@ export let WriterControl_API = {
                                 }
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", strCommandName, bolShowUI, Parameter);
                                 return result;
+                            case "tablecolumnwidthproperties":
+                                if (!Parameter) {
+                                    return false;
+                                }
+                                var CurrentTableColumn = rootElement.CurrentTableColumn();
+                                if (CurrentTableColumn) {
+                                    var cells = rootElement.GetSelectTableCells();
+                                    if (cells && cells.length && cells.length > 1) {
+                                        //批量设置表格列宽度
+                                        var table = rootElement.GetElementProperties(rootElement.CurrentTable());
+                                        const result = cells.map(item => ({ ColIndex: item.ColIndex }));
+                                        const uniqueArr = [...new Set(result.map(item => item.ColIndex))].map(value => ({ ColIndex: value }));
+                                        uniqueArr.forEach(colindex => {
+                                            rootElement.SetElementProperties(table.Columns[colindex.ColIndex], { Width: Parameter });
+                                        });
+                                    } else {
+                                        //单个设置表格列宽度
+                                        rootElement.SetElementProperties(CurrentTableColumn, { Width: Parameter });
+                                    }
+
+
+                                }
+                                break;
                             default:
                                 var result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", strCommandName, bolShowUI, Parameter);
                                 if (cmdNamesForRefreshOptions.indexOf(strCommandName) >= 0) {
@@ -7222,45 +8442,32 @@ export let WriterControl_API = {
          * @param ["callback","string","错误的回调函数","","",true]
          */
         rootElement.ManuallyLoadingfonts = function (callBack) {
-            var strUrl = `${window.strBasePath}?wasmres=fonts/simsun_old.ttf&ver=${window.strAppVersion}&flag=261861&wasmrootpath=${decodeURIComponent(window.strBasePath)}`;
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", strUrl, true);
-            xhr.responseType = "blob";
-            xhr.onload = function () {
-                if (this.status == 200) {
-                    // 操作成功
-                    try {
-                        var blob = this.response;
-                        DCTools20221228.blobToArrayBuffer(blob, buffer => {
-                            var buffer2 = new Uint8Array(buffer);
-                            DotNet.invokeMethod(
-                                window.DCWriterEntryPointAssemblyName,
-                                "SetFontFileContent",
-                                "宋体",
-                                "宋体",
-                                buffer2);
-                        });
-                    } catch (err) {
-                        callBack(err, strUrl, errorEvent);
-                    }
-                }
+            // 构造宋体字体任务对象
+            const fontTask = {
+                FileName: "simsun_old.ttf",
+                Name: "宋体",
+                KeyValue: "宋体"
             };
-            xhr.onerror = function (err) {
-                callBack(err, strUrl, errorEvent);
-            };
-            xhr.send();
-
+            // 错误事件处理函数（用于错误回调）
             function errorEvent(blob) {
                 DCTools20221228.blobToArrayBuffer(blob, buffer => {
-                    var buffer2 = new Uint8Array(buffer);
-                    DotNet.invokeMethod(
-                        window.DCWriterEntryPointAssemblyName,
-                        "SetFontFileContent",
+                    const buffer2 = new Uint8Array(buffer);
+                    DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "SetFontFileContent",
                         "宋体",
                         "宋体",
                         buffer2);
                 });
             }
+            // 执行下一个任务的回调函数
+            // 参数为 true 表示失败，需要调用错误回调
+            function ExecuteNextTask(isError) {
+                if (isError === true && typeof callBack === "function") {
+                    const strUrl = DCTools20221228.GetResourceUrl("fonts/" + fontTask.FileName);
+                    callBack(new Error("字体下载失败"), strUrl, errorEvent);
+                }
+            }
+            // 使用统一的字体下载方法
+            WriterControl_Print.DownloadSingleFontFile(rootElement, fontTask, ExecuteNextTask);
         };
 
         /**
@@ -7278,7 +8485,7 @@ export let WriterControl_API = {
             var startTime = new Date();
             let result = null;
             if (element === null) {
-                console.log("GetElementProperties:element为空");
+                // console.warn("GetElementProperties:element为空");
                 //debugger;
                 DCEventInterfaceLogFunction(rootElement, 'GetElementProperties', startTime);
                 return null;
@@ -7322,7 +8529,8 @@ export let WriterControl_API = {
             var startTime = new Date();
             let result = false;
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-            if (IsPrintPreview) {
+            var ReadViewMode = rootElement.ReadViewMode;//阅读模式
+            if (IsPrintPreview || ReadViewMode) {
                 return result;
             }
             if (DCTools20221228.IsDotnetReferenceElement(element) === true) {
@@ -7363,7 +8571,9 @@ export let WriterControl_API = {
             }
             if (opt != null) {
                 ReturnBase64FromSrc(opt, function (opt) {
-                    result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "InsertImage", false, opt);
+                    // 如果是只有一个对象的数组，就传入对象，不传入数组
+                    const finalOpt = Array.isArray(opt) && opt.length === 1 ? opt[0] : opt;
+                    result = rootElement.__DCWriterReference.invokeMethod("DCExecuteCommand", "InsertImage", false, finalOpt);
                 });
             }
             if (typeof (callback) == "function") {
@@ -7392,6 +8602,7 @@ export let WriterControl_API = {
                                 let height = opt[i].height || 120;
                                 var img = new Image();
                                 img.src = opt[i].Src;
+                                opt[i].Source = img.src;//需要补充记录属性到图片里
                                 //是否需要保持长宽比
                                 if (opt && opt.KeepWidthHeightRate) {
                                     let aspectRatio = img.width / img.height;
@@ -7427,12 +8638,14 @@ export let WriterControl_API = {
                 if (opt.Src && new RegExp('^http|https*').test(opt.Src)) {
                     var img = new Image();
                     img.src = opt.Src;
+                    opt.Source = img.src;
                     img.setAttribute('crossorigin', 'anonymous');
                     img.onload = function () {
                         var canvas = rootElement.ownerDocument.createElement('canvas');
                         canvas.width = img.width;
                         canvas.height = img.height;
                         canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+                        opt.Source = opt.Src;//需要补充记录属性到图片里
                         opt.Src = canvas.toDataURL('image/png');
                         canvas.remove();
                         callback(opt);
@@ -7457,17 +8670,40 @@ export let WriterControl_API = {
         };
 
         /**
+         * @name InsertCommentByElement
+         * @type function
+         * @apinameZh 对指定的元素添加批注
+         * @classification structuralelement
+         * @param ["commentInfo","object","批注信息","","",true]
+         * @returns ["result","boolean","操作是否成功"]
+         */
+        rootElement.InsertCommentByElement = function (commentInfo, element) {
+            var startTime = new Date();
+            var IsOperateDOM = DCGetAllowOperateDOM(rootElement);
+            var readonly = rootElement.Readonly;
+            if (IsOperateDOM === false || readonly) {
+                //阅读、预览、续打、区域选择，只读时不能使用此接口
+                return false;
+            }
+            let result = rootElement.__DCWriterReference.invokeMethod("InsertCommentByElement", commentInfo, element);
+            DCEventInterfaceLogFunction(rootElement, 'InsertCommentByElement', startTime);
+            return result;
+        };
+
+
+        /**
          * @name NewComment
          * @type function
          * @apinameZh 兼容四代插入批注
          * @classification structuralelement
          * @param ["commentInfo","object","批注信息","","",true]
          * @returns ["result","boolean","操作是否成功"]
+         * @change ["2025-09-02","修复DUWRITER5_0-4757","wyc" ]
          */
         rootElement.NewComment = function (commentInfo) {
             var startTime = new Date();
             var IsOperateDOM = DCGetAllowOperateDOM(rootElement);
-            var readonly = rootElement.Readonly;
+            var readonly = rootElement.Readonly === true && rootElement.DocumentOptions.BehaviorOptions.CommentEditableWhenReadonly === false;
             if (IsOperateDOM === false || readonly) {
                 //阅读、预览、续打、区域选择，只读时不能使用此接口
                 return false;
@@ -7885,8 +9121,9 @@ export let WriterControl_API = {
             var startTime = new Date();
             var IsOperateDOM = DCGetAllowOperateDOM(rootElement);
             var readonly = rootElement.Readonly;//只读
+            var formView = rootElement.FormView();
             //阅读、预览、续打、区域选择，只读，表单模式下都不能修改dom
-            if (IsOperateDOM && (readonly === false) ) {
+            if (IsOperateDOM && (readonly === false) && (formView === 'Disable')) {
                 rootElement.__DCWriterReference.invokeMethod("ClearDocumentBody");
                 DCEventInterfaceLogFunction(rootElement, 'ClearDocumentBody', startTime);
             }
@@ -7901,7 +9138,9 @@ export let WriterControl_API = {
         rootElement.CommitDocumentUserTrace = function () {
             var startTime = new Date();
             var readonly = rootElement.Readonly;//只读
-            if (readonly) {
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            if (readonly || ExtViewMode || RectInfo) {
                 //只读、续打、区域选择时禁用此接口
                 return false;
             }
@@ -8054,23 +9293,23 @@ export let WriterControl_API = {
             }
         };
 
-       // /**
-       //* @name DCPaste
-       //* @type function
-       //* @apinameZh 执行粘贴操作
-       //* @classification editformat
-       //* @returns ["result","boolean","操作是否成功"]
-       //*/
-       // rootElement.DCPaste = function () {
-       //     var startTime = new Date();
-       //     var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
-       //     if (IsOperateDOM) {
-       //         let result = rootElement.__DCWriterReference.invokeMethod("DCPaste");
-       //         DCEventInterfaceLogFunction(rootElement, 'DCPaste', startTime);
-       //         return result;
-       //     }
-       //     return false;
-       // };
+        /**
+       * @name DCPaste
+       * @type function
+       * @apinameZh 执行粘贴操作
+       * @classification editformat
+       * @returns ["result","boolean","操作是否成功"]
+       */
+        rootElement.DCPaste = function () {
+            var startTime = new Date();
+            var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
+            if (IsOperateDOM) {
+                let result = rootElement.__DCWriterReference.invokeMethod("DCPaste");
+                DCEventInterfaceLogFunction(rootElement, 'DCPaste', startTime);
+                return result;
+            }
+            return false;
+        };
 
         /**
        * @name GetElementTextByID
@@ -8082,6 +9321,7 @@ export let WriterControl_API = {
        * @returns ["result","boolean","操作是否成功"]
        * @describe 该接口支持参数 document.WriterControl.GetElementTextByID('txtAge', {SpecifyParent: 'subdocid', IncludeBackgroundText: false, IncludeBorderText: false, IncludeHiddenText: false, IncludeLabelUnitText: false, IncludeLogicDeletedContent: false });，IncludeBackgroundText表示是否包含背景文字，IncludeBorderText是否保存边框文字，IncludeHiddenText是否包含隐藏的文本，IncludeLabelUnitText是否包含单位文本，IncludeLogicDeletedContent是否包含逻辑删除内容
        * @change ["2024-5-6","扩展options参数支持指定查找元素的父容器","wyc" ]
+       * @change ["2025-9-12","输出图片元素时输出ALT属性为文本","wyc" ]
        */
         rootElement.GetElementTextByID = function (id, options) {
             var startTime = new Date();
@@ -8111,9 +9351,10 @@ export let WriterControl_API = {
         * @param ["excludeHiddenElement2","Boolean","是否排除隐藏元素","","",true]
         * @param ["specifyRootElement","string","指定位置如：body，header，footer","","",true]
         * @param ["nestNode","string","nestNode","","",true]
+        * @param ["lessPropMode","boolean","精简输出的属性","","",false]
         * @returns ["result","boolean","操作是否成功"]
         */
-        rootElement.GetAllInputFields = function (excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode) {
+        rootElement.GetAllInputFields = function (excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode, lessPropMode) {
             var startTime = new Date();
             if (typeof (specifyRootElement) === "string") {
                 var str = specifyRootElement.toLowerCase();
@@ -8127,9 +9368,9 @@ export let WriterControl_API = {
             }
             var result = null;
             if (DCTools20221228.IsDotnetReferenceElement(specifyRootElement) === true) {
-                result = rootElement.__DCWriterReference.invokeMethod("GetAllInputFields", excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode);
+                result = rootElement.__DCWriterReference.invokeMethod("GetAllInputFields", excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode, lessPropMode);
             } else {
-                result = rootElement.__DCWriterReference.invokeMethod("GetAllInputFields2", excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode);
+                result = rootElement.__DCWriterReference.invokeMethod("GetAllInputFields2", excludeReadonly2, excludeHiddenElement2, specifyRootElement, nestNode, lessPropMode);
             }
             DCEventInterfaceLogFunction(rootElement, 'GetAllInputFields', startTime);
             return result;
@@ -8284,6 +9525,45 @@ export let WriterControl_API = {
             return result;
         };
 
+        /**
+         * @name GetDocumentUserTrackInfos
+         * @type function
+         * @apinameZh 获取痕迹列表信息
+         * @classification vestige
+         * @param ["parameter","boolean","是否是清洁模式","","",true]
+         * @returns ["result","Array","列表"]
+         */
+        rootElement.GetDocumentUserTrackInfos = function (parameter) {
+            var startTime = new Date();
+
+            let isClearMode = false;
+            if (parameter == null) {
+                isClearMode = false;//非清洁模式
+            }
+            else if (parameter == "true" || parameter == true) {
+                isClearMode = true;//清洁模式
+            }
+            else if (parameter === "false" || parameter === false) {
+                isClearMode = false;//非清洁模式
+            }
+            else {
+                isClearMode = false;//非清洁模式
+            }
+            var list = rootElement.__DCWriterReference.invokeMethod("GetDocumentUserTrackInfos", isClearMode);
+            if (list != null && list.length > 0) {
+                for (var iCount = 0; iCount < list.length; iCount++) {
+                    var item = list[iCount];
+                    item.Focus = function () {
+                        if (typeof (item.NativeHandle) == "number") {
+                            rootElement.__DCWriterReference.invokeMethod("FocusElementByNativeHandle", item.NativeHandle);
+                        }
+                    };
+                }
+            }
+            DCEventInterfaceLogFunction(rootElement, 'GetDocumentUserTrackInfos', startTime);
+
+            return list;
+        };
 
         /**
          * @name NavigateByUserTrackInfo
@@ -8295,8 +9575,9 @@ export let WriterControl_API = {
          */
         rootElement.NavigateByUserTrackInfo = function (handle) {
             var startTime = new Date();
+            var ReadViewMode = rootElement.ReadViewMode;//阅读模式
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-            if (IsPrintPreview) {
+            if (ReadViewMode || IsPrintPreview) {
                 //阅读预览模式下禁止调用
                 return false;
             }
@@ -8477,8 +9758,18 @@ export let WriterControl_API = {
             var readonly = rootElement.Readonly;//只读
             //阅读、预览、续打、区域选择，只读都不能修改dom
             if (IsOperateDOM && (readonly === false)) {
+                var formView = rootElement.FormView();
                 var CurrentElement = rootElement.CurrentElement();
                 // 表单模式下仅允许给输入域赋值
+                if (formView !== 'Disable') {
+                    if (CurrentElement) {
+                        var properties = rootElement.GetElementProperties(rootElement.CurrentElement());
+                        if (properties.TypeName && properties.TypeName === "XTextInputFieldElement") {
+                            result = rootElement.__DCWriterReference.invokeMethod("insertXmlString", parameter);
+                        }
+                    }
+                    return result;
+                }
                 result = rootElement.__DCWriterReference.invokeMethod("insertXmlString", parameter);
             }
             DCEventInterfaceLogFunction(rootElement, 'InsertXmlString', startTime);
@@ -8501,6 +9792,18 @@ export let WriterControl_API = {
             var result = false;
             //阅读、预览、续打、区域选择，只读都不能插入XML
             if (IsOperateDOM && (readonly === false)) {
+                var formView = rootElement.FormView();
+                var CurrentElement = rootElement.CurrentElement();
+                // 表单模式下仅允许给输入域赋值
+                if (formView !== 'Disable') {
+                    if (CurrentElement) {
+                        var properties = rootElement.GetElementProperties(rootElement.CurrentElement());
+                        if (properties.TypeName && properties.TypeName === "XTextInputFieldElement") {
+                            result = rootElement.__DCWriterReference.invokeMethod("InsertXmlBase64String", parameter);
+                        }
+                    }
+                    return result;
+                }
                 result = rootElement.__DCWriterReference.invokeMethod("InsertXmlBase64String", parameter);
             }
             DCEventInterfaceLogFunction(rootElement, 'InsertXmlBase64String', startTime);
@@ -8543,7 +9846,8 @@ export let WriterControl_API = {
         rootElement.SaveToOFD = function (options, callBack) {
             var startTime = new Date();
             var strFileName = (options && options.filename != null) ? options.filename : startTime.toString();
-            var documentxml = rootElement.__DCWriterReference.invokeMethod("PrepareXmlForSavingToOFD", options);
+            var documentxml = DCTools20221228.GetResultUTF8String(
+                rootElement.__DCWriterReference.invokeMethod("PrepareXmlForSavingToOFD", options));
             if (documentxml == null) {
                 return false;
             }
@@ -8597,6 +9901,7 @@ export let WriterControl_API = {
                 WriterControl_Rule.InvalidateView(rootElement, "vrule");
                 WriterControl_Paint.InvalidateAllView(rootElement);
                 tick = new Date().valueOf() - tick;
+                WriterControl_Paint.UpdateViewForWaterMark(rootElement);
                 DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromMixString', startTime);
             }
             return false;
@@ -8877,6 +10182,37 @@ export let WriterControl_API = {
             result = rootElement.__DCWriterReference.invokeMethod("Search", options);
             DCEventInterfaceLogFunction(rootElement, 'Search', startTime);
             //}
+            if (rootElement.ReadViewMode || rootElement.Readonly) {
+                // 在阅读模式或者只读模式下搜索滚动视图到当前选中内容【DUWRITER5_0-4510】
+                if (typeof result == "number" && result > -1) {
+                    var pageContainer = rootElement.querySelector('[dctype="page-container"]');
+                    // 编辑器内部页面存在滚动
+                    if (pageContainer && pageContainer.scrollHeight > pageContainer.clientHeight) {
+                        // 获取当前元素的属性 TopInOwnerPage  OwnerPageIndex
+                        var CurrentEl = rootElement.CurrentElement("XTextCharElement");
+                        var CurrentElProps = rootElement.GetElementProperties(CurrentEl);
+                        var allCanvas = pageContainer.querySelectorAll('canvas[dctype="page"]');
+                        if (CurrentElProps && typeof CurrentElProps.OwnerPageIndex == "number") {
+                            // 修复放大倍数影响定位病程【DUWRITER5_0-3017】
+                            var ZoomRate = rootElement.GetZoomRate();
+                            var thisPage = allCanvas[CurrentElProps.OwnerPageIndex];
+                            if (thisPage) {
+                                var topInOwnerPage = parseFloat((CurrentElProps.TopInOwnerPage / 300 * 96.00001209449 * ZoomRate).toFixed(2));
+                                var leftInOwnerPage = parseFloat((CurrentElProps.LeftInOwnerPage / 300 * 96.00001209449 * ZoomRate).toFixed(2));
+                                // 修复普通视图模式下搜索定位问题【DUWRITER5_0-4629】
+                                var bolNormalViewMode = rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode");
+                                if (bolNormalViewMode && CurrentElProps.OwnerPageIndex > 0) {
+                                    var HeaderNode = rootElement.DocumentHeader;
+                                    var HeaderNodeProps = rootElement.GetElementProperties(HeaderNode);
+                                    var TopInOwnerPageNotHeader = CurrentElProps.TopInOwnerPage - (HeaderNodeProps.TopInOwnerPage + HeaderNodeProps.Height);
+                                    topInOwnerPage = parseFloat((TopInOwnerPageNotHeader / 300 * 96.00001209449 * ZoomRate).toFixed(2));
+                                }
+                                pageContainer.scrollTo(thisPage.offsetLeft + leftInOwnerPage, thisPage.offsetTop + topInOwnerPage);
+                            }
+                        }
+                    }
+                }
+            }
             return result;
         };
 
@@ -8983,7 +10319,14 @@ export let WriterControl_API = {
             var startTime = new Date();
             var result = false;
             var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
-            if (IsOperateDOM) {
+            var ReadViewMode = rootElement.ReadViewMode;
+            if (IsOperateDOM || (IsOperateDOM == false && ReadViewMode)) {
+                if (!(typeof options === 'object' && options !== null && !Array.isArray(options))) {
+                    options = {};
+                }
+                if (typeof (options.SearchID) != "boolean") {
+                    options.SearchID = ReadViewMode || rootElement.Readonly;
+                }
                 result = WriterControl_Dialog.SearchAndReplaceDialog(options, rootElement);
                 DCEventInterfaceLogFunction(rootElement, 'SearchAndReplaceDialog', startTime);
             }
@@ -9064,6 +10407,41 @@ export let WriterControl_API = {
                 result = rootElement.__DCWriterReference.invokeMethod("SetFieldDropListItemByValue", id, valuestring);
             }
             DCEventInterfaceLogFunction(rootElement, 'SetFieldDropListItemByValue', startTime);
+            return result;
+        };
+
+        /**
+         * @name FormView
+         * @type function
+         * @classification file
+         * @apinameZh 获取当前的表单模式类型
+         */
+        rootElement.FormView = function () {
+            var startTime = new Date();
+            var result = false;
+            var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//阅读、预览、续打、区域选择时，不能修改dom
+            if (IsOperateDOM) {
+                result = rootElement.__DCWriterReference.invokeMethod("FormView");
+            }
+            DCEventInterfaceLogFunction(rootElement, 'FormView', startTime);
+            return result;
+        };
+
+        /**
+        * @name ProtectType
+        * @type function
+        * @apinameZh 当前内容保护状态
+        * @classification file
+        * @returns ["result","string","内容保护状态"]
+        */
+        rootElement.ProtectType = function () {
+            var startTime = new Date();
+            var result = false;
+            var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//阅读、预览、续打、区域选择时，不能修改dom
+            if (IsOperateDOM) {
+                result = rootElement.__DCWriterReference.invokeMethod("ProtectType");
+            }
+            DCEventInterfaceLogFunction(rootElement, 'ProtectType', startTime);
             return result;
         };
 
@@ -9402,13 +10780,18 @@ export let WriterControl_API = {
                 //阅读、预览、续打、区域选择，只读时不能使用此接口
                 return false;
             }
-
-            //wyc20230727:直接转发需求
-            var opt = {
-                Visible: visible
-            };
             var startTime = new Date();
-            let result = rootElement.SetElementProperties(element, opt);
+            if (DCTools20221228.IsDotnetReferenceElement(element) === false &&
+                typeof (element) === "object" && element.NativeHandle) {
+                element = element.NativeHandle;
+            }
+            let result = rootElement.SetElementVisible(element, visible);
+
+            ////wyc20230727:直接转发需求
+            //var opt = {
+            //    Visible: visible
+            //};
+            //let result = rootElement.SetElementProperties(element, opt);
             DCEventInterfaceLogFunction(rootElement, 'SetElementVisibility', startTime);
             return result;
             //return rootElement.__DCWriterReference.invokeMethod("SetElementVisibility", element, visible);
@@ -9530,12 +10913,16 @@ export let WriterControl_API = {
             var asycinvoke = false;
             var downloadstr = "false";
             var forceblack = "false";
+            var forcetransparentbackground = "false";
             if (options != null && options.resulttype === "DownloadFile") {
                 //asycinvoke = false;
                 downloadstr = "true";
             }
             if (options != null && options.forceblacktextcolor === true || options.forceblacktextcolor === "true") {
                 forceblack = "true";
+            }
+            if (options != null && options.forcetransparentbackcolor === true || options.forcetransparentbackcolor === "true") {
+                forcetransparentbackground = "true";
             }
             var strServicePageUrl = DCTools20221228.GetServicePageUrl(rootElement);
             if (strServicePageUrl == null || strServicePageUrl.length == 0) {
@@ -9545,6 +10932,7 @@ export let WriterControl_API = {
             // 此处对应的服务器代码在 DCWriterForASPNET\Writer\Controls\Web\WC_WASM.cs
             var strUrl = strServicePageUrl + "?wasm=getpdfbyfiles&dcbid2022=" + DCTools20221228.GetClientID() +
                 "&forceblack=" + forceblack +
+                "&forcetransparentbackground=" + forcetransparentbackground +
                 "&downloadstr=" + downloadstr;
 
             var postData = rootElement.__DCWriterReference.invokeMethod("InnerGetPDFByFilesData", options);
@@ -9624,6 +11012,16 @@ export let WriterControl_API = {
                 return false;
             }
             var resultInfo = resultobj.Coordinates;
+
+            if (Array.isArray(resultobj.CheckedUnsupportedFontNames) === true &&
+                resultobj.CheckedUnsupportedFontNames.length > 0) {
+                console.log("本地生成PDF失败，需要下载的字体:" + resultobj.CheckedUnsupportedFontNames);
+                if (typeof rootElement.EventOfPDFFontDownloadError == "function") {
+                    rootElement.EventOfPDFFontDownloadError("本地生成PDF失败，需要下载的字体:" + resultobj.CheckedUnsupportedFontNames);
+                }
+                //return false;
+            }
+
             var postData = resultobj.Files;
             var callBack2 = null;
             var fileName = options.filename;
@@ -9637,7 +11035,6 @@ export let WriterControl_API = {
                         })
                         .catch((error) => {
                             console.error(error);
-                            resultstr = false;
                         });
                 };
             }
@@ -9926,6 +11323,9 @@ export let WriterControl_API = {
         * @change ["2024-1-26","补充图片处理流程","wyc" ]
         * @change ["2024-06-03","添加参数支持合并前分别绑定数据","wyc"]
         * @change ["2024-09-13","添加UnifiedHeaderFooterFile参数对所有合并文档提供统一的页眉页脚","wyc"]
+        * @change ["2025-10-13","改进处理大文档的性能","yyf"]
+        * @change ["2025-11-7","补充前端设置UseClassAttributes生成精简版HTML","wyc"]
+        * @change ["2026-1-27","从非首页生成HTML时会从后台多生成一页再在前端删除","wyc"]
         * @describe 参数同GetPrintPreviewHTML，但直接从五代获取HTML不再需要连接四代服务，必须使用callBack接收处理后的HTML否则会有内容缺失问题
         */
         rootElement.GetPrintPreviewHTML2 = function (options, callBack) {
@@ -9934,7 +11334,22 @@ export let WriterControl_API = {
             var IsOperateDOM = DCGetAllowOperateDOM(rootElement);//判断是否可用操作dom
             //wyc20240718: 获取打印预览HTML这一块不会修改文档DOM，不需要此判断
             //if (IsOperateDOM){
-            result = rootElement.__DCWriterReference.invokeMethod("InnerGetPrintPreviewHtmlData2", options);
+            result = DCTools20221228.GetResultUTF8String(
+                rootElement.__DCWriterReference.invokeMethod("InnerGetPrintPreviewHtmlData2", options));
+
+            //wyc20260127:检测到后台特殊标记则将预览HTML的首页删除
+            const solidword = "$needdeletefirstpage$";
+            if (result.startsWith(solidword) === true) {
+                result = result.slice(solidword.length)
+                var divv = document.createElement("div");
+                divv.innerHTML = result;
+                var pages = divv.querySelectorAll(".dcpageforprint");
+                if (pages != null && pages.length > 0) {
+                    pages[0].parentElement.removeChild(pages[0]);
+                    result = divv.innerHTML;
+                }
+            }
+            
             WriterControl_Paint.ApplyBitmapContentHtmlSrc(result, function (strResultHtml) {
                 if (typeof (callBack) == "function") {
                     callBack.call(rootElement, strResultHtml);
@@ -9992,11 +11407,13 @@ export let WriterControl_API = {
         * @classification file
         * @apinameZh 兼容四代接口，保存文档的正文
         * @param ["fileFormat","string","数据格式","","",true]
+        * @param ["textOptions","object","保存文本的参数","","",true]
         * @returns ["result","string","保存文档的正文"]
         */
-        rootElement.SaveBodyDocumentToString = function (fileFormat) {
+        rootElement.SaveBodyDocumentToString = function (fileFormat, textOptions = null) {
             var startTime = new Date();
-            let result = rootElement.__DCWriterReference.invokeMethod("SaveBodyDocumentToString", fileFormat);
+            let result = DCTools20221228.GetResultUTF8String(
+                rootElement.__DCWriterReference.invokeMethod("SaveBodyDocumentToString", fileFormat, textOptions));
             DCEventInterfaceLogFunction(rootElement, 'SaveBodyDocumentToString', startTime);
             return result;
         };
@@ -10070,7 +11487,8 @@ export let WriterControl_API = {
         */
         rootElement.SaveDocumentToStringAsync = function (fileFormat) {
             var startTime = new Date();
-            let result = DCTools20221228.UnPackageStringValue(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", fileFormat));
+            let result = DCTools20221228.GetResultUTF8String(
+                rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", fileFormat));
             WriterControl_Task.AddCallbackForCompletedAllTasks(function () {
                 WriterControl_Event.RaiseControlEvent(rootElement, "EventAfterSaveDocumentToStringAsync", result);
             });
@@ -10822,17 +12240,34 @@ export let WriterControl_API = {
          * @param ["newText","string","文本","","",true]
          * @returns ["result","boolean","操作是否成功"]
          */
-        rootElement.SetTableCellTextExtByHandle = function (cell, newText) {
+        rootElement.SetTableCellTextExtByHandle = function (cell, newText, checkPermission = false) {
             var startTime = new Date();
             var result = false;
             if (typeof (cell) == "number") {
-                var result = rootElement.__DCWriterReference.invokeMethod("SetTableCellTextExtByHandle", cell, newText);
+                var result = rootElement.__DCWriterReference.invokeMethod("SetTableCellTextExtByHandle", cell, newText, checkPermission);
                 DCEventInterfaceLogFunction(rootElement, 'SetTableCellTextExtByHandle', startTime);
                 return result;
             }
             else {
                 return false;
             }
+        };
+
+
+        /**
+         * @name1 SetTableCellSlantTextExtByHandle
+         * @type function
+         * @apinameZh 以类似 '2<SplitLine>/</SplitLine>4'固定格式的文本对单元格进行对角线赋值
+         * @classification table
+         * @param ["cell","number","单元格NativeHandle","","",true]
+         * @param ["newText","string","文本","","",true]
+         * @returns ["result","boolean","操作是否成功"]
+         */
+        rootElement.SetTableCellSlantTextExtByHandle = function (cell, newText, checkPermission = false, isRefresh = false) {
+            var startTime = new Date();
+            var result = rootElement.__DCWriterReference.invokeMethod("SetTableCellSlantTextExtByHandle", cell, newText, checkPermission, isRefresh);
+            DCEventInterfaceLogFunction(rootElement, 'SetTableCellSlantTextExtByHandle', startTime);
+            return result;
         };
 
         /**
@@ -11149,6 +12584,13 @@ export let WriterControl_API = {
        */
         rootElement.FocusTableRow = function (color) {
             var startTime = new Date();
+
+            var readonly = rootElement.Readonly;
+            if (readonly) {
+                //阅读、预览、续打、区域选择，只读时不能使用此接口
+                return false;
+            }
+
             var row = rootElement.CurrentTableRow();
             if (!row) {
                 return;
@@ -11226,14 +12668,18 @@ export let WriterControl_API = {
         //     CommitUserTrace:
         //     AppendSubDocuments:
         //     LoadFromUrl:
+        //     LoadFromUrl:
+        //     RemoveBlankLines:
         // }
         rootElement.LoadDocumentFromString2 = function (options) {
             rootElement.CheckDisposed();
 
             //20240428 lixinyu 加载文档接口在预览、续打、区域选择时禁止调用(DUWRITER5_0-2400)
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
             //当前存在其中一个模式，即不可修改dom，返回false
-            if (IsPrintPreview) {
+            if (IsPrintPreview || ExtViewMode || RectInfo) {
                 return false;
             }
 
@@ -11251,7 +12697,44 @@ export let WriterControl_API = {
                 xhr.send();
             }
             var result = rootElement.__DCWriterReference.invokeMethod("LoadDocumentFromString2", options);
+            if (result) {
+                rootElement.ClearOldVisibleElements();
+                //[DUWRITER5_0-3617] 20240919 lxy js调用LoadDocumentFromString2后，需要重新绘制一遍水印
+                WriterControl_Paint.UpdateViewForWaterMark(rootElement);
+            }
+
             DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromString2', startTime);
+            return result;
+        };
+
+        /**
+         * @name LoadDocumentFromGoBroadHTMLStringWithMetaData
+         * @classification file
+         * @type function
+         * @apinameZh 加载高博特定的HTML文档
+         * @param ["strHtmlData","string","高博特定HTML文档字符串","","",true]
+         * @param ["metaDatas","object","加载高博特定HTML文档所需的元数据数组对象","","",true]
+         * @returns ["result","object","操作是否成功"]
+         * @change ["2026-1-12","创建接口","wyc" ]
+         */
+        rootElement.LoadDocumentFromGoBroadHTMLStringWithMetaData = function (strHtmlData, metaDatas) {
+            rootElement.CheckDisposed();
+
+            //20240428 lixinyu 加载文档接口在预览、续打、区域选择时禁止调用(DUWRITER5_0-2400)
+            var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
+            var ExtViewMode = ['Normal', 0].indexOf(rootElement.ExtViewMode) == -1;//续打模式
+            var RectInfo = rootElement.RectInfo;//区域选择
+            //当前存在其中一个模式，即不可修改dom，返回false
+            if (IsPrintPreview || ExtViewMode || RectInfo) {
+                return false;
+            }
+
+            var startTime = new Date();
+            var result = rootElement.__DCWriterReference.invokeMethod("LoadDocumentFromGoBroadHTMLStringWithMetaData", strHtmlData, metaDatas);
+            if (result && result.Succeed === true) {
+                rootElement.RefreshDocument();
+            }
+            DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromGoBroadHTMLStringWithMetaData', startTime);
             return result;
         };
 
@@ -11278,7 +12761,7 @@ export let WriterControl_API = {
                         { WriterControl: rootElement, Data: strXml });
                 }
                 else {
-                    throw windows.__DCSR.PromptNotDCWriterOFD;
+                    throw window.__DCSR.PromptNotDCWriterOFD;
                 }
                 DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromBinary', startTime);
                 return bolResult2;
@@ -11286,6 +12769,11 @@ export let WriterControl_API = {
             var result = rootElement.__DCWriterReference.invokeMethod("LoadDocumentFromBinary", bsContent, strFormat);
             WriterControl_Rule.InvalidateView(rootElement, "hrule");
             WriterControl_Rule.InvalidateView(rootElement, "vrule");
+
+            if (result) {
+                rootElement.ClearOldVisibleElements();
+            }
+
             DCEventInterfaceLogFunction(rootElement, 'LoadDocumentFromBinary', startTime);
             return result;
         };
@@ -11429,6 +12917,250 @@ export let WriterControl_API = {
             result = rootElement.__DCWriterReference.invokeMethod("GetElementCoordinateByID", ids, ispreviewmode, specifyxml);
             DCEventInterfaceLogFunction(rootElement, 'GetElementCoordinateByID', startTime);
             return result;
+        };
+
+        /**
+        * @name GetDocumentSpecifyPageImages
+        * @type function
+        * @apinameZh 兼容四代获取指定页码的图片数据
+        * @classification structuralelement
+        * @param ["options","object","获取参数属性","","json格式包含两个参数：ShowMarginLine是否显示页面编辑线；SpecifyPageIndexes指定的页码数",true]
+        * @param ["callBack","function","回调函数","","用于接收接口返回的base64字符串",true]
+        * @param ["required","Function","成功获得数据后的回调函数","","回调函数参数是一个字符串数组，为图片格式的数据",true]
+        */
+        rootElement.GetDocumentSpecifyPageImages = function (options, callBack) {
+            var startTime = new Date();
+            var bsData = rootElement.__DCWriterReference.invokeMethod("GetDocumentSpecifyPageImages", options);
+            if (bsData != null && bsData.length > 10) {
+                var reader = new DCBinaryReader(bsData);
+                var totalPageCount = reader.ReadInt16();
+                var cavas = rootElement.ownerDocument.createElement("CANVAS");
+                var imgDatas = new Array();
+                var outputPageCount = 0;
+                function DrawOnePage() {
+                    var bsPage = reader.ReadByteArray();
+                    if (bsPage != null && bsPage.length > 0) {
+                        var pageReader = new DCBinaryReader(bsPage);
+                        if (pageReader.ReadByte() != 133) {
+                            // 文件头不对
+                            return;
+                        }
+                        var pageWidth = pageReader.ReadInt16();
+                        var pageHeight = pageReader.ReadInt16();
+                        cavas.width = pageWidth;
+                        cavas.height = pageHeight;
+                        var ctx = cavas.getContext("2d");
+                        ctx.clearRect(0, 0, pageWidth, pageHeight);
+                        ctx.resetTransform();
+                        if (typeof (ctx.reset) == "function") {
+                            ctx.reset();
+                        }
+                        var drawer = new PageContentDrawer(cavas, pageReader);
+                        drawer.EventSource = "GetDocumentSpecifyPageImages";
+                        drawer.EventAfterDraw = function () {
+                            outputPageCount++;
+                            var strData = cavas.toDataURL("image/png", 1);
+                            imgDatas.push(strData);
+                            if (outputPageCount == totalPageCount) {
+                                callBack && callBack(imgDatas);
+                            }
+                            else {
+                                DrawOnePage();
+                            }
+                        };
+                        drawer.AddToTask();
+                    }
+                }
+                DrawOnePage();
+            }
+            DCEventInterfaceLogFunction(rootElement, 'GetDocumentSpecifyPageImages', startTime);
+        };
+
+        /**
+         * @name PrintAsImage
+         * @type function
+         * @apinameZh 获取指定页码的打印下图片数据
+         * @classification print
+         * @param ["pageArr","array","页码数组","","需要获取的页码数组成的数组(为空值时返回所有)",true]
+         * @param ["callBack","function","回调函数","","用于接收接口返回的base64字符串",true]
+         */
+        rootElement.PrintAsImage = function (pageArr, callBack) {
+            if (WriterControl_Task.__Tasks && WriterControl_Task.__Tasks.length > 0) {
+                WriterControl_Task.AddCallbackForCompletedAllTasks(function () {
+                    rootElement.PrintAsImage(pageArr, callBack);
+                });
+                return;
+            }
+
+            var startTime = new Date();
+            var options = null;
+            if (pageArr) {
+                if (Array.isArray(pageArr)) {
+                    pageArr = pageArr.join(',');
+                }
+                options = {
+                    PrintRange: "SomePages",
+                    SpecifyPageIndexs: pageArr,
+                    CleanMode: true
+                };
+            }
+            var printImageScale = rootElement.getAttribute("printimagescale");
+            printImageScale = printImageScale ? parseFloat(printImageScale) : 1;
+            try {
+                // 获取到是否为续打模式
+                var jumpPrint = rootElement.JumpPrint;
+                var oldJumpPrintPosition = 0;
+                var oldJumpPrintEndPosition = 0;
+                if (jumpPrint.Mode == "Normal") {
+                    oldJumpPrintPosition = rootElement.JumpPrintPosition;
+                    oldJumpPrintEndPosition = rootElement.JumpPrintEndPosition;
+                    rootElement.JumpPrintPosition = 0;
+                    rootElement.JumpPrintEndPosition = 0;
+                }
+                // 修复目前svg生成图片失效的问题【DUWRITER5_0-3802】
+                var strCode = rootElement.__DCWriterReference.invokeMethod("GetPageIndexWidthHeightForPrint", true, options, false);
+                if (strCode) {
+                    var datas = JSON.parse(strCode);
+                    var imgDatas = [];
+                    var loadedImages = 0;
+                    for (var iCount = 0; iCount < datas.length; iCount++) {
+                        var pageInfo = datas[iCount];
+                        var element = rootElement.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+                        element.style.pageBreakAfter = "always";
+                        element.style.pageBreakInside = "avoid";
+                        element.setAttribute("width", pageInfo.Width * printImageScale + "px");
+                        element.setAttribute("height", pageInfo.Height * printImageScale + "px");
+                        element.setAttribute("viewBox", "0 0 " + pageInfo.Width + " " + pageInfo.Height);
+                        // 存储当前页面的索引
+                        element.Index = iCount;
+                        element.PageIndex = pageInfo.PageIndex;
+                        WriterControl_Print.InnerDrawOnePage(element, false, rootElement);
+                        svgToImage(element, function (dataURL, svgElement) {
+                            loadedImages++;
+                            imgDatas[svgElement.Index] = dataURL;
+                            svgElement.remove();
+                            // 等待所有图片都转好
+                            if (loadedImages == datas.length) {
+                                // 转成图片
+                                if (!!callBack && typeof (callBack) == "function") {
+                                    callBack(imgDatas);
+                                }
+                                imgDatas = null;
+                            }
+                        });
+                    }// for
+                }
+                if (jumpPrint.Mode == "Normal") {
+                    if (oldJumpPrintPosition) {
+                        rootElement.JumpPrintPosition = oldJumpPrintPosition;
+                    }
+                    if (oldJumpPrintEndPosition) {
+                        rootElement.JumpPrintEndPosition = oldJumpPrintEndPosition;
+                    }
+                }
+                if (rootElement.IsPrintPreview() == false) {
+                    // 打印先渲染页面展示，再进行打印【DUWRITER5_0-3379】
+                    rootElement.__DCWriterReference.invokeMethod("RefreshViewAfterPrint", true);
+                }
+            } catch (error) {
+                console.log(error);
+            }
+            function svgToImage(svgElement, callback) {
+                // 将SVG元素转换为字符串
+                var serializer = new XMLSerializer();
+                var svgString = serializer.serializeToString(svgElement);
+
+                // 使用DOMParser来确保SVG格式正确，并添加命名空间
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(svgString, "image/svg+xml");
+                var svgWithNS = doc.documentElement;
+
+                // 将SVG字符串转换为Blob对象
+                var blob = new Blob([svgWithNS.outerHTML], { type: "image/svg+xml;charset=utf-8" });
+
+                // 创建一个URL对象指向该Blob对象
+                var url = URL.createObjectURL(blob);
+
+                // 创建一个Image对象并加载该URL
+                var img = new Image();
+                img.onload = function () {
+                    // 将图片绘制到canvas上
+                    var canvas = document.createElement("canvas");
+                    var ctx = canvas.getContext("2d");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    // 将canvas转换为图片
+                    var dataURL = canvas.toDataURL("image/png");
+
+                    // 调用回调函数，传递生成的图片
+                    callback(dataURL, svgElement);
+                };
+                img.src = url;
+            }
+
+            // //获取所有的canvas
+            // var strCode = rootElement.__DCWriterReference.invokeMethod(
+            //     "GetPageIndexWidthHeightForPrint",
+            //     true,
+            //     options,
+            //     false);
+            // try {
+            //     var datas = JSON.parse(strCode);
+            //     if (datas && Array.isArray(datas)) {
+            //         var allCanvas = [];
+            //         var imgDatas = [];
+            //         //修改ZoomRate
+            //         var oldZoomRate = rootElement.__DCWriterReference.invokeMethod("get_ZoomRate");
+            //         for (var i = 0; i < datas.length; i++) {
+            //             var pageInfo = datas[i];
+            //             var element = rootElement.ownerDocument.createElement("CANVAS");
+            //             element.__PageInfo = pageInfo;
+            //             element.PageIndex = pageInfo.PageIndex;
+            //             element.setAttribute("native-width", pageInfo.Width);
+            //             element.setAttribute("native-height", pageInfo.Height);
+            //             WriterControl_Paint.SetPageElementSize(rootElement, element);
+            //             element.width = pageInfo.Width * printImageScale;
+            //             element.height = pageInfo.Height * printImageScale;
+            //             allCanvas.push(element);
+            //             rootElement.__DCWriterReference.invokeMethod(
+            //                 "SetViewZoomRate",
+            //                 printImageScale);
+            //             WriterControl_Print.InnerDrawOnePage(element, true, rootElement);
+
+            //         }
+            //         if (jumpPrint.Mode == "Normal") {
+            //             if (oldJumpPrintPosition) {
+            //                 rootElement.JumpPrintPosition = oldJumpPrintPosition;
+            //             }
+            //             if (oldJumpPrintEndPosition) {
+            //                 rootElement.JumpPrintEndPosition = oldJumpPrintEndPosition;
+            //             }
+
+            //         }
+            //         WriterControl_Task.AddCallbackForCompletedAllTasks(function () {
+            //             rootElement.__DCWriterReference.invokeMethod(
+            //                 "SetViewZoomRate",
+            //                 oldZoomRate);
+            //             //转成图片
+            //             if (allCanvas && allCanvas.length > 0) {
+            //                 for (var z = 0; z < allCanvas.length; z++) {
+            //                     var canvas = allCanvas[z];
+            //                     //console.log(canvas);
+            //                     var imgStr = canvas.toDataURL("image/png", 1);
+            //                     imgDatas.push(imgStr);
+            //                     canvas.remove();
+            //                 }
+            //                 callBack && callBack(imgDatas);
+            //                 imgDatas = null;
+            //                 rootElement.__DCWriterReference.invokeMethod("RefreshViewAfterPrint", true);
+            //             }
+            //         });
+            //     }
+            // } catch (err) { console.warn(err); }
+
+            DCEventInterfaceLogFunction(rootElement, 'PrintAsImage', startTime);
         };
 
         /**
@@ -11677,8 +13409,9 @@ export let WriterControl_API = {
         */
         rootElement.InComplexViewMode = function () {
             var startTime = new Date();
+            var ReadViewMode = rootElement.ReadViewMode;//阅读模式
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-            if (IsPrintPreview) {
+            if (ReadViewMode || IsPrintPreview) {
                 //阅读预览模式下禁止调用
                 return false;
             }
@@ -11696,8 +13429,9 @@ export let WriterControl_API = {
        */
         rootElement.InCleanViewMode = function () {
             var startTime = new Date();
+            var ReadViewMode = rootElement.ReadViewMode;//阅读模式
             var IsPrintPreview = rootElement.IsPrintPreview();//预览模式
-            if (IsPrintPreview) {
+            if (ReadViewMode || IsPrintPreview) {
                 //阅读预览模式下禁止调用
                 return false;
             }
@@ -11810,6 +13544,31 @@ export let WriterControl_API = {
             return result;
         };
 
+        /**
+        * @name GetDocumentDomStructure
+        * @type function
+        * @apinameZh 解析文档的DOM结构层次
+        * @classification file
+        * @param ["xmlString","string","文档内容，允许为空，空表示使用当前文档","","",false]
+        * @param ["format","string","文档格式，允许为空，空表示使用XML格式","","",false]
+        * @returns ["result","object","文档的DOM结构对象"]
+        * @change ["2023-11-23","GetDocumentDomStructure","刘帅" ]
+        */
+        rootElement.GetDocumentDomStructure = function (xmlString, format) {
+            var startTime = new Date();
+            if (xmlString == null) {
+                xmlString = "";
+            }
+            if (format == null) {
+                format = "";
+            }
+            let result = rootElement.__DCWriterReference.invokeMethod("GetDocumentDomStructure", xmlString, format);
+
+            // console.log("GetDocumentDomStructure", result);
+
+            DCEventInterfaceLogFunction(rootElement, 'GetDocumentDomStructure', startTime);
+            return result;
+        };
 
         /**
          * @name SetSelectTableCellGridLineInfo
@@ -11879,13 +13638,14 @@ export let WriterControl_API = {
         * @type function
         * @apinameZh 聚焦下一个输入域的接口
         * @param ["isEditor","Boolean","参数表示在聚焦时，是否启动编辑激活功能","false","在编辑激活时，如果是下拉或时间输入域，会自动显示下拉列表或时间选择框",false]
+        * @param ["isGotoLast","Boolean","是否定位到输入域内部元素的末尾位置","false","当输入域有子元素时定位到最后一个元素右边",false]
         * @returns ["result","Boolean","操作是否成功"]
         * @classification structuralelement
         * @change ["2023-11-28","增加聚焦下一个输入域的接口","lxy" ]
         */
-        rootElement.FocusNextInput = function (isEditor = false) {
+        rootElement.FocusNextInput = function (isEditor = false, isGotoLast = false) {
             var startTime = new Date();
-            let result = rootElement.__DCWriterReference.invokeMethod("FocusNextInput", isEditor);
+            let result = rootElement.__DCWriterReference.invokeMethod("FocusNextInput", isEditor, isGotoLast);
             DCEventInterfaceLogFunction(rootElement, 'FocusNextInput', startTime);
             return result;
         };
@@ -11895,17 +13655,32 @@ export let WriterControl_API = {
        * @type function
        * @apinameZh 聚焦前一个输入域的接口
        * @param ["isEditor","Boolean","参数表示在聚焦时，是否启动编辑激活功能","false","在编辑激活时，如果是下拉或时间输入域，会自动显示下拉列表或时间选择框",false]
+       * @param ["isGotoLast","Boolean","是否定位到输入域内部元素的末尾位置","false","当输入域有子元素时定位到最后一个元素右边",false]
        * @returns ["result","Boolean","操作是否成功"]
        * @classification structuralelement
        * @change ["2023-12-15","增加聚焦前一个输入域的接口","wyc" ]
        */
-        rootElement.FocusPreviousInput = function (isEditor = false) {
+        rootElement.FocusPreviousInput = function (isEditor = false, isGotoLast = false) {
             var startTime = new Date();
-            let result = rootElement.__DCWriterReference.invokeMethod("FocusPreviousInput", isEditor);
+            let result = rootElement.__DCWriterReference.invokeMethod("FocusPreviousInput", isEditor, isGotoLast);
             DCEventInterfaceLogFunction(rootElement, 'FocusPreviousInput', startTime);
             return result;
         };
 
+        /**
+        * @name ClearDocumentParameters
+        * @type function
+        * @apinameZh 清除文档数据源绑定参数
+        * @classification file
+        * @returns ["result","Boolean","操作是否成功"]
+        * @change ["2023-11-29","创建API","wyc" ]
+        */
+        rootElement.ClearDocumentParameters = function () {
+            var startTime = new Date();
+            let result = rootElement.__DCWriterReference.invokeMethod("ClearDocumentParameters");
+            DCEventInterfaceLogFunction(rootElement, 'ClearDocumentParameters', startTime);
+            return result;
+        };
 
         /**
         * @name GetCurrentLineElements
@@ -12308,7 +14083,7 @@ export let WriterControl_API = {
                 "&downloadstr=" + downloadstr;
 
             var resultstr = null;
-            var postData = DCTools20221228.UnPackageStringValue(rootElement.__DCWriterReference.invokeMethod("InnerGetPDFBySingleFilesData", filexml));
+            var postData = DCTools20221228.GetResultUTF8String(rootElement.__DCWriterReference.invokeMethod("InnerGetPDFBySingleFilesData", filexml));
             var data2 = new TextEncoder().encode(postData);
             var buffer = DCTools20221228.GZipCompress(data2);
             buffer.then(result => {
@@ -12329,6 +14104,61 @@ export let WriterControl_API = {
             return resultstr;
         };
 
+        /**
+         * @name DownLoadFontsForLocalPDF
+         * @type function
+         * @apinameZh 为了SaveDocumentToPdfBase64String提高下载速度，可以提前下载本地PDF所需字体的异步函数。
+         * @classification file
+         * @param ["callBack","function","回调函数，可以提示当前文档下载PDF所需要的字体,第一个参数有值时是报错信息","","",true]
+         * @change ["2024-06-29","增加接口","xuyiming" ]
+         */
+        rootElement.DownLoadFontsForLocalPDF = function (callBack) {
+            // // 记录开始时间，用于后续计算下载所需的时间。
+            // var startTime = new Date();
+            // // 调用WriterControl_Print中的函数来下载本地PDF所需字体。
+            // // 使用回调函数来记录操作完成的时间。
+            // WriterControl_Print.DownLoadFontsForLocalPDF(rootElement, function () {
+            //     if (!!callBack && typeof (callBack) == "function") {
+            //         callBack();
+            //     }
+            //     // 下载完成后，调用DCEventInterfaceLogFunction记录操作开始和结束时间。
+            //     DCEventInterfaceLogFunction(rootElement, 'DownLoadFontsForLocalPDF', startTime);
+            // });
+
+            // 【DUWRITER5_0-3028】
+            // 定义一个Promise封装的下载函数
+            function downloadFontsForLocalPDF(rootElement) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        // 尝试下载字体
+                        WriterControl_Print.DownLoadFontsForLocalPDF(rootElement, function () {
+                            // 成功下载后调用resolve
+                            resolve();
+                        });
+                    } catch (error) {
+                        // 下载过程中出现异常，调用reject
+                        reject(error);
+                    }
+                });
+            }
+            // 记录开始时间
+            const startTime = new Date();
+            // 使用Promise重构异步操作
+            downloadFontsForLocalPDF(rootElement).then(() => {
+                // 成功回调
+                if (!!callBack && typeof callBack === "function") {
+                    callBack();
+                }
+                // 记录日志
+                DCEventInterfaceLogFunction(rootElement, 'DownLoadFontsForLocalPDF', startTime);
+            }).catch((error) => {
+                // 错误处理
+                // console.error("下载字体失败:", error);
+                if (!!callBack && typeof callBack === "function") {
+                    callBack(error); // 将错误传递给回调函数处理
+                }
+            });
+        };
 
         //将二进制转换为base64的方法
         function DCconvertBinaryToBase64(binaryData) {
@@ -12617,7 +14447,7 @@ export let WriterControl_API = {
         };
 
         /**
-       * @name SortTableRowsByDateTime
+       * @name SortTableRowsByAttributes
        * @type function
        * @apinameZh 对表格指定列按照日期时间排序
        * @classification file
@@ -12639,6 +14469,31 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'SortTableRowsByAttributes', startTime);
             return result;
         };
+
+        /**
+       * @name SortTableRowsByDateTime
+       * @type function
+       * @apinameZh 对表格指定列按照日期时间排序
+       * @classification file
+       * @param ["tableID","string","表格id","true","","false"]
+       * @param ["startRowIndex","string","开始的表格行的序号。表格行从0开始排序号。","true","","false"]
+       * @param ["endRowIndex","string","结束的表格行的序号。当为-1时表示到最后一行。","true","","false"]
+       * @param ["dateColunmn","string","日期列的序号。表格列从0开始排序号。","true","","false"]
+       * @param ["timeColumn","string","时间列的序号。表格列从0开始排序号。","true","","false"]
+       */
+        rootElement.SortTableRowsByDateTime = function (tableID, startRowIndex, endRowIndex, dateColunmn, timeColumn) {
+            var startTime = new Date();
+            var result = false;
+            if (DCTools20221228.IsDotnetReferenceElement(tableID) === true) {
+                result = rootElement.__DCWriterReference.invokeMethod("SortTableRowsByDateTime2", tableID, startRowIndex, endRowIndex, dateColunmn, timeColumn);
+            } else {
+                result = rootElement.__DCWriterReference.invokeMethod("SortTableRowsByDateTime", tableID, startRowIndex, endRowIndex, dateColunmn, timeColumn);
+            }
+
+            DCEventInterfaceLogFunction(rootElement, 'SortTableRowsByDateTime', startTime);
+            return result;
+        };
+
 
         /**
       * @name RemoveElementAttributes
@@ -12706,6 +14561,17 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'HiddenAllVisibleElement', startTime);
             return result;
         };
+        /**
+       * @name ClearOldVisibleElements
+       * @type function
+       * @apinameZh 清空缓存数据
+       */
+        rootElement.ClearOldVisibleElements = function () {
+            var startTime = new Date();
+            rootElement.__DCWriterReference.invokeMethod("ClearOldVisibleElements");
+            DCEventInterfaceLogFunction(rootElement, 'ClearOldVisibleElements', startTime);
+        };
+
 
         /**
          * @name setToolBarVisibility
@@ -12726,7 +14592,36 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'setToolBarVisibility', startTime);
             return result;
         };
-
+        /**
+         * @name setToolBarVisibility
+         * @type function
+         * @apinameZh 设置工具条的自定义按钮
+         * @classification view
+         * @param ["btnList","array","自定义按钮列表","","",""]
+         * @returns ["result","boolean","操作是否成功"]
+         */
+        rootElement.SetToolBarCustomizeBtn = function (btnList) {
+            var startTime = new Date();
+            let result = true;
+            WriterControl_ToolBar.SetCustomizeBtn(rootElement, btnList);
+            DCEventInterfaceLogFunction(rootElement, 'SetToolBarCustomizeBtn', startTime);
+            return result;
+        };
+        /**
+         * @name SetToolBarFontFamilys
+         * @type function
+         * @apinameZh 设置工具条字体选项列表
+         * @classification view
+         * @param ["fontFamilysList","array","字体列表","","",""]
+         * @returns ["result","boolean","操作是否成功"]
+         */
+        rootElement.SetToolBarFontFamilys = function (fontFamilysList) {
+            var startTime = new Date();
+            let result = false;
+            result = WriterControl_ToolBar.ChangeFontFamilys(rootElement, fontFamilysList);
+            DCEventInterfaceLogFunction(rootElement, 'SetToolBarFontFamilys', startTime);
+            return result;
+        };
 
 
         /**
@@ -13015,9 +14910,10 @@ export let WriterControl_API = {
          * @type function
          * @apinameZh 创建护理记录单趋势图svg
          * @classification file
+         * @options ["Options","object","设置选项","true","","false"]
          */
-        rootElement.CreateTrendChartSvg = function () {
-            WriterControl_TrendChart.CreateTrendChart(rootElement);
+        rootElement.CreateTrendChartSvg = function (Options = null) {
+            WriterControl_TrendChart.CreateTrendChart(rootElement, Options);
         };
 
         /**
@@ -13026,8 +14922,8 @@ export let WriterControl_API = {
          * @apinameZh 对护理记录单进行赋值
          * @classification file
          */
-        rootElement.TrendChartDataSourceToDocument = function (data) {
-            WriterControl_TrendChart.TrendChartDataSourceToDocument(rootElement, data);
+        rootElement.TrendChartDataSourceToDocument = function (data, options = null) {
+            WriterControl_TrendChart.TrendChartDataSourceToDocument(rootElement, data, options);
         };
         /**
          * @name InsertImageSetTableRowAttr
@@ -13166,11 +15062,266 @@ export let WriterControl_API = {
             return rootElement.SetElementTextByID(elNativeHandle, InsertText);
         };
 
+
+        /**
+        * @name AcceptAIAnalyseResultForAppend
+        * @type function
+        * @apinameZh 接受AI分析结果:增加内容。dcmID：AI分析结果的编号；aistring：需要追加的文本；isAddCurrntUserTrack：表示是否附加当前用户的痕迹。
+        * @classification 
+        */
+        rootElement.AcceptAIAnalyseResultForAppend = function (dcmID, aistring, userID, userName, permissionLevel, strTag,  strDescription,isAddCurrntUserTrack=false) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAIAnalyseResultForAppend", dcmID, aistring, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAIAnalyseResultForAppend', startTime);
+            return result;
+        };
+
+        /**
+        * @name AcceptAIAnalyseResultForDelete
+        * @type function
+        * @apinameZh 接受AI分析结果:删除内容。dcmID：AI分析结果的编号；isAddCurrntUserTrack：表示是否附加当前用户的痕迹。
+        * @classification 
+        */
+        rootElement.AcceptAIAnalyseResultForDelete = function (dcmID, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack = false) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAIAnalyseResultForDelete", dcmID, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAIAnalyseResultForDelete', startTime);
+            return result;
+        };
+
+        /**
+       * @name AcceptAIAnalyseResultForModify
+       * @type function
+       * @apinameZh 接受AI分析结果:更改内容。dcmID：AI分析结果的编号；aistring：需要修改的文本；isAddCurrntUserTrack：表示是否附加当前用户的痕迹。
+       * @classification 
+       */
+        rootElement.AcceptAIAnalyseResultForModify = function (dcmID, aistring, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack = false) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAIAnalyseResultForModify", dcmID, aistring, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAIAnalyseResultForModify', startTime);
+            return result;
+        };
+
+        /**
+        * @name AcceptAiStringToPhysicsDelete
+        * @type function
+        * @apinameZh 接受AI删除的内容，转为物理删除。userTrackInfoNativeHandle：痕迹的第一个元素handle。
+        * @classification 
+        */
+        rootElement.AcceptAiStringToPhysicsDelete = function (userTrackInfoNativeHandle) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAiStringToPhysicsDelete", userTrackInfoNativeHandle);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAiStringToPhysicsDelete', startTime);
+            return result;
+        };
+
+        /**
+      * @name AcceptAiStringToUserDelete
+      * @type function
+      * @apinameZh 接受AI分析结果:更改内容。dcmID：AI分析结果的编号；aistring：需要修改的文本；isAddCurrntUserTrack：表示是否附加当前用户的痕迹。
+      * @classification 
+      */
+        rootElement.AcceptAiStringToUserDelete = function (userTrackInfoNativeHandle,  userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack = false) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAiStringToUserDelete", userTrackInfoNativeHandle, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAiStringToUserDelete', startTime);
+            return result;
+        };
+
+        /**
+      * @name AcceptAiStringToUserCreate
+      * @type function
+      * @apinameZh 接受AI输入的内容，转为医生创作。如果isAddCurrntUserTrack为true，则转为普通文字，去除痕迹
+      * @classification 
+      */
+        rootElement.AcceptAiStringToUserCreate = function (userTrackInfoNativeHandle, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack = false) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("AcceptAiStringToUserCreate", userTrackInfoNativeHandle, userID, userName, permissionLevel, strTag, strDescription, isAddCurrntUserTrack);
+            DCEventInterfaceLogFunction(rootElement, 'AcceptAiStringToUserCreate', startTime);
+            return result;
+        };
+
+        /**
+        * @name SelectTrackInfoContent
+        * @type function
+        * @apinameZh 选择整个痕迹信息
+        * @classification 
+        */
+        rootElement.SelectTrackInfoContent = function (userTrackInfoNativeHandle) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("SelectTrackInfoContent", userTrackInfoNativeHandle);
+            DCEventInterfaceLogFunction(rootElement, 'SelectTrackInfoContent', startTime);
+            return result;
+        };
+
+
+
+
+        /**
+        * @name RefuseAiString
+        * @type function
+        * @apinameZh 拒绝AI插入的文本痕迹。userTrackInfoNativeHandle：痕迹的第一个元素handle。
+        * @classification 
+        */
+        rootElement.RefuseAiString = function (userTrackInfoNativeHandle) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("RefuseAiString", userTrackInfoNativeHandle);
+            DCEventInterfaceLogFunction(rootElement, 'RefuseAiString', startTime);
+            return result;
+        };
+
+        
+
+        /**
+         * @name GetSourceTextForAIAnalyse
+         * @type function
+         * @apinameZh 获得用于AI分析的源文本内容
+         * @classification 
+         */
+        rootElement.GetSourceTextForAIAnalyse = function (strID = "") {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("GetSourceTextForAIAnalyse", strID);
+            DCEventInterfaceLogFunction(rootElement, 'GetSourceTextForAIAnalyse', startTime);
+            return result;
+        };
+
+        /**
+        * @name InsertAiStringWithTrack
+        * @type function
+        * @apinameZh 通过AI插入字符串并附加痕迹信息。aistring：表示需要插入的文本；userID：表示AI用户的编号；userName：表示AI用户的名称；permissionLevel：表示痕迹的等级，和普通用户登录相同；strTag：痕迹的附件信息，业务系统需要；strDescription：痕迹描述信息。
+        * @classification 
+        */
+        rootElement.InsertAiStringWithTrack = function (aistring,  userID,  userName,  permissionLevel,  strTag,  strDescription) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("InsertAiStringWithTrack", aistring, userID, userName, permissionLevel, strTag, strDescription);
+            DCEventInterfaceLogFunction(rootElement, 'InsertAiStringWithTrack', startTime);
+            return result;
+        };
+
+        /**
+       * @name InsertAiStringWithTrackByElement
+       * @type function
+       * @apinameZh 通过AI插入字符串并附加痕迹信息。jsonElement:表示元素的ID或者handle；aistring：表示需要插入的文本；userID：表示AI用户的编号；userName：表示AI用户的名称；permissionLevel：表示痕迹的等级，和普通用户登录相同；strTag：痕迹的附件信息，业务系统需要；strDescription：痕迹描述信息。
+       * @classification 
+       */
+        rootElement.InsertAiStringWithTrackByElement = function (jsonElement ,aistring, userID, userName, permissionLevel, strTag, strDescription) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("InsertAiStringWithTrackByElement", jsonElement,aistring, userID, userName, permissionLevel, strTag, strDescription);
+            DCEventInterfaceLogFunction(rootElement, 'InsertAiStringWithTrackByElement', startTime);
+            return result;
+        };
+
+        /**
+         * @name ShowAIAnalyseResult
+         * @type function
+         * @apinameZh 根据编号移除AI分析结果。如果编号为空则移除所有AI分析结果。如果没有AI分析结果则返回false。
+         * @classification 
+         */
+        rootElement.ShowAIAnalyseResult = function (inputJson) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("ShowAIAnalyseResult", inputJson);
+            DCEventInterfaceLogFunction(rootElement, 'ShowAIAnalyseResult', startTime);
+            return result;
+        };
+
+        /**
+         * @name RemoveAIAnalyseResult
+         * @type function
+         * @apinameZh 显示AI分析结果
+         * @classification 
+         */
+        rootElement.RemoveAIAnalyseResult = function (dcmid) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("RemoveAIAnalyseResult", dcmid);
+            DCEventInterfaceLogFunction(rootElement, 'RemoveAIAnalyseResult', startTime);
+            return result;
+        };
+
+        /**
+         * @name GetAllFontFullNamesForPDF
+         * @type function
+         * @apinameZh 获取本文档生成PDF需要的字体文件名列表
+         * @classification 
+         */
+        rootElement.GetAllFontFullNamesForPDF = function () {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod("GetAllFontFullNamesForPDF");
+            DCEventInterfaceLogFunction(rootElement, 'GetAllFontFullNamesForPDF', startTime);
+            return result;
+        };
+
+
+        /**
+         * @name SaveDocumentOptions
+         * @type function
+         * @apinameZh 下载文档选项配置
+         * @classification 
+         */
+        rootElement.SaveDocumentOptions = function () {
+            var startTime = new Date();
+            var result = null;
+            var options = rootElement.DocumentOptions;
+            var optionsJson = JSON.stringify(options);
+            var blob = new Blob([optionsJson], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'document_options.json';
+            a.click();
+            DCEventInterfaceLogFunction(rootElement, 'SaveDocumentOptions', startTime);
+            return result;
+        };
+
+        /**
+         * @name LoadDocumentOptionsFile
+         * @type function
+         * @apinameZh 加载本地文档选项配置
+         * @classification 
+         */
+        rootElement.LoadDocumentOptionsFile = function () {
+            var startTime = new Date();
+            var result = null;
+            //打开本地json
+            var file = document.createElement('input');
+            file.type = 'file';
+            file.accept = 'application/json';
+            file.onchange = function (e) {
+                var file = e.target.files[0];
+                var reader = new FileReader();
+                reader.readAsText(file);
+                reader.onload = function (e) {
+                    var optionsJson = e.target.result;
+                    var options = JSON.parse(optionsJson);
+                    rootElement.DocumentOptions = options;
+                    rootElement.ApplyDocumentOptions();
+                };
+            };
+            file.click();
+            DCEventInterfaceLogFunction(rootElement, 'LoadDocumentOptions', startTime);
+            return result;
+        };
+
+
         //rootElement.refreshDocumentOptions();
         document.WriterControl = rootElement;
         if (rootElement.ownerDocument !== document) {
             rootElement.ownerDocument.WriterControl = rootElement;
         }
+
 
     },
 
@@ -13181,6 +15332,30 @@ export let WriterControl_API = {
      */
     BindDCWriterDocument: function (rootElement) {
 
+        //将二进制转换为base64的方法
+        function DCconvertBinaryToBase64(binaryData) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // 创建一个Blob对象
+                    var blob = new Blob([binaryData], { type: 'application/pdf' });
+
+                    // 创建一个FileReader对象
+                    var reader = new FileReader();
+
+                    // 读取Blob对象
+                    reader.readAsDataURL(blob);
+
+                    // 当读取完成时
+                    reader.onload = function () {
+                        // 将结果以Base64字符串的形式输出
+                        var base64String = reader.result.split(',')[1];
+                        resolve(base64String);
+                    };
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
 
         /**
          * @name SetElementProperties
@@ -13401,8 +15576,9 @@ export let WriterControl_API = {
             if (DCTools20221228.IsDotnetReferenceElement(rootElement) === false) {
                 return false;
             }
-            var result = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "SaveDCWriterControlDocumentToString",
-                rootElement);
+            var result = DCTools20221228.GetResultUTF8String(
+                DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "SaveDCWriterControlDocumentToString",
+                    rootElement));
             if (dispose === true) {
                 rootElement.Dispose();
             }
@@ -13424,8 +15600,9 @@ export let WriterControl_API = {
             if (DCTools20221228.IsDotnetReferenceElement(rootElement) === false) {
                 return false;
             }
-            var result = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "SaveDCWriterControlDocumentToBase64String",
-                rootElement, format);
+            var result = DCTools20221228.GetResultUTF8String(
+                DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "SaveDCWriterControlDocumentToBase64String",
+                    rootElement, format));
             if (dispose === true) {
                 rootElement.Dispose();
             }
@@ -13454,6 +15631,13 @@ export let WriterControl_API = {
                 }
                 rootElement = null;
             }
+            ////解绑rootElemnt上的所有属性
+            //for (var fun in rootElement) {
+            //    try {
+            //        rootElement[fun] = null
+            //    } catch (err) { }
+
+            //}
             DCEventInterfaceLogFunction(rootElement, 'Dispose', startTime);
             return result;
         };
@@ -13481,6 +15665,78 @@ export let WriterControl_API = {
             DCEventInterfaceLogFunction(rootElement, 'SaveDocumentToString', startTime);
             return result;
         };
+
+        /**
+        * @name AppendSubDocuments
+        * @type function
+        * @classification file
+        * @param { string } options 要附加的子文档参数对象。
+        * @apinameZh 纯后台对象的附加子文档
+        */
+        rootElement.AppendSubDocuments = function (options) {
+
+            var startTime = new Date();
+            if (DCTools20221228.IsDotnetReferenceElement(rootElement) === false) {
+                return false;
+            }
+            var result = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "DOMAppendSubDocuments",
+                rootElement, options);
+            if (rootElement.OwnerControl != null && rootElement.OwnerControl.style) {
+                rootElement.OwnerControl.style.display = "none";
+            }
+            DCEventInterfaceLogFunction(rootElement, 'AppendSubDocuments', startTime);
+            return result;
+        };
+
+        /**
+        * @name SaveSubDocumentToString
+        * @type function
+        * @classification file
+        * @param { object } options 要保存的子文档参数对象,可以是复杂参数对象也可以直接是保存格式字符串。
+        * @param { function } callback 保存成功后的回调函数。
+        * @apinameZh 纯后台对象的保存单个子文档
+        */
+        rootElement.SaveSubDocumentToString = function (options, callback) {
+
+            var startTime = new Date();
+            if (DCTools20221228.IsDotnetReferenceElement(rootElement) === false || typeof (options) !== "object") {
+                return null;
+            }
+            var result = null;
+            if (options.FileFormat !== "pdf") {
+                result = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "DOMSaveSubDocumentToString",
+                    rootElement, options);
+            }
+            else {
+                options.FileFormat = "xml";
+                options.OutputFormatXML = false;
+                var xmlstr = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "DOMSaveSubDocumentToString",
+                    rootElement, options);
+                WriterControl_Print.SaveLocalPDF(
+                    {
+                        RootElement: rootElement.OwnerControl,
+                        DocumentsXml: xmlstr,
+                        CallBack: function (data) {
+                            //将二进制转换为base64
+                            DCconvertBinaryToBase64(data)
+                                .then((base64String) => {
+                                    callback(base64String);
+                                })
+                                .catch((error) => {
+                                    console.error(error);
+                                });
+                        }
+                    }
+                );
+            }
+
+            if (rootElement.OwnerControl != null && rootElement.OwnerControl.style) {
+                rootElement.OwnerControl.style.display = "none";
+            }
+            DCEventInterfaceLogFunction(rootElement, 'AppendSubDocuments', startTime);
+            return result;
+        };
+
 
         /**
         * @name GetTableRowData
@@ -13621,8 +15877,3160 @@ export let WriterControl_API = {
             return result;
         };
 
+
+        /**
+        * @name GetDocumentSpecifyPageImages
+        * @type function
+        * @apinameZh 兼容四代获取指定页码的图片数据
+        * @classification structuralelement
+        * @param ["options","object","获取参数属性","","json格式包含两个参数：ShowMarginLine是否显示页面编辑线；SpecifyPageIndexes指定的页码数",true]
+        * @param ["callBack","function","回调函数","","用于接收接口返回的base64字符串",true]
+        * @param ["required","Function","成功获得数据后的回调函数","","回调函数参数是一个字符串数组，为图片格式的数据",true]
+        */
+        rootElement.GetSpecifyPageImages = function (options, callBack) {
+            var startTime = new Date();
+            if (DCTools20221228.IsDotnetReferenceElement(rootElement) === false) {
+                return null;
+            }
+            var bsData = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "DOMGetSpecifyPageImages",
+                rootElement, options);
+            if (bsData != null && bsData.length > 10) {
+                var reader = new DCBinaryReader(bsData);
+                var totalPageCount = reader.ReadInt16();
+                var cavas = document.createElement("CANVAS");
+                var imgDatas = new Array();
+                var outputPageCount = 0;
+                function DrawOnePage() {
+                    var bsPage = reader.ReadByteArray();
+                    if (bsPage != null && bsPage.length > 0) {
+                        var pageReader = new DCBinaryReader(bsPage);
+                        if (pageReader.ReadByte() != 133) {
+                            // 文件头不对
+                            return;
+                        }
+                        var pageWidth = pageReader.ReadInt16();
+                        var pageHeight = pageReader.ReadInt16();
+                        cavas.width = pageWidth;
+                        cavas.height = pageHeight;
+                        var ctx = cavas.getContext("2d");
+                        ctx.clearRect(0, 0, pageWidth, pageHeight);
+                        ctx.resetTransform();
+                        if (typeof (ctx.reset) == "function") {
+                            ctx.reset();
+                        }
+                        var drawer = new PageContentDrawer(cavas, pageReader);
+                        drawer.EventSource = "GetSpecifyPageImages";
+                        drawer.EventAfterDraw = function () {
+                            outputPageCount++;
+                            var strData = cavas.toDataURL("image/png", 1);
+                            imgDatas.push(strData);
+                            if (outputPageCount == totalPageCount) {
+                                callBack && callBack(imgDatas);
+                            }
+                            else {
+                                DrawOnePage();
+                            }
+                        };
+                        drawer.AddToTask();
+                    }
+                }
+                DrawOnePage();
+            }
+            if (rootElement.OwnerControl != null && rootElement.OwnerControl.style) {
+                rootElement.OwnerControl.style.display = "none";
+            }
+            DCEventInterfaceLogFunction(rootElement, 'GetSpecifyPageImages', startTime);
+        };
     },
 
+
+    /**
+     * 对时间轴根元素绑定一些方法供外面调用
+     * @param {HTMLElement} rootElement 根元素对象
+     * @param {object} refDCWriter DCWriterClass对象在JS中的代理
+     */
+    BindControlForTemperatureControlForWASM: function (rootElement, refDCWriter) {
+        rootElement.__DCWriterReference = refDCWriter;
+        rootElement.IsWriterPrintPreviewControlForWASM = false;
+
+        /**
+        * @name RemoteLoadTemperatureDocumentFromXMLString
+        * @type function
+        * @classification file
+        * @param { string } xmlstr 加载的时间轴文档XML字符串
+        * @param { function } callBack 回调函数，若设置，则异步请求四代服务，否则同步请求
+        * @apinameZh 利用四代服务加载时间轴文档XML转换成JSON结构
+        */
+        rootElement.RemoteLoadTemperatureDocumentFromXMLString = function (xmlstr, callBack) {
+            var startTime = new Date();
+            var strServicePageUrl = DCTools20221228.GetServicePageUrl(rootElement);
+            if (strServicePageUrl == null || strServicePageUrl.length == 0) {
+                console.error("DCWriter:未配置ServicePageUrl,无法执行LoadTemperatureDocumentFromXMLString");
+                DCEventInterfaceLogFunction(rootElement, 'LoadTemperatureDocumentFromXMLString', startTime);
+                return false;
+            }
+            var strUrl = strServicePageUrl + "?dctimelineloaddocumentfromfrontend=1&sessionname=1&advancedmode=true&serviceflag=fdjia8324";
+            var postData = "loaddocumentinfo=" + encodeURIComponent(xmlstr);
+            var xhr = new XMLHttpRequest();
+            var resultobj = null;
+            var hascallback = typeof (callBack) === "function";
+            xhr.open("POST", strUrl, hascallback);
+            xhr.onload = function () {
+                if (this.status == 200) {
+                    //debugger;
+                    var tempobj = JSON.parse(this.response);
+                    if (tempobj.success === "true") {
+                        resultobj = JSON.parse(tempobj.result);
+                        if (typeof (callBack) == "function") {
+                            callBack.call(rootElement, resultobj);
+                        }
+                    }
+                    return;
+                }
+            };
+            xhr.send(postData);
+            return resultobj;
+        };
+
+        /**
+        * @name RemoteSaveTemperatureDocumentToXMLString
+        * @type function
+        * @classification file
+        * @param { object } jsonobj 时间轴文档的前端JSON结构
+        * @param { function } callBack 回调函数，若设置，则异步请求四代服务，否则同步请求
+        * @apinameZh 利用四代服务将前端时间轴文档JSON对象保存成XML字符串
+        */
+        rootElement.RemoteSaveTemperatureDocumentToXMLString = function (jsonobj, callBack) {
+            var startTime = new Date();
+            var strServicePageUrl = DCTools20221228.GetServicePageUrl(rootElement);
+            if (strServicePageUrl == null || strServicePageUrl.length == 0) {
+                console.error("DCWriter:未配置ServicePageUrl,无法执行LoadTemperatureDocumentFromXMLString");
+                DCEventInterfaceLogFunction(rootElement, 'LoadTemperatureDocumentFromXMLString', startTime);
+                return false;
+            }
+            var strUrl = strServicePageUrl + "?dctimelinesavedocumenttofrontend=1&sessionname=1&advancedmode=true&serviceflag=fdjia8324";
+            var postData = "temperaturedocument=" + encodeURIComponent(JSON.stringify(jsonobj));
+            var xhr = new XMLHttpRequest();
+            var resultobj = null;
+            var hascallback = typeof (callBack) === "function";
+            xhr.open("POST", strUrl, hascallback);
+            xhr.onload = function () {
+                if (this.status == 200) {
+                    //debugger;
+                    var tempobj = null;
+                    try {
+                        tempobj = JSON.parse(this.response);
+                    }
+                    catch (e) {
+                        console.log(this.response);
+                    }
+                    if (tempobj != null && tempobj.success === "true") {
+                        resultobj = tempobj.result;
+                        if (typeof (callBack) == "function") {
+                            callBack.call(rootElement, resultobj);
+                        }
+                    }
+                    return;
+                }
+            };
+            xhr.send(postData);
+            return resultobj;
+        };
+
+        /**
+        * @name Dispose
+        * @type function
+        * @classification file
+        * @apinameZh 清理所有正在使用的资源
+        */
+        rootElement.Dispose = function () {
+            if (rootElement.__DCWriterReference && typeof (rootElement.__DCWriterReference.disposeJSObjectReference) === "function") {
+                rootElement.__DCWriterReference.disposeJSObjectReference();
+            }
+            //解绑rootElemnt上的所有属性
+            for (var fun in rootElement) {
+                if (fun === "parentElement" ||
+                    fun === "parentNode" ||
+                    fun === "outerText" ||
+                    fun === "outerHTML") {
+                    continue;
+                }
+                try {
+                    rootElement[fun] = null;
+                } catch (err) { }
+
+            }
+            rootElement.parentElement.removeChild(rootElement);
+        };
+
+        /**
+        * @name SetZoomRate
+        * @type function
+        * @classification file
+        * @param { number } 新的缩放值 
+        * @apinameZh 修改页面大小
+        */
+        rootElement.SetZoomRate = function (newZoomRate) {
+            WriterControl_DrawFu.SetZoomRate(rootElement, newZoomRate);
+        };
+
+        /**
+        * @name MoveProjectUpAndDown
+        * @type function
+        * @classification file
+        * @param { object|string } id 对应文本标签属性对象或者UID值
+        * @apinameZh 对项目进行上移下移
+         */
+        rootElement.MoveProjectUpAndDown = function (id, direction) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能移动项目");
+                return false;
+            }
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = d.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //获取到元素
+            if (!id) {
+                return false;
+            }
+            direction = parseInt(direction);
+            if (isNaN(direction)) {
+                return false;
+            }
+            //循环拿到所有的
+            var allType = ["HeaderLabels", "HeaderLines", "FooterLines", "YAxisInfos"];
+            var config = rootElement.DocumentOptions.DefaultData;
+            for (var i = 0; i < allType.length; i++) {
+                var projectArr = config.Config[allType[i]];
+                for (var j = 0; j < projectArr.length; j++) {
+                    //判断是否存在UID或者name值
+                    var thisProject = projectArr[j];
+                    if (thisProject.UID == id || thisProject.Name == id) {
+                        var lastIndex = j + direction;
+                        //判断位置
+                        if (lastIndex < 0) {
+                            lastIndex = 0;
+                        } else if (lastIndex > projectArr.length - 1) {
+                            lastIndex = projectArr.length - 1;
+                        }
+                        //删除原位置
+                        var remoevProject = projectArr.splice(j, 1);
+                        projectArr.splice(lastIndex, 0, remoevProject[0]);
+
+                        WriterControl_DrawFu.CreateTemperatureInit(rootElement, config, "EventTemperatureMoveProjectUpAndDown");
+                        rootElement.InnerRaiseEvent("EventMoveProjectUpAndDown", thisProject, allType[i]);
+                        return thisProject;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        /**
+        * @name TemperatureFileNew
+        * @type function
+        * @classification file
+        * @apinameZh 创建一个空白的时间轴页面
+        */
+        rootElement.TemperatureFileNew = function () {
+            rootElement.isFileNew = true;
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement);
+            rootElement.isFileNew = false;
+        };
+
+        /**
+        * @name LoadTemperatureDocumentFromString
+        * @type function
+        * @classification file
+        * @param { string } str 时间轴文档xml字符串。
+        * @param { boolean } isLoadData 是否初始化加载数据  默认为true
+        * @change ["2024-08-06","新增直接从JSON字符串加载","wyc" ]
+        * @change ["2024-09-06","修改为直接用四代服务远端加载不再需要五代后台","wyc" ]
+        * @apinameZh 加载时间轴文档xml，返回四代时间轴文档的BS前端JSON数据对象
+        */
+        rootElement.LoadTemperatureDocumentFromString = function (str, isLoadData = false) {
+            var startTime = new Date();
+            let res = null;
+            //wyc20240806:判断是JSON字符串则直接解析
+            if (str.startsWith && (str.startsWith('{') === true || str.startsWith('[') === true)) {
+                res = JSON.parse(str);
+            } else {
+                res = TemperatureControl_XMLToJSON.GetJsonData(str);
+            }
+            rootElement.setAttribute("pageindex", "1");
+            if (isLoadData === true) {
+                res.Values = [];
+            }
+
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, res, "EventTemperatureDocumentLoad");
+
+            DCEventInterfaceLogFunction(rootElement, 'LoadTemperatureDocumentFromString', startTime);
+            return true;
+        };
+
+        /**
+        * @name LoadTemperatureDocumentFromFile
+        * @type function
+        * @classification file
+        * @param { boolean } isLoadData 是否初始化加载数据  默认为true
+        * @apinameZh 打开本地时间轴文档xml
+        */
+        rootElement.LoadTemperatureDocumentFromFile = function (isSaveData) {
+            var file = document.createElement('input');
+            file.setAttribute('id', 'dcInputFile');
+            file.setAttribute('type', 'file');
+            file.setAttribute('accept', '.xml,.json,.rtf,.html,.htm,.odt');
+            file.style.display = 'none';
+            rootElement.appendChild(file);
+            file.click();
+            //file文件选中事件
+            file.onchange = function () {
+                var fileList = this.files;
+                if (fileList.length > 0) {
+                    //console.log(fileList[0]);
+                    var reader = new FileReader();
+                    reader.readAsText(fileList[0], "UFT-8");
+                    reader.onload = function (e) {
+                        //获取到文件内容
+                        var strFileContent = e.target.result;
+                        rootElement.LoadTemperatureDocumentFromString(strFileContent, isSaveData);
+                    };
+                }
+            };
+        };
+
+        /**
+        * @name SaveTemperatureDocumentToString
+        * @type function
+        * @classification file
+        * @param { string } format 保存格式，默认为xml
+        * @change ["2024-08-06","新增直接保存成JSON字符串","wyc" ]
+        * @apinameZh 将BS前端的时间轴文档JSON数据对象保存成时间轴文档XML字符串
+        */
+        //* @param { boolean } isSaveData 是否需要单独保存数据
+        rootElement.SaveTemperatureDocumentToString = function (format, callBack) {
+            var startTime = new Date();
+            let res1 = null;
+            var jsonobj = rootElement.DocumentOptions.DefaultData;
+            //当体温单模板是Fahrenheit，则直接返回json字符串
+            var TemperatureMode = jsonobj.Config && jsonobj.Config.TemperatureMode && jsonobj.Config.TemperatureMode == "Fahrenheit";
+            if (TemperatureMode) {
+                res1 = JSON.stringify(jsonobj);
+                if (typeof (callBack) == "function") {
+                    callBack.call(rootElement, res1);
+                } else {
+                    return res1;
+                }
+            }
+
+
+            //wyc20240806:新增保存成JSON字符串
+
+            if (format === "json") {
+                res1 = JSON.stringify(jsonobj);
+                if (typeof (callBack) == "function") {
+                    callBack.call(rootElement, res1);
+                }
+            } else {
+                //res1 = rootElement.__DCWriterReference.invokeMethod(window.DCWriterEntryPointAssemblyName, "SaveTemperatureDocumentToString", jsonobj);
+                var srvurl = rootElement.getAttribute("servicepageurl");
+                if ((srvurl == null || srvurl.length == 0) &&
+                    window.__DCResourceBasePath != null &&
+                    window.__DCResourceBasePath.indexOf) {
+                    var index = window.__DCResourceBasePath.indexOf("?wasmres");
+                    if (index > 0) {
+                        var substr = window.__DCResourceBasePath.substring(0, index);
+                        rootElement.setAttribute("servicepageurl", substr);
+                    }
+                }
+                res1 = rootElement.RemoteSaveTemperatureDocumentToXMLString(jsonobj, callBack);
+            }
+            DCEventInterfaceLogFunction(rootElement, 'SaveTemperatureDocumentToString', startTime);
+            return res1;
+        };
+
+        /**
+        * @name SaveTemperatureDocumentToFile
+        * @param { string } filename 文件名
+        * @param { string } format 保存格式，默认为xml
+        * @apinameZh 下载本地xml文件
+        */
+        // * @param { string } 文件名
+        // * @param { strFormat } 文件类型
+        rootElement.SaveTemperatureDocumentToFile = function (filename, format = 'xml') {
+            format = format.trim().toLowerCase();
+            var jsonobj = rootElement.DocumentOptions.DefaultData;
+            //当体温单模板是Fahrenheit，则直接返回json字符串
+            var TemperatureMode = jsonobj.Config && jsonobj.Config.TemperatureMode && jsonobj.Config.TemperatureMode == "Fahrenheit";
+            format = format === 'xml' && !TemperatureMode ? 'xml' : 'json';//文件格式
+
+            if (format === 'json') {
+                var responseText = JSON.stringify(jsonobj);
+            } else {
+                var responseText = rootElement.SaveTemperatureDocumentToString(jsonobj);
+            }
+
+            var a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = window.URL.createObjectURL(new Blob([responseText], { type: format === 'xml' ? "text/xml" : "application/json" }));
+            var d = new Date();
+            a.download = filename ? filename : d.getFullYear() + "" + ((d.getMonth() + 1) >= 10 ? (d.getMonth() + 1) : '0' + (d.getMonth() + 1)) + "" + d.getDate() + "" + d.getHours() + "" + d.getMinutes() + "" + d.getSeconds(); + '.' + format;
+            // 将a标签添加到body中是为了更好的兼容性，谷歌浏览器可以不用添加
+            document.body.appendChild(a);
+            a.click();
+            // 移除
+            a.remove();
+            // 释放url
+            window.URL.revokeObjectURL(a.href);
+        };
+
+        /**
+        * @name SaveTemperatureDocumentToPDF
+        * @type function
+        * @classification file
+        * @apinameZh 保存为pdf数据
+        */
+        rootElement.SaveTemperatureDocumentToPDF = function (callback, scale = 1) {
+            var pageSetting = rootElement.DocumentOptions.CalculationData;
+            var pdfWidth = rootElement.DocumentOptions.DefaultData.Config.PageSettings.PaperWidth;
+            var pdfHeight = rootElement.DocumentOptions.DefaultData.Config.PageSettings.PaperHeight;
+
+            // 【DUWRITER5_0-4854】 20251020 lxy 设置缩放因子提高清晰度，建议使用 2-4 倍
+            // const scale = 4; // 可以调整为 2, 3, 4 等，越大越清晰但生成速度越慢
+            scale = parseInt(scale);
+            if (isNaN(scale)) {
+                scale = 1;
+            }
+            if (scale < 1) {
+                scale = 1;
+            }
+            if (scale > 4) {
+                scale = 4;
+            }
+
+
+            const pdf = new jspdf.jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+            var svgContainer = rootElement.querySelector("[dctype=page-container]");
+            svgContainer = svgContainer.cloneNode(true);
+            var allSvg = svgContainer.querySelectorAll("[dctype=page]");
+
+            for (var i = 0; i < allSvg.length; i++) {
+                var cloneSvg = allSvg[i];
+                cloneSvg.style.border = "none";
+                var typesign = cloneSvg.querySelector("[dctype=typesign]");
+                typesign && typesign.remove();
+
+                var canvas = document.createElement('canvas');
+                // 【关键改进】使用缩放因子增加 canvas 分辨率
+                canvas.width = pageSetting.PaperWidth * scale;
+                canvas.height = pageSetting.PaperHeight * scale;
+
+                var ctx = canvas.getContext('2d');
+                // 【关键改进】应用缩放变换
+                ctx.scale(scale, scale);
+
+                var data = (new XMLSerializer()).serializeToString(cloneSvg);
+                var DOMURL = window.URL || window.webkitURL || window;
+                var img = new Image();
+                var svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+                var url = DOMURL.createObjectURL(svgBlob);
+                img.index = i;
+                img.onload = function () {
+                    ctx.drawImage(this, 0, 0);
+                    DOMURL.revokeObjectURL(url);
+                    // 【可选改进】使用 jpeg 格式并设置质量（如果不需要透明背景）
+                    var png = canvas.toDataURL('image/png');
+                    // 或者使用 JPEG 获得更小的文件：
+                    // var png = canvas.toDataURL('image/jpeg', 0.95);
+
+                    if (this.index != 0) {
+                        pdf.addPage();
+                    }
+                    pdf.addImage(png, 'png', 0, 0, pdfWidth, pdfHeight);
+                    if (this.index == allSvg.length - 1) {
+                        var base64 = pdf.output("datauristring");
+                        base64 = base64.replace(/filename=generated.pdf;/, "");
+                        callback(base64);
+                    }
+                };
+                img.src = url;
+            }
+        };
+
+        /**
+        * @name PrintTemperatureDocument
+        * @type function
+        * @classification file
+        * @param { object } args 打印相关配置
+        *                        PrintMode: "Normal" | "OddPage" | "EvenPage",// 默认Normal,打印模式，为一个字符串，可以为 Normal,OddPage,EvenPage。这里的页码是从1开始计算的
+        *                        SpecifyPageIndexs: "1,3,6-11,12",//默认空，打印指定页码列表，页码从1开始计算，各个项目之间用逗号分开，如果项目中间有个横杠，表示一个页码范围
+        *                        FromPage: 1, // 默认1，从1开始计算的打印开始页码
+        *                        ToPage: 2,//默认为总页数
+        *                                    
+        * @apinameZh 下载本地xml文件
+        */
+        rootElement.PrintTemperatureDocument = function (args) {
+
+            //[DUWRITER5_0-3731] 20241021 lxy 单页模式下支持打印多页
+            var viewmode = rootElement.getAttribute("viewmode");
+            var isSinglePage = '';//先保留一下状态
+            var isPageindex = rootElement.getAttribute("pageindex");
+            //判断是否为单页模式
+            if (typeof viewmode == "string" && (viewmode.toLowerCase().trim() == "singlepage")) {
+                isSinglePage = true;
+                // //判断是否为打印多页
+                // var isPrintMode = (args.PrintMode == "OddPage" || args.PrintMode == "EvenPage");
+                // var isSpecifyPageIndexs = args.SpecifyPageIndexs && args.SpecifyPageIndexs.length > 0;
+                // var isFromToPage = args.FromPage || args.ToPage;
+                // //奇偶页、指定页码、指定页范围时，先设置成全部展示
+                // if (isPrintMode || isSpecifyPageIndexs || isFromToPage) {
+                // //打印指定页时，先设置成全部展示
+                rootElement.SetTemperatureViewMode("page");
+                // }
+            }
+
+
+            var iframe = rootElement.ownerDocument.getElementById(rootElement.id + "_IFrame_Print");
+            if (iframe == null) {
+                iframe = rootElement.ownerDocument.createElement("iframe");
+                iframe.id = rootElement.id + "_IFrame_Print";
+                iframe.style.position = "absolute";
+                rootElement.appendChild(iframe);
+                iframe.style.width = rootElement.offsetWidth + "px";
+                iframe.style.height = rootElement.offsetHeight + "px";
+                iframe.style.left = "0px";
+                iframe.style.top = "0px";// (rootElement.offsetTop + 600) + "px";
+                iframe.style.border = "1px solid blue";
+                iframe.style.display = "";
+                iframe.style.backgroundColor = "white";
+                iframe.style.zIndex = 10000;
+            }
+            iframe.style.display = 'none';
+            var targetDocument = iframe.contentDocument;
+            targetDocument.open();
+            targetDocument.write("");
+            targetDocument.close();
+
+            var styleElement = targetDocument.createElement("STYLE");
+            styleElement.innerText = "@page{margin-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px;}";
+            targetDocument.head.appendChild(styleElement);
+            targetDocument.body.style.margin = "0px";
+            targetDocument.title = " ";
+
+            //获取到页面中的所有svg元素
+            var allSvg = rootElement.querySelectorAll("[dctype=page]");
+            if (allSvg && allSvg.length > 0) {
+                var SpecifyPageNum = [];
+                var isPage = rootElement.getAttribute("viewmode");
+                if (typeof isPage == "string" && (isPage.toLowerCase().trim() == "page" || isPage.toLowerCase().trim() == "temperature")) {
+                    isPage = null;
+                }
+
+                if (args && !isPage) {
+                    if (args.PrintMode == "OddPage" || args.PrintMode == "EvenPage") {
+                        for (var i = 1; i <= allSvg.length; i++) {
+                            if (args.PrintMode == "OddPage") {
+                                if (i % 2 == 1) {
+                                    SpecifyPageNum.push(i);
+                                }
+                            } else if (args.PrintMode == "EvenPage") {
+                                if (i % 2 == 0) {
+                                    SpecifyPageNum.push(i);
+                                }
+                            }
+                        }
+                    } else if (args.SpecifyPageIndexs && args.SpecifyPageIndexs.length > 0) {
+                        var thisIndex = args.SpecifyPageIndexs.split(",");
+                        if (thisIndex && thisIndex.length > 0) {
+                            for (var i = 0; i < thisIndex.length; i++) {
+                                //先判断是否存在-
+                                var pageIndex = thisIndex[i];
+                                //是否存在数值
+                                if (pageIndex.indexOf("-") >= 0) {
+                                    //底部的数值
+                                    var lastIndex = pageIndex.split("-");
+                                    if (lastIndex && lastIndex.length == 2) {
+                                        var firstLastIndex = parseInt(lastIndex[0]);
+                                        var secondLastIndex = parseInt(lastIndex[1]);
+                                        if (!isNaN(firstLastIndex) && !isNaN(secondLastIndex)) {
+                                            if (secondLastIndex < firstLastIndex) {
+                                                secondLastIndex = secondLastIndex + firstLastIndex;
+                                                firstLastIndex = secondLastIndex - firstLastIndex;
+                                                secondLastIndex = secondLastIndex - firstLastIndex;
+                                            } else if (firstLastIndex == secondLastIndex) {
+                                                SpecifyPageNum.push(firstLastIndex);
+                                                continue;
+                                            }
+                                            for (var j = firstLastIndex; j <= secondLastIndex; j++) {
+                                                SpecifyPageNum.push(j);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    pageIndex = parseInt(pageIndex);
+                                    if (!isNaN(pageIndex)) {
+                                        SpecifyPageNum.push(pageIndex);
+                                    }
+                                }
+                            }
+                        }
+
+                    } else if (args.FromPage || args.ToPage) {
+                        if (args.FromPage) {
+                            args.FromPage = parseInt(args.FromPage);
+                            if (isNaN(args.FromPage)) {
+                                args.FromPage = 0;
+                            }
+                        } else {
+                            args.FromPage = 0;
+                        }
+                        if (args.ToPage) {
+                            args.ToPage = parseInt(args.ToPage);
+                            if (isNaN(args.ToPage)) {
+                                args.ToPage = allSvg.length;
+                            }
+                        } else {
+                            args.ToPage = allSvg.length;
+                        }
+
+                        if (args.FromPage > args.ToPage) {
+                            args.FromPage = args.FromPage + args.ToPage;
+                            args.ToPage = args.FromPage - args.ToPage;
+                            args.FromPage = args.FromPage - args.ToPage;
+                        } else if (args.FromPage == args.ToPage) {
+                            SpecifyPageNum.push(args.FromPage);
+                        }
+                        for (var j = args.FromPage; j <= args.ToPage; j++) {
+                            SpecifyPageNum.push(j);
+                        }
+                    }
+                }
+                if (SpecifyPageNum.length == 0) {
+                    SpecifyPageNum = [...new Array(allSvg.length).keys()];
+                    SpecifyPageNum.forEach((item, index) => {
+                        SpecifyPageNum[index] = item + 1;
+                    });
+                }
+                if (SpecifyPageNum.length > 0) {
+                    //去重
+                    SpecifyPageNum = Array.from(new Set(SpecifyPageNum));
+                    //排序
+                    SpecifyPageNum = SpecifyPageNum.sort((a, b) => {
+                        return a - b;
+                    });
+                }
+                for (var i = 1; i <= allSvg.length; i++) {
+                    if (SpecifyPageNum.indexOf(i) < 0) {
+                        continue;
+                    }
+                    var cloneSvg = allSvg[i - 1].cloneNode(true);
+                    var hasText = cloneSvg.querySelector("[dctype='typesign']");
+                    cloneSvg.style.border = "none";
+                    cloneSvg.style.margin = "0px";
+                    hasText && hasText.remove();
+                    targetDocument.body.appendChild(cloneSvg);
+                    //targetDocument.body.appendChild(targetDocument.createElement("BR"));
+                }
+            }
+            iframe.contentWindow.onafterprint = function (e) {
+                //console.log("打印完成", e);
+                rootElement.InnerRaiseEvent("EventTemperatureAfterPrint", targetDocument);
+                iframe.style.display = "none";
+            };
+
+            //打印前事件
+            var result = rootElement.InnerRaiseEvent("EventTemperatureBeforePrint", targetDocument);
+            if (result === false) {
+                return iframe;
+            }
+            iframe.contentWindow.print();
+
+            //[DUWRITER5_0-3731] 20241021 lxy 恢复单页展示
+            if (isSinglePage) {
+                rootElement.SetTemperatureViewMode("singlepage");
+                rootElement.SetTemperaturePageIndex(isPageindex || '1');
+            }
+            return iframe;
+        };
+
+        /**
+         * @name GetDocumentConfigProperties
+         * @type function 
+         * @classification file
+         * @apinameZh 获取全局属性
+         */
+        rootElement.GetDocumentConfigProperties = function () {
+            var config = rootElement.DocumentOptions.DefaultData.Config;
+            config = JSON.parse(JSON.stringify(config));
+            //将数据配置外数据清空
+            var deleteArr = ["TagString", "HeaderLabels", "HeaderLines", "FooterLines", "YAxisInfos", "Labels"];
+            deleteArr.forEach(item => {
+                delete config[item];
+            });
+            return config;
+        };
+
+        /**
+         * @name SetDocumentConfigProperties
+         * @type function 
+         * @classification file
+         * @param { object } options 修改后的时间轴全局属性对象
+         * @apinameZh 设置全局属性
+         */
+        rootElement.SetDocumentConfigProperties = function (option) {
+            //如果不存在option直接退出
+            if (!option || typeof option != "object" || Object.keys(option).length == 0) {
+                return;
+            }
+            //对option内的HeaderLabels,HeaderLines,FooterLines,Labels,YAxisInfos进行处理
+            var ignoreArr = ["HeaderLabels", "HeaderLines", "FooterLines", "Labels", "YAxisInfos"];
+            for (var i = 0; i < ignoreArr.length; i++) {
+                if (option[ignoreArr[i]]) {
+                    delete option[ignoreArr[i]];
+                }
+            }
+            //设置属性
+            var config = {};
+            if (rootElement && rootElement.DocumentOptions) {
+                config = rootElement.DocumentOptions.DefaultData;
+
+                for (var i in option) {
+                    if (i == "PageSettings") {
+                        var pageSetting = option[i];
+                        for (var j in pageSetting) {
+                            config.Config[i][j] = pageSetting[j];
+                        }
+                    } else {
+                        config.Config[i] = option[i];
+                    }
+
+                }
+            } else {
+                config.Config = option;
+            }
+            //console.log(config);
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, config, "EventTemperatureUpdateDocumentConfig");
+            rootElement.InnerRaiseEvent("EventStructureChanged", config.Config, "DocumentConfig");
+        };
+
+        /**
+         * @name GetInternalProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应属性对象或者UID值
+         * @param { string } type 对应内部对象的名称
+         * @apinameZh 从编辑器内部获取对应对象的属性
+         */
+        rootElement.GetInternalProperties = function (id, type) {
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            if (!rootElement.DocumentOptions) {
+                return;
+            }
+            var allLabel = [];
+            if (type) {
+                allLabel = rootElement.DocumentOptions.DefaultData.Config[type];
+            } else {
+                var allItem = ["HeaderLabels", "HeaderLines", "FooterLines", "YAxisInfos", "Labels"];
+                allLabel = [];
+                for (var i = 0; i < allItem.length; i++) {
+                    //如果返回的不是数组则直接进入下一个循环
+                    var thisItem = rootElement.DocumentOptions.DefaultData.Config[allItem[i]];
+                    if (thisItem && !Array.isArray(thisItem)) {
+                        continue;
+                    }
+                    allLabel = [...allLabel, ...thisItem];
+                }
+            }
+            if (allLabel && allLabel.length > 0) {
+                //返回所有的元素
+                if (typeof id == "string") {
+                    //找到对应的UID
+                    for (var i = 0; i < allLabel.length; i++) {
+                        if (allLabel[i].UID == id) {
+                            return allLabel[i];
+                        }
+                    }
+                } else if (id == null) {
+                    return allLabel;
+                }
+            }
+            return;
+        };
+
+
+        /**
+         * @name GetLabelProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应文本标签属性对象或者UID值
+         * @apinameZh 获取全部文本标签属性或者对应UID文本标签属性
+         */
+        rootElement.GetLabelProperties = function (id) {
+            return rootElement.GetInternalProperties(id, "Labels");
+        };
+
+        /**
+         * @name SetLabelProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应文本标签属性对象或者UID值
+         * @param { object } option 修改后的文本标签属性对象
+         * @apinameZh 修改对应UID文本标签属性
+         */
+        rootElement.SetLabelProperties = function (id, option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能修改文本标签");
+                return;
+            }
+            if (typeof id == 'object') {
+                //[DUWRITER5_0-4361] 20250417 lxy 兼容通过name修改属性
+                if (id.Name) {
+                    id = id.Name;
+                } else if (id.UID) {
+                    id = id.UID; //判断是否存在UID属性
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id || !option) {
+                return;
+            }
+            if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                return;
+            }
+            var hasChange = null;
+            var changeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.Labels && defaultData.Config.Labels.length > 0) {
+                var label = defaultData.Config.Labels;
+                hasChange = label.find((data, index) => {
+                    if (data.UID == id || data.Name == id) {
+                        changeData = data;
+                        for (var i in option) {
+                            data[i] = option[i];
+                        }
+                        label[index] = data;
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "Labels");
+        };
+
+        /**
+         * @name AddLabel
+         * @type function 
+         * @classification file
+         * @param { object } option 新增的文本标签属性对象
+         * @apinameZh 新增文本标签属性
+         */
+        rootElement.AddLabel = function (option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能新增文本标签");
+                return;
+            }
+            //判断option是否存在
+            if (!option || typeof option != 'object') {
+                return;
+            }
+            var newLable = rootElement.NewTextLabel();
+            for (var i in option) {
+                newLable[i] = option[i];
+            }
+            // console.log(newLable);
+            //找到全局的config写入
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData && defaultData.Config && defaultData.Config.Labels) {
+                // 判断是否为数组
+                if (!Array.isArray(defaultData.Config.Labels)) {
+                    defaultData.Config.Labels = [];
+                }
+                defaultData.Config.Labels.push(newLable);
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, defaultData, "EventTemperatureAddLabels", newLable);
+            rootElement.InnerRaiseEvent("EventStructureChanged", newLable, "Labels");
+            return newLable;
+        };
+
+        /**
+         * @name RemoveLabel
+         * @type function 
+         * @classification file
+         * @param { boolean|object } id 对应文本标签属性对象或者UID值
+         * @apinameZh 删除对应UID文本标签属性
+         */
+        rootElement.RemoveLabel = function (id) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能删除文本标签");
+                return;
+            }
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id) {
+                return;
+            }
+            var hasChange = null;
+            var removeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.Labels && defaultData.Config.Labels.length > 0) {
+                var labels = defaultData.Config.Labels;
+                hasChange = labels.find((data, index) => {
+                    if (data.UID == id) {
+                        removeData = data;
+                        labels.splice(index, 1);
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureRemoveLabels", hasChange);
+            rootElement.InnerRaiseEvent("EventStructureChanged", removeData, "Labels");
+            return hasChange;
+        };
+
+        /**
+         * @name GetHeaderLabelProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应眉栏属性对象或者UID值
+         * @apinameZh 获取全部眉栏属性或者对应UID眉栏属性
+         */
+        rootElement.GetHeaderLabelProperties = function (id) {
+            return rootElement.GetInternalProperties(id, "HeaderLabels");
+        };
+
+        /**
+         * @name SetHeaderLabelProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应眉栏属性对象或者UID值
+         * @param { object } option 修改后的眉栏属性对象
+         * @apinameZh 修改对应UID眉栏属性
+         */
+        rootElement.SetHeaderLabelProperties = function (id, option) {
+            //判断是否为设计模式
+            //var dcType = rootElement.getAttribute("dctype");
+            //if (dcType != "DCTemperatureDesignControlForWASM") {
+            //    console.log("需要在设计模式下才能修改眉栏属性");
+            //    return;
+            //}
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id || !option) {
+                return;
+            }
+            if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                return;
+            }
+            var hasChange = null;
+            var changeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.HeaderLabels && defaultData.Config.HeaderLabels.length > 0) {
+                var headerLabels = defaultData.Config.HeaderLabels;
+                hasChange = headerLabels.find((data, index) => {
+                    if (data.UID == id) {
+                        changeData = data;
+                        for (var i in option) {
+                            data[i] = option[i];
+                        }
+                        headerLabels[index] = data;
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "HeaderLabels");
+        };
+
+        /**
+         * @name SetHeaderLabelChangeDate
+         * @type function 
+         * @param { object } options 键值对，键为目标小标题的UID，值为转科日期数组
+         * @apinameZh 设置眉栏的转科转床信息
+         */
+        rootElement.SetHeaderLabelChangeDate = function (options) {
+            if (options && Object.keys(options).length > 0) {
+                var optionsKey = Object.keys(options);
+                var changeData = [];
+
+                var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.HeaderLabels;
+                if (HeaderLabels && HeaderLabels.length) {
+                    HeaderLabels.forEach(item => {
+                        if (item.UID.indexOf(optionsKey) >= 0) {
+                            changeData.push(item);
+                        }
+                    });
+                }
+
+                if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                    rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'] = JSON.parse(JSON.stringify(options));
+                }
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "HeaderLabels");
+            return true;
+
+        };
+
+        /**
+        * @name SetHeaderLabelChangeDateByUID
+        * @type function 
+        * @param { string } uid 目标小标题的UID
+        * @param { object } options 键值对，键为目标小标题的UID，值为转科日期数组
+        * @apinameZh 设置眉栏的转科转床信息
+        */
+        rootElement.SetHeaderLabelChangeDateByUID = function (uid, options) {
+            if (options && Object.keys(options).length > 0) {
+                var changeData = [];
+                var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.HeaderLabels;
+                if (HeaderLabels && HeaderLabels.length) {
+                    HeaderLabels.forEach(item => {
+                        if (item.UID == uid) {
+                            changeData.push(item);
+                        }
+                    });
+                }
+
+                if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                    if (!rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate']) {
+                        rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'] = {};
+                    }
+                    rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'][uid] = {};
+                    rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'][uid] = JSON.parse(JSON.stringify(options));
+                }
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "HeaderLabels");
+            return true;
+
+        };
+        /**
+        * @name RemoveHeaderLabelChangeDateByUID
+        * @type function 
+        * @param { string } uid 目标小标题的UID
+        * @apinameZh 删除单个眉栏的转科转床信息
+        */
+        rootElement.RemoveHeaderLabelChangeDateByUID = function (uid) {
+            if (!uid) {
+                return false;
+            }
+            var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.HeaderLabels;
+
+            if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                if (!rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate']) {
+                    return false;
+                }
+                if (!rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'][uid]) {
+                    return false;
+                }
+                delete rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'][uid];
+            }
+
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", HeaderLabels, "HeaderLabels");
+            return true;
+
+        };
+
+        /**
+        * @name RemoveHeaderLabelChangeDate
+        * @type function 
+        * @apinameZh 删除所有的眉栏转科转床信息
+        */
+        rootElement.RemoveHeaderLabelChangeDate = function () {
+            var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.HeaderLabels;
+            if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                if (!rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate']) {
+                    return false;
+                }
+                rootElement.DocumentOptions.DefaultData.Config['HeaderLabelChangeDate'] = null;
+
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", HeaderLabels, "HeaderLabels");
+            return true;
+
+        };
+
+        /**
+         * @name AddHeaderLabel
+         * @type function 
+         * @classification file
+         * @param { object } option 新增的眉栏属性对象
+         * @apinameZh 新增眉栏属性
+         */
+        rootElement.AddHeaderLabel = function (option) {
+            //判断是否为设计模式
+            //var dcType = rootElement.getAttribute("dctype");
+            //if (dcType != "DCTemperatureDesignControlForWASM") {
+            //    console.log("需要在设计模式下才能新增眉栏");
+            //    return;
+            //}
+            //判断option是否存在
+            if (!option || typeof option != 'object') {
+                return;
+            }
+            var newLable = rootElement.NewHeaderLabel();
+            for (var i in option) {
+                newLable[i] = option[i];
+            }
+            //找到全局的config写入
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData) {
+                var headerLabels = defaultData.Config.HeaderLabels;
+                headerLabels.push(newLable);
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureAddHeaderLabel", newLable);
+            rootElement.InnerRaiseEvent("EventStructureChanged", newLable, "HeaderLabels");
+            return newLable;
+        };
+
+        /**
+         * @name RemoveHeaderLabel
+         * @type function 
+         * @classification file
+         * @param { boolean|object } id 对应眉栏属性对象或者UID值
+         * @apinameZh 删除对应UID眉栏属性
+         */
+        rootElement.RemoveHeaderLabel = function (id) {
+            //判断是否为设计模式
+            //var dcType = rootElement.getAttribute("dctype");
+            //if (dcType != "DCTemperatureDesignControlForWASM") {
+            //    console.log("需要在设计模式下才能删除眉栏");
+            //    return;
+            //}
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id) {
+                return;
+            }
+            var hasChange = null;
+            var removeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.HeaderLabels && defaultData.Config.HeaderLabels.length > 0) {
+                var headerLabels = defaultData.Config.HeaderLabels;
+                hasChange = headerLabels.find((data, index) => {
+                    if (data.UID == id) {
+                        removeData = data;
+                        headerLabels.splice(index, 1);
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureRemoveHeaderLabel", hasChange);
+            rootElement.InnerRaiseEvent("EventStructureChanged", removeData, "HeaderLabels");
+            return hasChange;
+        };
+
+        /**
+         * @name GetGeneralItemProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应一般项目属性对象或者UID值
+         * @apinameZh 获取全部一般项目属性或者对应UID一般项目属性
+         */
+        rootElement.GetGeneralItemProperties = function (id) {
+            return rootElement.GetInternalProperties(id, "HeaderLines");
+        };
+
+        /**
+         * @name SetGeneralItemProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应一般项目属性对象或者UID值
+         * @param { object } option 修改后的一般项目属性对象
+         * @apinameZh 修改对应UID一般项目属性
+         */
+        rootElement.SetGeneralItemProperties = function (id, option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能修改一般项目属性");
+                return;
+            }
+            rootElement.SetHeaderFooterLineProperties(id, option, "HeaderLines");
+        };
+
+        /**
+         * @name AddGeneralItem
+         * @type function 
+         * @classification file
+         * @param { object } option 新增一般项目属性对象
+         * @apinameZh 新增一般项目属性
+         */
+        rootElement.AddGeneralItem = function (option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能新增一般项目");
+                return;
+            }
+            //判断option是否存在
+            if (!option || typeof option != 'object') {
+                return;
+            }
+            var newLable = rootElement.NewTitleLine();
+            for (var i in option) {
+                newLable[i] = option[i];
+            }
+            //找到全局的config写入
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData) {
+                var headerLines = defaultData.Config.HeaderLines;
+                headerLines.push(newLable);
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureAddHeaderLines", newLable);
+            rootElement.InnerRaiseEvent("EventStructureChanged", newLable, "HeaderLines");
+            return newLable;
+        };
+
+        /**
+         * @name RemoveGeneralItem
+         * @type function 
+         * @classification file
+         * @param { boolean|object } id 对应一般项目属性对象或者UID值
+         * @apinameZh 删除对应UID一般项目属性
+         */
+        rootElement.RemoveGeneralItem = function (id) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能删除一般项目");
+                return;
+            }
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id) {
+                return;
+            }
+            var hasChange = null;
+            var removeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.HeaderLines && defaultData.Config.HeaderLines.length > 0) {
+                var headerLines = defaultData.Config.HeaderLines;
+                hasChange = headerLines.find((data, index) => {
+                    if (data.UID == id) {
+                        removeData = data;
+                        headerLines.splice(index, 1);
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureRemoveHeaderLines", hasChange);
+            rootElement.InnerRaiseEvent("EventStructureChanged", removeData, "HeaderLines");
+            return hasChange;
+        };
+
+        /**
+         * @name GetSpecialItemsProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应特殊项目属性对象或者UID值
+         * @apinameZh 获取全部特殊项目属性或者对应UID特殊项目属性
+         */
+        rootElement.GetSpecialItemsProperties = function (id) {
+            return rootElement.GetInternalProperties(id, "FooterLines");
+        };
+
+        /**
+         * @name SetSpecialItemsProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应特殊项目属性对象或者UID值
+         * @param { object } option 修改后的特殊项目属性对象
+         * @apinameZh 修改对应UID特殊项目属性接口
+         */
+        rootElement.SetSpecialItemsProperties = function (id, option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能修改特殊项目属性");
+                return;
+            }
+            rootElement.SetHeaderFooterLineProperties(id, option, "FooterLines");
+        };
+
+        /**
+         * @name AddSpecialItems
+         * @type function 
+         * @classification file
+         * @param { object } option 新增特殊项目属性对象
+         * @apinameZh 新增特殊项目属性
+         */
+        rootElement.AddSpecialItems = function (option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能新增特殊项目");
+                return;
+            }
+            //判断option是否存在
+            if (!option || typeof option != 'object') {
+                return;
+            }
+            var newLable = rootElement.NewTitleLine();
+            for (var i in option) {
+                newLable[i] = option[i];
+            }
+            //找到全局的config写入
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData) {
+                var footerLines = defaultData.Config.FooterLines;
+                footerLines.push(newLable);
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureAddFooterLines", newLable);
+            rootElement.InnerRaiseEvent("EventStructureChanged", newLable, "FooterLines");
+            return newLable;
+        };
+
+        /**
+         * @name RemoveSpecialItems
+         * @type function 
+         * @classification file
+         * @param { boolean|object } id 对应特殊项目属性对象或者UID值
+         * @apinameZh 删除对应UID特殊项目属性
+         */
+        rootElement.RemoveSpecialItems = function (id) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能删除特殊项目");
+                return;
+            }
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id) {
+                return;
+            }
+            var hasChange = null;
+            var removeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.FooterLines && defaultData.Config.FooterLines.length > 0) {
+                var footerLines = defaultData.Config.FooterLines;
+                hasChange = footerLines.find((data, index) => {
+                    if (data.UID == id) {
+                        removeData = data;
+                        footerLines.splice(index, 1);
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureRemoveFooterLines", hasChange);
+            rootElement.InnerRaiseEvent("EventStructureChanged", removeData, "FooterLines");
+            return hasChange;
+        };
+
+        /**
+         * @name SetHeaderFooterLineProperties
+         * @type function 
+         * @classification file
+         * @param { object } options 时间轴页眉页脚属性统一接口
+         * @apinameZh 页眉页脚属性统一接口
+         */
+        rootElement.SetHeaderFooterLineProperties = function (id, option, type) {
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id || !option || typeof option != "object" || Object.keys(option).length == 0) {
+                return;
+            }
+            if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                return;
+            }
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            var headerFooterArr = [];
+            if (defaultData.Config.HeaderLines) {
+                headerFooterArr = [...headerFooterArr, ...defaultData.Config.HeaderLines];
+            }
+            if (defaultData.Config.FooterLines) {
+                headerFooterArr = [...headerFooterArr, ...defaultData.Config.FooterLines];
+            }
+            var hasChange = null;
+            var changeData = null;
+            if (headerFooterArr && headerFooterArr.length > 0) {
+                //修改属性
+                hasChange = headerFooterArr.find((data, index) => {
+                    if (data.UID == id) {
+                        changeData = data;
+                        for (var i in option) {
+                            data[i] = option[i];
+                        }
+                        headerFooterArr[index] = data;
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            //console.log(rootElement.DocumentOptions.DefaultData);
+            //console.log(config);
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateHeaderFooterLineProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, type);
+        };
+        /**
+        * @name SetFooterLinesChangeDate
+        * @type function 
+        * @classification file
+        * @param { object } options 特殊项目的修改数据
+        * @apinameZh 特殊项目的修改数据
+        */
+        rootElement.SetFooterLinesChangeDate = function (options) {
+            if (options && Object.keys(options).length > 0) {
+                var FooterLines = rootElement.DocumentOptions.DefaultData.Config.FooterLines;
+
+                if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                    rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'] = {};
+                    rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'] = JSON.parse(JSON.stringify(options));
+                }
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+                rootElement.InnerRaiseEvent("EventStructureChanged", FooterLines, "FooterLines");
+                return true;
+            }
+            return false;
+        };
+
+        /**
+         * @name SetFooterLinesChangeDateByUID
+         * @type function 
+         * @classification file
+         * @param { string } nameStr 对应特殊项目属性对象或者UID值
+         * @param { object } options 特殊项目的修改数据
+         * @apinameZh 特殊项目的单个修改数据
+         */
+        rootElement.SetFooterLinesChangeDateByUID = function (nameStr, options) {
+            if (options && Object.keys(options).length > 0) {
+                var changeData = [];
+                var FooterLines = rootElement.DocumentOptions.DefaultData.Config.FooterLines;
+                if (FooterLines && FooterLines.length) {
+                    FooterLines.forEach(item => {
+                        if (item.Name == nameStr) {
+                            changeData.push(item);
+                        }
+                    });
+                }
+
+                if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                    if (!rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate']) {
+                        rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'] = {};
+                    }
+                    rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'][nameStr] = {};
+                    rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'][nameStr] = JSON.parse(JSON.stringify(options));
+                }
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+                rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "FooterLines");
+                return true;
+            }
+            return false;
+        };
+
+        /**
+       * @name RemoveFooterLinesChangeDateByUID
+       * @type function 
+       * @classification file
+       * @param { string } nameStr 对应特殊项目属性对象或者UID值
+       * @apinameZh 删除对应特殊项目的单个修改数据
+       */
+        rootElement.RemoveFooterLinesChangeDateByUID = function (nameStr) {
+            if (!nameStr) {
+                return false;
+            }
+            var changeData = [];
+            var FooterLines = rootElement.DocumentOptions.DefaultData.Config.FooterLines;
+            if (FooterLines && FooterLines.length) {
+                FooterLines.forEach(item => {
+                    if (item.Name == nameStr) {
+                        changeData.push(item);
+                    }
+                });
+            }
+
+            if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                if (!rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate']) {
+                    return false;
+                }
+                if (!rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'][nameStr]) {
+                    return false;
+                }
+                delete rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'][nameStr];
+
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+                rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "FooterLines");
+                return true;
+            }
+
+            return false;
+        };
+
+        /**
+      * @name RemoveFooterLinesChangeDateByUID
+      * @type function 
+      * @classification file
+      * @param { string } nameStr 对应特殊项目属性对象或者UID值
+      * @apinameZh 删除对应特殊项目的单个修改数据
+      */
+        rootElement.RemoveFooterLinesChangeDate = function () {
+            var FooterLines = rootElement.DocumentOptions.DefaultData.Config.FooterLines;
+            if (rootElement.DocumentOptions.DefaultData && rootElement.DocumentOptions.DefaultData.Config) {
+                if (!rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate']) {
+                    return false;
+                }
+                delete rootElement.DocumentOptions.DefaultData.Config['FooterLinesChangeDate'];
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateLabelProperties");
+                rootElement.InnerRaiseEvent("EventStructureChanged", FooterLines, "FooterLines");
+                return true;
+            }
+            return false;
+        };
+
+        /**
+         * @name GetYAxisInfosProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应体征项目属性对象或者UID值
+         * @apinameZh 获取全部体征项目属性或者对应UID体征项目属性
+         */
+        rootElement.GetYAxisInfosProperties = function (id) {
+            return rootElement.GetInternalProperties(id, "YAxisInfos");
+        };
+
+        /**
+         * @name SetYYAxisProperties
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应体征项目属性对象或者UID值
+         * @param { object } option 修改后的体征项目属性对象
+         * @apinameZh 修改对应UID体征项目属性接口
+         */
+        rootElement.SetYAxisInfosProperties = function (id, option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能修改体征项目");
+                return;
+            }
+            //如果不存在option直接退出
+            if (!id || !option) {
+                return;
+            }
+            if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                return;
+            }
+            var hasChange = null;
+            var changeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.YAxisInfos && defaultData.Config.YAxisInfos.length > 0) {
+                var yAxios = defaultData.Config.YAxisInfos;
+                hasChange = yAxios.find((data, index) => {
+                    if (data.UID == id || data.Name == id) {
+                        changeData = data;
+                        for (var i in option) {
+                            data[i] = option[i];
+                        }
+                        yAxios[index] = data;
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateYAxisInfosProperties");
+            rootElement.InnerRaiseEvent("EventStructureChanged", changeData, "YAxisInfos");
+        };
+
+        /**
+         * @name AddYAxisInfos
+         * @type function 
+         * @classification file
+         * @param { object } option 新增体征项目属性对象
+         * @apinameZh 新增体征项目属性
+         */
+        rootElement.AddYAxisInfos = function (option) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能新增体征项目");
+                return;
+            }
+            //判断option是否存在
+            if (!option || typeof option != 'object') {
+                return;
+            }
+            var newLable = rootElement.NewYAxis();
+            for (var i in option) {
+                newLable[i] = option[i];
+            }
+            //找到全局的config写入
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData) {
+                var yAxisInfos = defaultData.Config.YAxisInfos;
+                yAxisInfos.push(newLable);
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureAddYAxisInfos", newLable);
+            rootElement.InnerRaiseEvent("EventStructureChanged", newLable, "YAxisInfos");
+            return newLable;
+        };
+
+        /**
+         * @name RemoveYAxisInfos
+         * @type function 
+         * @classification file
+         * @param { boolean|object } id 对应体征项目属性对象或者UID值
+         * @apinameZh 删除对应UID体征项目属性
+         */
+        rootElement.RemoveYAxisInfos = function (id) {
+            //判断是否为设计模式
+            var dcType = rootElement.getAttribute("dctype");
+            if (dcType != "DCTemperatureDesignControlForWASM") {
+                console.log("需要在设计模式下才能删除体征项目");
+                return;
+            }
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else {
+                    id = null;
+                }
+            }
+            //如果不存在option直接退出
+            if (!id) {
+                return;
+            }
+            var hasChange = null;
+            var removeData = null;
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (defaultData.Config && defaultData.Config.YAxisInfos && defaultData.Config.YAxisInfos.length > 0) {
+                var yAxisInfos = defaultData.Config.YAxisInfos;
+                hasChange = yAxisInfos.find((data, index) => {
+                    if (data.UID == id) {
+                        removeData = data;
+                        yAxisInfos.splice(index, 1);
+                        return true;
+                    }
+                });
+            }
+            if (!hasChange) {
+                return;
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureRemoveYAxisInfos", hasChange);
+            rootElement.InnerRaiseEvent("EventStructureChanged", removeData, "YAxisInfos");
+            return hasChange;
+        };
+
+        /**
+         * @name GetGeneralItemValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应一般项目属性对象或者UID值
+         * @apinameZh 获取所有一般项目值接口
+         */
+        rootElement.GetGeneralItemValue = function (id) {
+            return rootElement.GetTemperatureDocumentValue(id, "HeaderLines");
+        };
+
+        /**
+         * @name SetGeneralItemValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应一般项目属性对象或者UID值
+         * @param { object } option 修改后的一般项目属性对象
+         * @apinameZh 修改一般项目值接口
+         */
+        rootElement.SetGeneralItemValue = function (id, option) {
+            return rootElement.SetTemperatureDocumentValue(id, option);
+        };
+
+
+
+
+        /**
+         * @name GetSpecialItemsValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应特殊项目属性对象或者UID值
+         * @apinameZh 获取所有特殊项目值接口
+         */
+        rootElement.GetSpecialItemsValue = function (id) {
+            return rootElement.GetTemperatureDocumentValue(id, "FooterLines");
+        };
+
+        /**
+         * @name SetSpecialItemsValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应特殊项目属性对象或者UID值
+         * @param { object } option 修改后的特殊项目属性对象
+         * @apinameZh 修改特殊项目值接口
+         */
+        rootElement.SetSpecialItemsValue = function (id, option) {
+            return rootElement.SetTemperatureDocumentValue(id, option);
+        };
+
+        /**
+         * @name GetYAxisInfosValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应体征项目属性对象或者UID值
+         * @apinameZh 获取所有体征项目值接口
+         */
+        rootElement.GetYAxisInfosValue = function (id) {
+            return rootElement.GetTemperatureDocumentValue(id, "YAxisInfos");
+        };
+
+        /**
+         * @name SetYAxisInfosValue
+         * @type function 
+         * @classification file
+         * @param { object|string } id 对应体征项目属性对象或者UID值
+         * @param { object } option 修改后的体征项目属性对象
+         * @apinameZh 修改体征项目值接口
+         */
+        rootElement.SetYAxisInfosValue = function (id, option) {
+            return rootElement.SetTemperatureDocumentValue(id, option);
+        };
+
+        /**
+         * @name DeleteYAxisInfosValue
+         * @param { object|string } name 对应体征项目属性对象或者UID值
+         * @param { string } time 对应体征项目属性值的时间
+         * @param { object } option 修改后的体征项目属性对象
+         * @apinameZh 删除体征项目值接口
+         */
+        rootElement.DeleteYAxisInfosValue = function (name, time) {
+            if (!name || !time) {
+                return false;
+            }
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (!defaultData.Config || !defaultData.Config.YAxisInfos || defaultData.Config.YAxisInfos.length == 0) {
+                return false;
+            }
+            var Values = defaultData.Values;
+            if (Values && Values.length > 0) {
+                var targetYAxisValue = null;
+                for (var i = 0; i < Values.length; i++) {
+                    if (Values[i].Name == name.trim()) {
+                        targetYAxisValue = Values[i];
+                        break;
+                    }
+                }
+                if (targetYAxisValue && targetYAxisValue.Datas && targetYAxisValue.Datas.length > 0) {
+                    var findTime = new Date(time).getTime();//要删除的时间
+                    var Datas = targetYAxisValue.Datas;
+                    for (var i = 0; i < Datas.length; i++) {
+                        var dataTime = Datas[i].Time && new Date(Datas[i].Time).getTime() || 0;
+                        if (dataTime == findTime) {
+                            Datas.splice(i, 1);
+                            break;
+                        }
+                    }
+                    WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureValue");
+                    return true;
+                }
+            }
+
+        };
+
+
+
+        /**
+         * @name GetTemperatureDocumentValue
+         * @type function 
+         * @classification file
+         * @param { string|object } id 时间轴id值或者UID属性
+         * @param { string } type 时间轴项目类型
+         * @apinameZh 获取时间轴数据
+         */
+        rootElement.GetTemperatureDocumentValue = function (id, type) {
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else if (id.Name) {
+                    id = id.Name;
+                } else {
+                    id = null;
+                }
+            }
+            if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                return;
+            }
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            if (!defaultData.Values) {
+                return;
+            }
+            //如果存在id值,优先考虑uid
+            var allType = ["HeaderLines", "FooterLines", "YAxisInfos"];
+            //如果不存在id值,直接返回所有的数值
+            if (id == null) {
+                if (type && allType.indexOf(type) >= 0) {
+                    //获取对应的项目
+                    var thisLabel = defaultData.Config[type];
+                    var allName = [];
+                    for (var i = 0; i < thisLabel.length; i++) {
+                        if (thisLabel[i].Name) {
+                            allName.push(thisLabel[i].Name);
+                        }
+                    }
+                    //获取所有的返回值
+                    var result = [];
+                    if (allName.length > 0) {
+                        for (var i = 0; i < defaultData.Values.length; i++) {
+                            var thisValue = defaultData.Values[i];
+                            if (allName.indexOf(thisValue.Name) >= 0) {
+                                result.push(thisValue);
+                                continue;
+                            }
+                        }
+                    }
+                    return result;
+                } else {
+                    return defaultData.Values;
+                }
+            }
+            var hasName = null;
+            for (var i = 0; i < allType.length; i++) {
+                if (hasName) {
+                    break;
+                }
+                var thisLabel = defaultData.Config[allType[i]];
+                if (thisLabel && thisLabel.length > 0) {
+                    for (var j = 0; j < thisLabel.length; j++) {
+                        if (thisLabel[j].UID == id) {
+                            hasName = thisLabel[j].Name;
+                            break;
+                        } else if (thisLabel[j].Name == id) {
+                            hasName = thisLabel[j].Name;
+                            break;
+                        }
+                    }
+                }
+            }
+            var result = null;
+            if (hasName) {
+                for (var i = 0; i < defaultData.Values.length; i++) {
+                    var thisValue = defaultData.Values[i];
+                    if (thisValue.Name == hasName) {
+                        result = thisValue;
+                        break;
+                    }
+                }
+            }
+            return result;
+        };
+
+        /**
+         * @name SetTemperatureDocumentValue
+         * @type function 
+         * @classification file
+         * @param { string|object } id 时间轴id值或者UID属性
+         * @param { object|array } options 时间轴数值数组
+         * @apinameZh 设置时间轴数据
+         */
+        rootElement.SetTemperatureDocumentValue = function (id, option) {
+            try {
+                if (typeof id == 'object') {
+                    //判断是否存在UID属性
+                    if (id.UID) {
+                        id = id.UID;
+                    } else if (id.Name) {
+                        id = id.Name;
+                    } else {
+                        id = null;
+                    }
+                }
+                //如果不存在option直接退出
+                if (!id) {
+                    return false;
+                }
+                if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                    return false;
+                }
+                var defaultData = rootElement.DocumentOptions.DefaultData;
+
+                //如果没有属性直接退回
+                if (!option) {
+                    return;
+                }
+
+                //如果存在id值,优先考虑uid
+                var allType = ["HeaderLines", "FooterLines", "YAxisInfos"];
+                var hasName = null;
+                var thisType = null;
+                var thisStyle = null;
+                for (var i = 0; i < allType.length; i++) {
+                    thisType = allType[i];
+                    if (hasName) {
+                        break;
+                    }
+                    var thisLabel = defaultData.Config[allType[i]];
+                    if (thisLabel && thisLabel.length > 0) {
+                        for (var j = 0; j < thisLabel.length; j++) {
+                            if (thisLabel[j].UID == id) {
+                                hasName = thisLabel[j].Name;
+                                thisStyle = thisLabel[j].Style;
+                                break;
+                            } else if (thisLabel[j].Name == id) {
+                                hasName = thisLabel[j].Name;
+                                thisStyle = thisLabel[j].Style;
+                                break;
+                            }
+                        }
+                    }
+                }
+                option = JSON.parse(JSON.stringify(option));
+                //自此出修改正option的值
+                if (!Array.isArray(option)) {
+                    option = [option];
+                }
+                for (var i = 0; i < option.length; i++) {
+                    //如果时间不存在直接返回
+                    if (!option[i].Time) {
+                        continue;
+                    }
+                    //if (!hasName && !option[i].Value) {
+                    //    continue;
+                    //}
+                    if (option[i] && option[i].Value === '') {
+                        option[i].Value = -10000;
+                    }
+                    //判断是否是否合法
+                    var isDate = new Date(option[i].Time).getTime();
+                    if (isNaN(isDate)) {
+                        option[i].Time = null;
+                    }
+                    var newOption = rootElement.NewValuePoint();
+                    for (var j in option[i]) {
+                        newOption[j] = option[i][j];
+                    }
+                    option[i] = newOption;
+                }
+
+                if (hasName) {
+                    changeDate(hasName, option);
+                } else {
+                    defaultData.Values.push({
+                        Name: id,
+                        Datas: option
+                    });
+                }
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureValue");
+                return true;
+            } catch (err) {
+                return false;
+            }
+
+            function changeDate() {
+
+                //如果存在Value
+                if (defaultData.Values && defaultData.Values.length > 0) {
+                    //存在相同的值
+                    var hasValue = defaultData.Values.find((data, index) => {
+                        //存在相同的Name值
+                        if (data.Name == hasName) {
+                            //存在值
+                            if (data.Datas) {
+                                //循环写入数据
+                                option.forEach((newData, newIndex) => {
+                                    if (newData.Time) {
+                                        var hasChange = false;
+                                        data.Datas.forEach((oldData, oldIndex) => {
+                                            if (newData.Time == oldData.Time) {
+                                                //判断是否为Text
+                                                if (thisStyle == "Text") {
+                                                    if ((newData.Value === oldData.Value) && (newData.Text === oldData.Text)) {
+                                                        //[DUWRITER5_0-4295]20250331lxy 当value、time、text都相同时，不拼接文本
+                                                        hasChange = true;
+                                                        return;
+                                                    }
+                                                    for (var i in newData) {
+                                                        if (i == "Text") {
+                                                            continue;
+                                                        }
+                                                        oldData[i] = newData[i];
+                                                    }
+                                                    oldData.Text += `&dc&${newData.Text}`; //用特殊标记表示
+                                                    hasChange = true;
+                                                    return;
+                                                }
+
+                                                //[DUWRITER5_0-4401] 20250428 lxy 优化赋值过程
+                                                for (var i in newData) {
+                                                    oldData[i] = newData[i];
+                                                }
+                                                hasChange = true;
+                                            }
+                                        });
+                                        if (!hasChange) {
+                                            data.Datas.push(newData);
+                                        }
+                                    }
+                                });
+                            } else {
+                                //不存在值
+                                data.Datas = option;
+                            }
+                            return true;
+                        }
+                    });
+                    if (!hasValue) {
+                        defaultData.Values.push({
+                            Name: hasName,
+                            Datas: option
+                        });
+                    }
+                } else {
+                    if (defaultData.Values == null) {
+                        defaultData.Values = [];
+                    }
+                    defaultData.Values.push({
+                        Name: hasName,
+                        Datas: option
+                    });
+                }
+
+            }
+        };
+
+        /**
+         * @name RemoveTemperatureDocumentValue
+         * @param { string|object } id 时间轴id值或者UID属性
+         * @param { object|array } options 时间轴数值数组（默认值为null，表示删除所有数据）
+         * @apinameZh 删除时间轴数据，如果不传参数则清空所有值
+         */
+        rootElement.RemoveTemperatureDocumentValue = function (id, option = null) {
+            try {
+                if (typeof id == 'object') {
+                    //判断是否存在UID属性
+                    if (id.UID) {
+                        id = id.UID;
+                    } else if (id.Name) {
+                        id = id.Name;
+                    } else {
+                        id = null;
+                    }
+                }
+                if (!rootElement || !rootElement.DocumentOptions || !rootElement.DocumentOptions.DefaultData) {
+                    return false;
+                }
+                var defaultData = rootElement.DocumentOptions.DefaultData;
+
+                //如果不存在option直接退出
+                if (!id && !option) {
+                    //清空整个value
+                    defaultData.Values = [];
+                    WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureValue");
+                    return true;
+                }
+                if (!id) {
+                    return false;
+                }
+
+                //如果存在id值,优先考虑uid
+                var allType = ["HeaderLines", "FooterLines", "YAxisInfos"];
+                var hasName = null;
+                for (var i = 0; i < allType.length; i++) {
+                    if (hasName) {
+                        break;
+                    }
+                    var thisLabel = defaultData.Config[allType[i]];
+                    if (thisLabel && thisLabel.length > 0) {
+                        for (var j = 0; j < thisLabel.length; j++) {
+                            if (thisLabel[j].UID == id) {
+                                hasName = thisLabel[j].Name;
+                                break;
+                            } else if (thisLabel[j].Name == id) {
+                                hasName = thisLabel[j].Name;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (hasName) {
+                    //如果存在Value
+                    if (defaultData.Values && defaultData.Values.length > 0) {
+                        //存在相同的值
+                        var hasValue = defaultData.Values.find((data, index) => {
+                            //存在相同的Name值
+                            if (data.Name == hasName) {
+                                //存在值
+                                if (data.Datas) {
+                                    if (option) {
+                                        option = JSON.parse(JSON.stringify(option));
+                                        //自此出修改正option的值
+                                        if (!Array.isArray(option)) {
+                                            option = [option];
+                                        }
+                                        for (var i = 0; i < option.length; i++) {
+                                            //如果时间不存在直接返回
+                                            if (!option[i].Time) {
+                                                continue;
+                                            }
+                                            //if (!hasName && !option[i].Value) {
+                                            //    continue;
+                                            //}
+                                            //判断是否是否合法
+                                            var isDate = new Date(option[i].Time).getTime();
+                                            if (isNaN(isDate)) {
+                                                option[i].Time = null;
+                                            }
+                                            var newOption = rootElement.NewValuePoint();
+                                            for (var j in option[i]) {
+                                                newOption[j] = option[i][j];
+                                            }
+                                            option[i] = newOption;
+                                        }
+                                        //循环写入数据
+                                        option.forEach((newData, newIndex) => {
+                                            if (newData.Time) {
+                                                var hasChange = false;
+                                                data.Datas.forEach((oldData, oldIndex) => {
+                                                    if (newData.Time == oldData.Time || (newData.ID && (newData.ID == oldData.ID))) {
+                                                        data.Datas.splice(oldIndex, 1);
+                                                        hasChange = true;
+                                                    }
+                                                });
+                                                if (!hasChange) {
+                                                    data.Datas.push(newData);
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        data.Datas = [];
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureValue");
+                return true;
+            } catch (err) {
+                return false;
+            }
+        };
+
+        /**
+         * @name GetTemperatureViewMode
+         * @type function 
+         * @classification file
+         * @apinameZh 获取时间轴显示模式
+         */
+        rootElement.GetTemperatureViewMode = function () {
+            return rootElement.DocumentOptions.DefaultData.ViewMode;
+        };
+
+        /**
+         * @name SetTemperatureViewMode
+         * @type function 
+         * @classification file
+         * @apinameZh 设置时间轴显示模式
+         */
+        rootElement.SetTemperatureViewMode = function (type) {
+            if (type && typeof type == "string") {
+                type == type.toLowerCase().trim();
+                if (type == "singlepage" || type == "temperature" || type == "page") {
+                    var pageindex = rootElement.getAttribute("pageindex");
+                    if (!pageindex || pageindex == "0") {
+                        rootElement.setAttribute("pageindex", 1);
+                    }
+                    rootElement.setAttribute("viewmode", type);
+                    rootElement.DocumentOptions.DefaultData.ViewMode = type;
+                    //此处刷新数据
+                    WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateViewMode");
+                }
+            }
+        };
+
+        /**
+         * @name GetTemperatureNumOfPages
+         * @type function 
+         * @classification file
+         * @apinameZh 获取时间轴总页数
+         */
+        rootElement.GetTemperatureNumOfPages = function () {
+            return rootElement.DocumentOptions.DefaultData.NumOfPages;
+        };
+
+        /**
+         * @name GetTemperaturePageIndex
+         * @type function 
+         * @classification file
+         * @apinameZh 分页展示时获取时间轴当前页
+         */
+        rootElement.GetTemperaturePageIndex = function () {
+            return rootElement.DocumentOptions.DefaultData.PageIndex;
+        };
+
+        /**
+         * @name SetTemperaturePageIndex
+         * @type function 
+         * @classification file
+         * @apinameZh 分页展示时设置时间轴当前页
+         */
+        rootElement.SetTemperaturePageIndex = function (index) {
+            if (index && typeof index == "string") {
+                index = parseInt(index);
+                if (isNaN(index)) {
+                    index == 1;
+                }
+            }
+            if (typeof index == "number") {
+                rootElement.setAttribute("pageindex", index);
+
+                var calculationData = rootElement.DocumentOptions.CalculationData;
+                var svgEle = rootElement.DocumentOptions.SVGElement;
+
+                //视图模式
+                // var viewMode = calculationData.GetViewMode ? calculationData.GetViewMode.toLowerCase().trim() : "page";
+                var viewMode = rootElement.getAttribute("viewmode") && rootElement.getAttribute("viewmode").toLowerCase().trim();
+                if (!viewMode) {
+                    viewMode = calculationData.GetViewMode ? calculationData.GetViewMode.toLowerCase().trim() : "page";
+                }
+                //判断是否需要滚动页面
+                if (viewMode !== "singlepage") {
+                    //非单页模式下需要滚动页面
+                    var thisSvg = svgEle[index - 1];
+                    if (thisSvg) {
+                        thisSvg = thisSvg.page.node();
+                        if (thisSvg) {
+                            var totleHeight = 0;
+                            for (var i = 1; i < index; i++) {
+                                totleHeight += svgEle[i].page.node().clientHeight + 5 + 2;
+                            }
+                            rootElement.querySelector('[dctype=page-container]').scrollTo(0, totleHeight);
+                        }
+                    }
+                } else {
+                    //此处刷新数据
+                    WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdatePageIndex");
+                }
+            }
+        };
+
+        /**
+         * @name DesignerMode
+         * @type function 
+         * @classification file
+         * @param { boolean } bool true为设计模式,false为正常模式
+         * @apinameZh 设置时间轴显示模式
+         */
+        rootElement.DesignerMode = function (bool) {
+            //获取编辑器dctype
+            var rootType = rootElement.getAttribute("dctype");
+            if (!rootType) {
+                return false;
+            }
+            if (bool === true) {
+                //本身就是设计模式直接退出
+                if (rootType == "DCTemperatureDesignControlForWASM") {
+                    return true;
+                }
+                rootElement.setAttribute("dctype", "DCTemperatureDesignControlForWASM");
+            } else {
+                if (rootType == "DCTemperatureControlForWASM") {
+                    return true;
+                }
+                rootElement.setAttribute("dctype", "DCTemperatureControlForWASM");
+            }
+            WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateDesignerMode");
+            return true;
+        };
+
+        /**
+         * @name GetTemperatureDocumentStructure
+         * @type function 
+         * @classification file
+         * @apinameZh 获取当前加载文档的导航结构
+         */
+        rootElement.GetTemperatureDocumentStructure = function () {
+            var defaultData = rootElement.DocumentOptions.DefaultData;
+            //最先把全局配置写入
+            var result = {
+                DocumentConfig: []
+            };
+            if (defaultData && defaultData.Config) {
+                var allItem = ["HeaderLabels", "HeaderLines", "FooterLines", "YAxisInfos", "Labels"];
+                for (var i = 0; i < allItem.length; i++) {
+                    var thisItem = allItem[i];
+                    result[thisItem] = [];
+                    var thisLabel = defaultData.Config[allItem[i]];
+                    if (thisLabel && thisLabel.length > 0) {
+                        for (var j = 0; j < thisLabel.length; j++) {
+                            result[thisItem][j] = {
+                                Name: thisLabel[j].Name,
+                                UID: thisLabel[j].UID,
+                                Title: thisLabel[j].Title
+                            };
+                        }
+                    }
+                }
+            }
+            return result;
+        };
+
+        /**
+         * @name LocationStructure
+         * @type function 
+         * @classification file
+         * @apinameZh 获取当前元素在文档中的位置
+         */
+        rootElement.LocationStructure = function (uid) {
+            if (typeof id == 'object') {
+                //判断是否存在UID属性
+                if (id.UID) {
+                    id = id.UID;
+                } else if (id.Name) {
+                    id = id.Name;
+                } else {
+                    id = null;
+                }
+            }
+            WriterControl_DrawFu.MoveBorderRect(rootElement, uid);
+        };
+
+        /**
+        * @name InnerRaiseEvent
+        * @type function
+        * @classification file
+        * @apinameZh 编辑器内部事件触发
+        */
+        rootElement.InnerRaiseEvent = function (eventName, args, type) {
+            if (eventName && typeof rootElement[eventName] == "function") {
+                var result = rootElement[eventName].call(rootElement, rootElement, args, type);
+                return result;
+            }
+            return;
+        };
+
+        rootElement.NewTemperatureDocument = function () {
+            return TemperatureControl_Data.NewTemperatureDocument();
+        };
+        rootElement.NewHeaderLabel = function () {
+            return TemperatureControl_Data.NewHeaderLabel();
+        };
+        rootElement.NewPageSettings = function () {
+            return TemperatureControl_Data.NewPageSettings();
+        };
+        rootElement.NewTemperatureDocumentConfig = function () {
+            return TemperatureControl_Data.NewTemperatureDocumentConfig();
+        };
+        rootElement.NewTextLabel = function () {
+            return TemperatureControl_Data.NewTextLabel();
+        };
+        rootElement.NewTitleLine = function () {
+            return TemperatureControl_Data.NewTitleLine();
+        };
+        rootElement.NewValuePoint = function () {
+            return TemperatureControl_Data.NewValuePoint();
+        };
+        rootElement.NewYAxis = function () {
+            return TemperatureControl_Data.NewYAxis();
+        };
+
+        /**
+        * @name ReturnDefaultValue
+        * @type function
+        * @classification file
+        * @apinameZh f返回默认值
+        */
+        // * @param { object } jsonobj 时间轴文档在前端的JSON结构。
+        rootElement.ReturnDefaultValue = function () {
+            var defaultValue = TemperatureControl_Data.NewTemperatureDocument();
+            defaultValue.Config.PageSettings = TemperatureControl_Data.NewPageSettings();
+            return defaultValue;
+        };
+
+        /**
+        * @name ShowAboutDialog
+        * @type function
+        * @apinameZh 显示关于对话框
+        * @classification file
+        * @param ["flag","boolean","是否弹出alert提示","true","","false"]
+        * @returns ["result","json","参数为false时会返回json数据"]
+        */
+        rootElement.ShowAboutDialog = function (flag = true) {
+            var startTime = new Date();
+            var result = null;
+            result = rootElement.__DCWriterReference.invokeMethod(window.DCWriterEntryPointAssemblyName, "ShowTemperatureAboutDialog", flag);
+            DCEventInterfaceLogFunction(rootElement, 'ShowTemperatureAboutDialog', startTime);
+            return result;
+        };
+
+        /**
+         * @name ShowDesignerDialog
+         * @type function
+         * @apinameZh 显示设计器对话框
+         * @classification file
+         * @param ["xml","string","设计器要展示的xml数据","true","","false"]
+         * @returns ["result","json","参数为false时会返回json数据"]
+         */
+        rootElement.ShowDesignerDialog = function (xml) {
+            var startTime = new Date();
+            //体温单模式
+            var TemperatureMode = rootElement.DocumentOptions.DefaultData.Config.TemperatureMode;
+            if (TemperatureMode && TemperatureMode.toLowerCase() == "fahrenheit") {
+                return console.warn('带有刻度的体温单中，不支持使用设计器');
+            }
+
+            if (!xml) {
+                xml = JSON.stringify(rootElement.DocumentOptions.DefaultData);
+            }
+            var result = TemperatureControl_Designer.initDesignerDiv(rootElement, xml);
+            DCEventInterfaceLogFunction(rootElement, 'ShowDesignerDialog', startTime);
+            return result;
+        };
+
+        /**
+         * @name SetPageSettings
+         * @type function
+         * @apinameZh 页面设置
+         * @classification file
+         * @param ["pagesettings","object","设计器页面设置","true","","false"]
+         * @returns ["result","boolean","true成功，false失败"]
+         */
+        rootElement.SetPageSettings = function (pageSettings) {
+            if (!pageSettings) { return false; }
+            var startTime = new Date();
+            try {
+                rootElement.DocumentOptions.DefaultData.Config.PageSettings = pageSettings;
+            } catch (error) {
+                return false;
+            }
+            DCEventInterfaceLogFunction(rootElement, 'SetPageSettings', startTime);
+            return true;
+        };
+
+        /**
+         * @name GetPageSettings
+         * @type function
+         * @apinameZh 获取页面设置
+         * @classification file
+         * @returns ["pagesettings","Object","页面设置属性对象"]
+         */
+        rootElement.GetPageSettings = function () {
+            var startTime = new Date();
+            let pagesettings = null;
+            if (rootElement.DocumentOptions.DefaultData.Config.PageSettings) {
+                pagesettings = rootElement.DocumentOptions.DefaultData.Config.PageSettings;
+            }
+            DCEventInterfaceLogFunction(rootElement, 'GetPageSettings', startTime);
+            return pagesettings;
+        };
+
+        /**
+        * @name SetTableData
+        * @type function
+        * @apinameZh 设置体温单表格数据
+        * @classification file
+        * @param ["tableId","array","表格id","true","","false"]
+        * @param ["tableData","array","表格数据","true","","false"]
+        */
+        rootElement.SetTableData = function (tableId, tableData = []) {
+            var startTime = new Date();
+            if (tableData && Array.isArray(tableData)) {
+                if (rootElement.DocumentOptions.DefaultData.BottomTableGroups) {
+                    if (rootElement.DocumentOptions.DefaultData.BottomTableGroups[tableId]) {
+                        rootElement.DocumentOptions.DefaultData.BottomTableGroups[tableId]['tableData'] = tableData;
+                    }
+                    //单独重绘表格
+                    WriterControl_DrawFu.CreateTemperatureInit(rootElement, rootElement.DocumentOptions.DefaultData, "EventTemperatureUpdateDocumentConfig");
+                }
+            }
+            DCEventInterfaceLogFunction(rootElement, 'SetTableData', startTime);
+            return true;
+        };
+
+        /**
+         * @name GetTablesDataSource
+         * @type function
+         * @apinameZh 获取指定表格的数据绑定参数
+         * @classification file
+         * @param ["tableId","array","表格id","true","","false"]
+         */
+        rootElement.GetTableData = function (tableId = null) {
+            if (!tableId) {
+                return null;
+            }
+            var BottomTableGroups = rootElement.DocumentOptions.DefaultData.BottomTableGroups || null;
+            if (!BottomTableGroups) {
+                return null;
+            }
+            if (tableId) {
+                var tableData = BottomTableGroups[tableId] && BottomTableGroups[tableId]['tableData'];
+                if (tableData && tableData.length > 0) {
+                    return tableData;
+                }
+            }
+            return null;
+
+        };
+
+        /**
+       * @name GetTablesDataSource
+       * @type function
+       * @apinameZh 获取指定表格的数据绑定参数
+       * @classification file
+       * @param ["tableId","array","表格id","true","","false"]
+       */
+        rootElement.GetTablesDataSource = function (tableId = null) {
+            var BottomTableGroups = rootElement.DocumentOptions.DefaultData.BottomTableGroups || null;
+            if (!BottomTableGroups) {
+                return null;
+            }
+            if (tableId) {
+                var tableColumns = BottomTableGroups[tableId] && BottomTableGroups[tableId]['tableColumns'];
+                if (tableColumns && tableColumns.length > 0) {
+                    var sourceObj = {};
+                    getTableSource(tableColumns, sourceObj);
+                    return sourceObj;
+                }
+            } else {
+                var allTable = Object.keys(BottomTableGroups);
+                if (allTable && allTable.length > 0) {
+                    var resultArray = [];
+                    for (var i = 0; i < allTable.length; i++) {
+                        var table = BottomTableGroups[allTable[i]];
+                        if (table && table.tableColumns && table.tableColumns.length > 0) {
+                            var sourceObj = {};
+                            getTableSource(table.tableColumns, sourceObj);
+                            resultArray.push(sourceObj);
+                        }
+                    }
+                    return resultArray;
+                }
+            }
+
+            function getTableSource(columns, sourceObj) {
+                for (var i = 0; i < columns.length; i++) {
+                    var column = columns[i];
+                    if (column && column.prop) {
+                        sourceObj[column.prop] = '';
+                    } else if (column && column.children && column.children.length > 0) {
+                        getTableSource(column.children, sourceObj);
+                    }
+                }
+            }
+
+
+            return null;
+
+        };
+
+
+
+        /**
+        * @name TemperatureRegisterCode
+        * @type Property
+        * @classification file
+        * @apinameZh 获取文档注册信息
+        * @valueType string
+        */
+        Object.defineProperty(rootElement, "TemperatureRegisterCode", {
+            get() {
+                var startTime = new Date();
+                let result = rootElement.__DCWriterReference.invokeMethod(window.DCWriterEntryPointAssemblyName, "get_TemperatureRegisterCode");
+                DCEventInterfaceLogFunction(rootElement, 'TemperatureRegisterCode', startTime, true);
+                return result;
+            },
+            set(value) {
+                var startTime = new Date();
+                rootElement.__DCWriterReference.invokeMethod(window.DCWriterEntryPointAssemblyName, "set_TemperatureRegisterCode", value);
+                //更新绘制注册信息
+                rootElement.TemperatureRegisterCode && WriterControl_DrawFu.ChangeAboutMessageText(rootElement, rootElement.TemperatureRegisterCode);
+                DCEventInterfaceLogFunction(rootElement, 'set_TemperatureRegisterCode', startTime, true);
+            },
+            configurable: true,//允许属性被删除或修改
+        });
+
+        //rootElement.refreshDocumentOptions();
+        document.TemperatureWriterControl = rootElement;
+        if (rootElement.ownerDocument !== document) {
+            rootElement.ownerDocument.TemperatureWriterControl = rootElement;
+        }
+    },
+
+    /**
+    * 对产程图元素绑定一些方法供外面调用
+    * @param {HTMLElement} rootElement 根元素对象
+    * @param {object} refDCWriter DCWriterClass对象在JS中的代理
+    */
+    BindControlForFlowControlForWASM: function (rootElement, refDCWriter) {
+        /**
+         * @name InnerRaiseEvent
+         * @type function
+         * @apinameZh 编辑器内部事件触发
+         */
+        rootElement.InnerRaiseEvent = function (eventName, args, type) {
+            if (eventName && typeof rootElement[eventName] == "function") {
+                var result = rootElement[eventName].call(rootElement, rootElement, args, type);
+                return result;
+            }
+            return;
+        };
+
+        /**   
+        * 修改产程开始时间
+        * @name SetFlowStartingTime
+        * @param {string} date 产程开始时间
+        * @apinameZh 根据json绘制产程图
+        */
+        rootElement.SetFlowStartingTime = function (date) {
+            if (date && new Date(date).toString() !== "Invalid Date") {
+                rootElement.DocumentOptions.DefaultData.Config.StartingTime = date;
+                var defaultData = rootElement.DocumentOptions.DefaultData;
+                //单独重绘表格
+                WriterContorl_FlowChart.CreateFlowControlInit(rootElement, defaultData, 'EventChangeFlowStartingTime');
+                return true;
+            }
+            return false;
+        };
+
+
+        /**     
+        * @name LoadFlowDocumentFromJson
+        * @param {object} data 产程图所有数据
+        * @apinameZh 根据json绘制产程图
+        */
+        rootElement.LoadFlowDocumentFromJson = function (data) {
+            if (data) {
+                try {
+                    if (typeof data === 'string') {
+                        data = JSON.parse(data);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    return false;
+                }
+                WriterContorl_FlowChart.CreateFlowControlInit(rootElement, data, 'EventFlowDocumentLoad');
+                return true;
+            }
+            return false;
+        };
+
+
+        /**     
+        * @name LoadFlowDocumentFromJsonFile
+        * @param {object} data 产程图所有数据
+        * @apinameZh 根据json格式的字符串文件绘制产程图
+        */
+        rootElement.LoadFlowDocumentFromJsonFile = function () {
+            var file = rootElement.ownerDocument.createElement('input');
+            file.setAttribute('id', 'dcInputFile');
+            file.setAttribute('type', 'file');
+            file.setAttribute('accept', '.json');
+            file.style.cssText = 'position: relative;left: -2000px; ';
+            rootElement.appendChild(file);
+            file.click();
+            //file文件选中事件
+            file.onchange = function () {
+                var fileList = this.files;
+                if (fileList.length > 0) {
+                    // console.log(fileList[0]);
+                    //转成json对象
+                    var reader = new FileReader();
+                    reader.readAsText(fileList[0]);
+                    reader.onload = function (e) {
+                        var jsonData = JSON.parse(e.target.result);
+                        rootElement.LoadFlowDocumentFromJson(jsonData);
+                    };
+                }
+            };
+        };
+
+        /**
+         * @name SetFlowYAxisValues
+         * @param {object} data 产程图Y轴数据{name:valueArray}
+         * @apinameZh 设置所有的数据值
+         */
+        rootElement.SetFlowYAxisValues = function (data) {
+            if (data && Object.keys(data) && Object.keys(data).length > 0) {
+                var dataKeys = Object.keys(data);
+                for (var i = 0; i < dataKeys.length; i++) {
+                    var key = dataKeys[i];
+                    var value = data[key];
+                    rootElement.DocumentOptions.DefaultData.Values[key] = JSON.parse(JSON.stringify(value));
+                }
+                WriterContorl_FlowChart.ChangeValue(rootElement);
+                return true;
+            }
+            return false;
+        };
+
+        /**     
+        * @name SetFlowYAxisValuesByName
+        * @param {string} dataName 产程图Y轴Name
+        * @param {array|object} data 产程图Y轴对应Name的值。（两种方式：1.传一个值对象，会追加到原有的数组中。2.传一个数组，会直接替换原有的数组。）
+        * @apinameZh 设置指定Y轴的属性值
+        */
+        rootElement.SetFlowYAxisValuesByName = function (dataName, data) {
+            if (dataName !== 'AttachedTableData') {//防止从此接口设置表格的值
+                if (data && Array.isArray(data)) {
+                    //数组直接替换
+                    rootElement.DocumentOptions.DefaultData.Values[dataName] = JSON.parse(JSON.stringify(data));
+                } else if (typeof data === 'object' && Object.keys(data).length > 0) {
+                    //对象会被追加
+                    var Values = rootElement.DocumentOptions.DefaultData.Values;
+                    // console.log(Values, dataName, '========');
+                    if (Values[dataName] && Array.isArray(Values[dataName])) {
+                        //判断当前传入的数据是否带有结束标记
+                        if (data && data.IsEndValue) {
+                            // // 存在结束标记，则与已存在结束点对比时间，如果时间大于已存在的结束点，则删除已存在的结束点
+                            Values[dataName].forEach(item => {
+                                if (item && item.IsEndValue) {
+                                    // var itemTime = item.Time ? new Date(item.Time).getTime() : 0;
+                                    // var dataTime = data.Time ? new Date(data.Time).getTime() : 0;;
+                                    // if (dataTime >= itemTime) {
+                                    delete item.IsEndValue;
+                                    // }
+                                }
+                            });
+                        }
+
+                        //存入数据
+                        Values[dataName].push(data);
+                    } else {
+
+                        Values[dataName] = [data];
+                    }
+                }
+                // WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowYAxisValues');
+
+                WriterContorl_FlowChart.ChangeValue(rootElement);
+                return true;
+            }
+            return false;
+        };
+
+
+        /**     
+        * @name SetFlowAttachedTableDataValues
+        * @param {array|object} data 设置产程图表格部分的值。（两种方式：1.传一个值对象，会追加到原有的数组中。2.传一个数组，会直接替换原有的数组。）
+        * @apinameZh 设置产程图表格值
+        */
+        rootElement.SetFlowAttachedTableDataValues = function (data) {
+            if (data && Array.isArray(data)) {
+                //数组直接替换
+                rootElement.DocumentOptions.DefaultData.Values['AttachedTableData'] = JSON.parse(JSON.stringify(data));
+            } else if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                //对象会被追加
+                var Values = rootElement.DocumentOptions.DefaultData.Values;
+                if (Values['AttachedTableData'] && Array.isArray(Values['AttachedTableData'])) {
+                    for (var i = 0; i < Values['AttachedTableData'].length; i++) {
+                        var item = Values['AttachedTableData'][i];
+                        if (item && item.Time) {
+                            if (data && data.Time && item.Time === data.Time) {
+                                //存在相同时间，则替换
+                                Values['AttachedTableData'][i] = data;
+                                break;
+                            }
+                        }
+                    }
+                    Values['AttachedTableData'].push(data);
+                } else {
+                    Values['AttachedTableData'] = [data];
+                }
+            }
+
+            WriterContorl_FlowChart.ChangeValue(rootElement);
+            return true;
+        };
+
+
+        /**     
+         * @name setFlowLabelByName
+         * @type function
+         * @param {string} labelName   标签名称
+         * @param {object} labelValue  标签属性值
+         * @apinameZh 设置文本标签的属性
+         */
+        rootElement.setFlowLabelByName = function (labelName, labelValue) {
+            if (labelName && labelValue && typeof labelName === 'string' && typeof labelValue === 'object') {
+                var labels = rootElement.DocumentOptions.DefaultData.Config.Labels;
+                if (labels && Array.isArray(labels)) {
+                    for (var i = 0; i < labels.length; i++) {
+                        if ((labels[i] && labels[i].Name) === labelName) {
+                            var newLabelKeys = Object.keys(labelValue);
+                            for (var j = 0; j < newLabelKeys.length; j++) {
+                                labels[i][newLabelKeys[j]] = labelValue[newLabelKeys[j]];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowLabel');
+            return true;
+        };
+
+
+        /**     
+        * @name setFlowHeaderLabelByName
+        * @param {string} labelName   标签名称
+        * @param {object} labelValue  标签属性值
+        * @apinameZh 设置顶部页眉标签的属性
+        */
+        rootElement.setFlowHeaderLabelByName = function (labelName, labelValue) {
+            if (labelName && labelValue && typeof labelName === 'string' && typeof labelValue === 'object') {
+                var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.HeaderLabels;
+                if (HeaderLabels && Array.isArray(HeaderLabels)) {
+                    for (var i = 0; i < HeaderLabels.length; i++) {
+                        if ((HeaderLabels[i] && HeaderLabels[i].Name) === labelName) {
+                            var newLabelKeys = Object.keys(labelValue);
+                            for (var j = 0; j < newLabelKeys.length; j++) {
+                                HeaderLabels[i][newLabelKeys[j]] = labelValue[newLabelKeys[j]];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowHeaderLabel');
+            return true;
+        };
+
+        /**     
+        * @name setFlowYAxisHeaderLabelByName
+        * @param {string} labelName   标签名称
+        * @param {object} labelValue  标签属性值
+        * @apinameZh 设置Y轴区域内页眉标签的属性
+        */
+        rootElement.setFlowYAxisHeaderLabelByName = function (labelName, labelValue) {
+            if (labelName && labelValue && typeof labelName === 'string' && typeof labelValue === 'object') {
+                var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.YAxis.XAxisForHeaderLableList;
+                if (HeaderLabels && Array.isArray(HeaderLabels)) {
+                    for (var i = 0; i < HeaderLabels.length; i++) {
+                        if ((HeaderLabels[i] && HeaderLabels[i].Name) === labelName) {
+                            var newLabelKeys = Object.keys(labelValue);
+                            for (var j = 0; j < newLabelKeys.length; j++) {
+                                HeaderLabels[i][newLabelKeys[j]] = labelValue[newLabelKeys[j]];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowHeaderLabel');
+            return true;
+        };
+
+
+        /**     
+        * @name setFlowAttchedTableHeaderLabelByName
+        * @param {string} labelName   标签名称
+        * @param {object} labelValue  标签属性值
+        * @apinameZh 设置表格区域内页眉标签的属性
+        */
+        rootElement.setFlowAttchedTableHeaderLabelByName = function (labelName, labelValue) {
+            if (labelName && labelValue && typeof labelName === 'string' && typeof labelValue === 'object') {
+                var HeaderLabels = rootElement.DocumentOptions.DefaultData.Config.AttachedTable.AttachedTableHeaderLabels;
+                if (HeaderLabels && Array.isArray(HeaderLabels)) {
+                    for (var i = 0; i < HeaderLabels.length; i++) {
+                        if ((HeaderLabels[i] && HeaderLabels[i].Name) === labelName) {
+                            var newLabelKeys = Object.keys(labelValue);
+                            for (var j = 0; j < newLabelKeys.length; j++) {
+                                HeaderLabels[i][newLabelKeys[j]] = labelValue[newLabelKeys[j]];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowHeaderLabel');
+            return true;
+        };
+
+        /**     
+         * @name setFlowFooterLabelByName
+         * @param {string} labelName   标签名称
+         * @param {object} labelValue  标签属性值
+         * @apinameZh 设置页脚标题的属性
+         */
+        rootElement.setFlowFooterLabelByName = function (labelName, labelValue) {
+            if (labelName && labelValue && typeof labelName === 'string' && typeof labelValue === 'object') {
+                var FooterLabels = rootElement.DocumentOptions.DefaultData.Config.FooterLabels;
+                if (FooterLabels && Array.isArray(FooterLabels)) {
+                    for (var i = 0; i < FooterLabels.length; i++) {
+                        if ((FooterLabels[i] && FooterLabels[i].Name) === labelName) {
+                            var newLabelKeys = Object.keys(labelValue);
+                            for (var j = 0; j < newLabelKeys.length; j++) {
+                                FooterLabels[i][newLabelKeys[j]] = labelValue[newLabelKeys[j]];
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeFlowFooterLabel');
+            return true;
+        };
+
+        /**     
+         * @name setFlowNotesValue
+         * @param {string} notesValue 备注的值
+         * @apinameZh 设置页脚标题的属性
+         */
+        rootElement.setFlowNotesValue = function (notesValue) {
+            if (notesValue && typeof notesValue === 'string') {
+                var Notes = rootElement.DocumentOptions.DefaultData.Config.Notes;
+                Notes.Value = notesValue;
+            }
+            WriterContorl_FlowChart.CreateFlowControlInit(rootElement, rootElement.DocumentOptions.DefaultData, 'EventFChangeNotesValue');
+            return true;
+        };
+
+
+        /**     
+         * @name ResetFlowValues
+         * @apinameZh 清空Y轴和表格处所有的值
+         */
+        rootElement.ResetFlowValues = function () {
+            rootElement.DocumentOptions.DefaultData.Values = {};
+            WriterContorl_FlowChart.ChangeValue(rootElement);
+            return true;
+        };
+
+        /**
+        * @name SaveFlowDocumentToJson
+        * @return {object} 产程图所有数据
+        * @apinameZh 保存为json数据
+        */
+        rootElement.SaveFlowDocumentToJson = function () {
+            if (rootElement.DocumentOptions.DefaultData) {
+                return JSON.stringify(rootElement.DocumentOptions.DefaultData);
+            }
+            return null;
+        };
+
+        /**
+        * @name SaveFlowDocumentToJsonFile
+        * @return {object} 产程图所有数据
+        * @apinameZh 保存为json格式的字符串为本地文件
+        */
+        rootElement.SaveFlowDocumentToJsonFile = function () {
+            var DefaultData = rootElement.DocumentOptions.DefaultData;
+            if (rootElement.DocumentOptions.DefaultData) {
+                var jsonStr = JSON.stringify(DefaultData);
+                var blob = new Blob([jsonStr], { type: 'text/plain;charset=utf-8' });
+                var fileName = "FlowDocument.json";
+                if (navigator.msSaveBlob) {
+                    navigator.msSaveBlob(blob, fileName);
+                } else {
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = fileName;
+                    link.click();
+                }
+                return true;
+            }
+            return false;
+        };
+
+        /**
+        * @name SaveFlowDocumentToPDF
+        * @param {function} callback 回调函数，参数为pdf的base64数据
+        * @apinameZh 保存为pdf数据
+        */
+        rootElement.SaveFlowDocumentToPDF = function (callback) {
+            //拿到页面宽度
+            var pageSetting = rootElement.DocumentOptions.CalculationData.Config.PageSettings;
+            //初始化jsPDF实例
+            const pdf = new jspdf.jsPDF('p', 'px', [pageSetting.PaperWidth, pageSetting.PaperHeight]);
+            //获取到所有的svg页面
+            var svgContainer = rootElement.querySelector("[dctype=page-container]");
+            svgContainer = svgContainer.cloneNode(true);
+            var allSvg = svgContainer.querySelectorAll("[dctype=page]");
+            //清除样式
+            for (var i = 0; i < allSvg.length; i++) {
+                var cloneSvg = allSvg[i];
+                cloneSvg.style.border = "none";
+                var typesign = cloneSvg.querySelector("[dctype=typesign]");
+                typesign && typesign.remove();
+                var canvas = document.createElement('canvas');
+                // var scale = 1;
+                canvas.width = pageSetting.PaperWidth;
+                canvas.height = pageSetting.PaperHeight;
+                // 绘制Canvas
+                var ctx = canvas.getContext('2d');
+                // ctx.scale(scale, scale);
+
+                var data = (new XMLSerializer()).serializeToString(cloneSvg);
+                var DOMURL = window.URL || window.webkitURL || window;
+                var img = new Image();
+                var svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+                var url = DOMURL.createObjectURL(svgBlob);
+                img.index = i;
+                img.onload = function () {
+                    ctx.drawImage(this, 0, 0);
+                    DOMURL.revokeObjectURL(url);
+
+                    // 转换Canvas为PNG图片
+                    var png = canvas.toDataURL('image/png;quality=0.95');
+                    if (this.index != 0) {
+                        pdf.addPage();
+                    }
+                    //console.log(png)
+                    pdf.addImage(png, 'png', 0, 0, pageSetting.PaperWidth, pageSetting.PaperHeight);// x, y, 宽, 高
+                    if (this.index == allSvg.length - 1) {
+                        var base64 = pdf.output("datauristring");
+                        base64 = base64.replace(/filename=generated.pdf;/, "");
+                        callback(base64);
+
+                    }
+                };
+                img.src = url;
+            }
+        };
+
+        /**
+        * @name PrintFlowDocument
+        * @apinameZh 打印
+        */
+        rootElement.PrintFlowDocument = function () {
+            var iframe = rootElement.ownerDocument.getElementById(rootElement.id + "_IFrame_Print");
+            if (iframe == null) {
+                iframe = rootElement.ownerDocument.createElement("iframe");
+                iframe.id = rootElement.id + "_IFrame_Print";
+                iframe.style.position = "absolute";
+                rootElement.appendChild(iframe);
+                iframe.style.width = rootElement.offsetWidth + "px";
+                iframe.style.height = rootElement.offsetHeight + "px";
+                iframe.style.left = "0px";
+                iframe.style.top = "0px";// (rootElement.offsetTop + 600) + "px";
+                iframe.style.border = "1px solid blue";
+                iframe.style.display = "";
+                iframe.style.backgroundColor = "white";
+                iframe.style.zIndex = 10000;
+            }
+            iframe.style.display = 'none';
+            var targetDocument = iframe.contentDocument;
+            targetDocument.open();
+            targetDocument.write("");
+            targetDocument.close();
+
+            var styleElement = targetDocument.createElement("STYLE");
+            styleElement.innerText = "@page{margin:0;padding:0;}";
+            targetDocument.head.appendChild(styleElement);
+            targetDocument.body.style.margin = "0px";
+            targetDocument.title = " ";
+
+            var allSvg = rootElement.querySelectorAll("[dctype=page]");
+            if (allSvg && allSvg.length > 0) {
+                for (var i = 1; i <= allSvg.length; i++) {
+                    var cloneSvg = allSvg[i - 1].cloneNode(true);
+                    var hasText = cloneSvg.querySelector("[dctype='typesign']");
+                    cloneSvg.style.border = "none";
+                    cloneSvg.style.margin = "0px";
+                    hasText && hasText.remove();
+                    targetDocument.body.appendChild(cloneSvg);
+                }
+            }
+            iframe.contentWindow.onafterprint = function (e) {
+                //console.log("打印完成", e);
+                rootElement.InnerRaiseEvent("EventFlowAfterPrint", targetDocument);
+                iframe.style.display = "none";
+            };
+
+            //打印前事件
+            var result = rootElement.InnerRaiseEvent("EventFlowBeforePrint", targetDocument);
+            if (result === false) {
+                return iframe;
+            }
+            iframe.contentWindow.print();
+
+            return iframe;
+        };
+
+
+
+        document.FlowWriterControl = rootElement;
+        if (rootElement.ownerDocument !== document) {
+            rootElement.ownerDocument.FlowWriterControl = rootElement;
+        }
+    },
     /**
     * 用于回收编辑器根元素的属性方法，方便GC释放
     * @param {HTMLElement} rootElement 编辑器根元素

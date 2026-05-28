@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 // DCWriter事件处理
 
@@ -69,6 +69,10 @@ export let WriterControl_Event = {
                 })
             }
         }
+        // 内部处理事件
+        if (WriterControl_Event.HandleDCWriterInnerEvent(rootElement, strEventName, eventArgs) == true) {
+            return;
+        }
         var handler = WriterControl_Event.InnerGetEventHandler(rootElement, strEventName);
         if (handler != null) {
             if (strEventName == "EventObjectElementMouseClick") {
@@ -77,21 +81,18 @@ export let WriterControl_Event = {
                     return rootElement.GetElementProperties(eventArgs.ElementHashCode);
                 };
             }
-            var curFunc = null;
             if (DCTools20221228.ParseBoolean(rootElement.getAttribute("debugmode"), false) == true) {
                 if (typeof (handler) == "function") {
-                    curFunc = handler;
                     handler.call(rootElement, rootElement, eventArgs);
                 }
                 else {
                     for (var iCount = 0; iCount < handler.length; iCount++) {
-                        curFunc = handler[iCount];
                         handler[iCount].call(rootElement, rootElement, eventArgs);
                     }
                 }
             }
             else {
-                var strDebugMode = rootElement.getAttribute("debugmode");
+                var curFunc = null;
                 try {
                     if (typeof (handler) == "function") {
                         curFunc = handler;
@@ -185,7 +186,7 @@ export let WriterControl_Event = {
      * @param {string} containerID 容器元素编号
      * @param {string} strEventName 事件名称
      * @param {any} parameter 参数
-     * @returns {boolean} 事件是否处理完毕，无需后续处理。
+     * @returns {boolean} true:事件得到处理了，无需后续处理。false:事件没处理，需要后续处理。
      */
     HandleDCWriterInnerEvent: function (containerID, strEventName, parameter) {
         var ctl = DCTools20221228.GetOwnerWriterControl(containerID);
@@ -212,27 +213,46 @@ export let WriterControl_Event = {
                     DCTools20221228.ConsoleWarring("执行按钮脚本错误{" + ext + "}，脚本为：" + jscode);
                 }
             }
-            //var buttonopt = ctl.GetElementPropertiesByID(parameter.buttonElementID);
-            //if (buttonopt != null
-            //    && buttonopt.Enabled === true
-            //    && buttonopt.ScriptTextForClick.length > 0) {
-            //    var jscode = decodeURIComponent(buttonopt.ScriptTextForClick);
-            //    if (window.execScript) {
-            //        window.execScript(jscode);
-            //    } else {
-            //        window.eval(jscode);
-            //    }
-            //    return true;
-            //}
         }
-        // // 元素双击事件
-        // if (strEventName == "EventElementMouseDblClick") {
-        //     var typename = ctl.GetCurrentElementTypeName();//当前选择的元素类型名称
-        //     if (typename == "xtextnewmedicalexpressionelement") {
-        //         // 医学表达式
-        //         ctl.ExecuteCommand("elementproperties", true);
-        //     }
-        // }
+        // 元素双击事件
+        if (strEventName == "EventElementMouseDblClick" && parameter) {
+            // 双击特定元素弹出属性对话框
+            var strTypeName = parameter.ElementTypeName;
+            var ele = parameter.TargetElement;
+            switch (strTypeName) {
+                case "XTextNewMedicalExpressionElement":// 医学表达式
+                    var options = ctl.GetElementProperties(ele);
+                    if (options) {
+                        // let inputNode = ctl.CurrentElement("xtextinputfieldelement");
+                        // 判断视图是否为只读模式
+                        // wyc20250519:排除严格表单，否则会定位错误元素DUWRITER5_0-3966
+                        // wyc20250702:修复DUWRITER5_0-4578 && (ctl.FormView() !== "Strict" || inputNode != null)
+                        if (ctl.Readonly === false) {
+                            if (options.ContentReadonly != true && options.ContentReadonly != "True" && options.ContentReadonly != "true") {
+                                // [DUWRITER5_0-4278] 20250327 修改双击医学表达式时，打开对应的医学表达式编辑对话框
+                                ctl.DCDispatchMedicalExpressionExecuteCommand(options, false, ele);
+                            }
+                        }
+                    }
+
+                    break;
+                case "XTextImageElement":// 图片
+                    var options = ctl.GetElementProperties(ele);
+                    if (options) {
+                        //判断视图是否为只读模式
+                        if (ctl.Readonly === false) {
+                            if (options.ContentReadonly != true && options.ContentReadonly != "True" && options.ContentReadonly != "true") {
+                                if (options.EnableEditImageAdditionShape) { //判断图片是否允许编辑
+                                    ctl.imgEditDialog(options, ctl);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
         return false;
     },
     /**
@@ -242,6 +262,9 @@ export let WriterControl_Event = {
      * @returns {boolean} 是否存在属性
      */
     HasControlEvent: function (containerID, strEventName) {
+        if (strEventName == "EventElementMouseDblClick" || strEventName == "EventButtonClick") {
+            return true;
+        }
         var ctl = DCTools20221228.GetOwnerWriterControl(containerID);
         if (ctl != null && ctl.__PlayingAPILogRecord != true) {
             return WriterControl_Event.InnerGetEventHandler(ctl, strEventName) != null;

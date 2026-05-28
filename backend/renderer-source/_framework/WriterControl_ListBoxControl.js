@@ -19,14 +19,14 @@ export let WriterControl_ListBoxControl = {
      * @param {Object} data {includeText:"",includeValue:"",excludeText:"",excludeValue:""}
      */
     GetListValueFormatString: function (inputNode, data) {
-        var resultData = {
+        const resultData = {
             Text: data.includeText,
             Value: data.includeValue,
         };
         // inputNode为空
         if (!inputNode) return resultData;
         // 有[includelist],无[excludelist]
-        var ListValueFormatString = inputNode.ListValueFormatString;//列表格式化字符串
+        let ListValueFormatString = inputNode.ListValueFormatString;//列表格式化字符串
         // 不是字符串，返回
         if (typeof (ListValueFormatString) != "string") return resultData;
         // 目前特殊处理列表格式化字符串是【有无列表】时的情况和【有[includelist],无[excludelist]】一致【DUWRITER5_0-3861】
@@ -61,14 +61,14 @@ export let WriterControl_ListBoxControl = {
      * @param {Object} data Text和Value
      */
     DecompilationListValueFormatString: function (inputNode, data) {
-        var resultData = {
+        let resultData = {
             Text: data.Text,
             Value: data.Value,
         };
         // inputNode为空
         if (!inputNode) return resultData;
         // 有[includelist],无[excludelist]
-        var ListValueFormatString = inputNode.ListValueFormatString;//列表格式化字符串
+        let ListValueFormatString = inputNode.ListValueFormatString;//列表格式化字符串
         // 不是字符串，返回
         if (typeof (ListValueFormatString) != "string") return resultData;
         // 目前特殊处理列表格式化字符串是【有无列表】时的情况和【有[includelist],无[excludelist]】一致【DUWRITER5_0-3861】
@@ -79,19 +79,19 @@ export let WriterControl_ListBoxControl = {
         if (ListValueFormatString.indexOf("[includelist]") == -1 || ListValueFormatString.indexOf("[excludelist]") == -1) {
             return resultData;
         }
-        var NowText = data.Value || data.Text;//现在的值
-        var FormatStr = ListValueFormatString;
+        const NowText = data.Value || data.Text;//现在的值
+        let FormatStr = ListValueFormatString;
         // 第一个字在什么地方
-        var OneCharIndex = ListValueFormatString.indexOf(NowText.slice(0, 1));
+        const OneCharIndex = ListValueFormatString.indexOf(NowText.slice(0, 1));
         if (OneCharIndex > -1) {
             FormatStr = ListValueFormatString.slice(OneCharIndex);
         }
         // 判断当前是否有选中的项
-        var listArr1 = FormatStr.split("[");
-        var listArr = [];
-        for (var i = 0; i < listArr1.length; i++) {
-            var listArr2 = listArr1[i].split("]");
-            for (var j = 0; j < listArr2.length; j++) {
+        const listArr1 = FormatStr.split("[");
+        const listArr = [];
+        for (let i = 0; i < listArr1.length; i++) {
+            const listArr2 = listArr1[i].split("]");
+            for (let j = 0; j < listArr2.length; j++) {
                 if (listArr2[j] != "") {
                     listArr.push(listArr2[j]);
                 }
@@ -103,14 +103,14 @@ export let WriterControl_ListBoxControl = {
         };
         function GetIncludeText(str) {
             if (str && str !== '') {
-                var textIndexArr = [];
-                for (var i = 0; i < listArr.length; i++) {
+                const textIndexArr = [];
+                for (let i = 0; i < listArr.length; i++) {
                     if (str.indexOf(listArr[i]) != -1) {
                         textIndexArr.splice(i, 0, [str.indexOf(listArr[i]), listArr[i]]);
                     }
                 }
-                var textArr = [];
-                for (var i = 0; i < textIndexArr.length; i++) {
+                const textArr = [];
+                for (let i = 0; i < textIndexArr.length; i++) {
                     if (textIndexArr[0][0] != 0) {
                         textArr.push(str.substring(0, textIndexArr[0][0]));
                     }
@@ -121,8 +121,8 @@ export let WriterControl_ListBoxControl = {
                         textArr.push(str.substring(textIndexArr[i][0] + textIndexArr[i][1].length));
                     }
                 }
-                var obj = {};
-                for (var i = 0; i < listArr.length; i++) {
+                const obj = {};
+                for (let i = 0; i < listArr.length; i++) {
                     obj[listArr[i]] = textArr[i];
                 }
                 return obj["includelist"] || "";
@@ -144,16 +144,16 @@ export let WriterControl_ListBoxControl = {
      */
     CreateListBoxControl: function (listItems, callBack, rootElement, divContainer, oldText, oldValue, currentInputProps, args) {
         // 处理格式化字符串
-        var FormatData = this.DecompilationListValueFormatString(currentInputProps, {
+        const FormatData = this.DecompilationListValueFormatString(currentInputProps, {
             Text: oldText,
             Value: oldValue ? oldValue : oldText
         });
         oldText = FormatData.Text, oldValue = FormatData.Value;
         /** 下拉列表盒子 */
-        var listBox = null;
+        let listBox = null;
         if (listItems != null && listItems.length > 0) {
             // 获取用户设置的下拉大小和字体
-            var DropdownListFontSize = 12, DropdownListFontName = "auto";
+            let DropdownListFontSize = 12, DropdownListFontName = "auto";
             // 添加判断避免报错
             if (rootElement && rootElement.DocumentOptions && rootElement.DocumentOptions.ViewOptions) {
                 // 下拉列表字体大小
@@ -185,10 +185,11 @@ export let WriterControl_ListBoxControl = {
             `;
 
             // 样式元素
-            var styleDom = rootElement.ownerDocument.createElement("style");
+            const styleDom = rootElement.ownerDocument.createElement("style");
             styleDom.innerHTML = `
-                .dcListBox .dc_ListItem,.dc_titleDiv[TwoColumnDisplay=true]{text-align:left;display:flex;align-items: center;width:100%;font-size:${DropdownListFontSize}px; font-family:${DropdownListFontName}; min-height: 30px;background-color: transparent;padding: 0;overflow: hidden;white-space: nowrap;cursor: pointer;border-bottom: 1px solid #eee;box-sizing: border-box;}
-                .dcListBox .dc_ListItem:hover,.dcListBox .dc_ListItem[moveli=true]{background-color:#eaf2ff!important;color:#000000!important;outline:1px solid #b7d2ff!important;}
+                .dcListBox .dc_ListItem,.dc_titleDiv[TwoColumnDisplay=true]{position:relative;text-align:left;display:flex;align-items: center;width:100%;font-size:${DropdownListFontSize}px; font-family:${DropdownListFontName}; min-height: 30px;background-color: transparent;padding: 0;overflow: hidden;white-space: nowrap;cursor: pointer;border-bottom: 1px solid #eee;box-sizing: border-box;}
+                .dcListBox .dc_ListItem:hover,.dcListBox .dc_ListItem[targetLi=true]{background-color:#e6f3ff!important;color:#000000!important;outline:1px solid  #4da6ff!important;}
+                .dcListBox .dc_ListItem[moveli=true]{background-color:#fff2e6!important;color:#000000!important;outline:1px solid #ffb366!important;}
                 /** 标题的样式 */
                 .dc_titleDiv[TwoColumnDisplay=true]{border-bottom:1px solid #000;font-weight:700;background-color:#EDEEE1;flex: none;}
                 .dc_titleDiv[TwoColumnDisplay=true] div[dc-data]{padding:2px 5px;}
@@ -206,7 +207,7 @@ export let WriterControl_ListBoxControl = {
             divContainer.appendChild(styleDom);
             // 添加属性DropdownList_TwoColumnDisplay="true"让单选下拉展示为两栏样式
             // 下拉列表展示的样式是否为两栏展示类型
-            var isTwoColumnDisplay = rootElement.getAttribute("DropdownList_TwoColumnDisplay") == "true";
+            const isTwoColumnDisplay = rootElement.getAttribute("DropdownList_TwoColumnDisplay") == "true";
             //var isTwoColumnDisplay = false;
             // 创建外层包裹元素
             listBox = rootElement.ownerDocument.createElement("div");
@@ -214,12 +215,12 @@ export let WriterControl_ListBoxControl = {
             listBox.style.cssText = "list-style:none;margin:0;positon:absoulte;background-color: #ffffff;color: #444;";
             if (isTwoColumnDisplay == false || !currentInputProps) {
                 // 在此处判断是否为分组互斥
-                var oldGroupText = null;
+                let oldGroupText = null;
                 // 循环解析listItems;
-                for (var i = 0; i < listItems.length; i++) {
-                    var item = listItems[i];
+                for (let i = 0; i < listItems.length; i++) {
+                    const item = listItems[i];
                     // 原本文本和值,itemShowText展示的文本
-                    var nativeText, nativeValue, itemShowText;
+                    let nativeText, nativeValue, itemShowText;
                     if (typeof (item) == "string") {
                         // 数据是字符串
                         nativeText = item ? item : "";
@@ -231,7 +232,7 @@ export let WriterControl_ListBoxControl = {
                         itemShowText = item.TextInList ? item.TextInList : nativeText;
                     }
                     /** 存储列表项的元素 */
-                    var ListItemBox = rootElement.ownerDocument.createElement("div");
+                    const ListItemBox = rootElement.ownerDocument.createElement("div");
                     // 设置class名称
                     ListItemBox.className = "dc_ListItem";
                     // 添加样式
@@ -242,21 +243,18 @@ export let WriterControl_ListBoxControl = {
                     ListItemBox.setAttribute("value", nativeValue);
                     // 下拉展示内容
                     ListItemBox.innerHTML = `<span class="dc_ListItemText" title="${itemShowText}">${itemShowText}</span>`;
+                    //console.log(2222222222222222222, oldText, oldValue, nativeValue, nativeText)
                     // 如果oldValue或者oldText存在,给上样式并将下拉滚动到对应位置
-                    if (oldValue != null && oldText != null && nativeValue == oldValue && nativeText == oldText) {
-                        ListItemBox.style.backgroundColor = '#eaf2ff';
-                        ListItemBox.style.color = '#000000';
-                        ListItemBox.style.outline = '1px solid #b7d2ff';
-                        ListItemBox.style.position = 'relative';
+                    if (oldValue != null && oldText != null && nativeText == oldText) { //&& nativeValue == oldValue
                         ListItemBox.setAttribute("targetLi", true);
 
                         //[DUWRITER5_0-1657]lxy20240109：给单选列表增加一个删除选中项功能
                         //[DUWRITER5_0-1907]lxy20240201:增加自定义属性DropdownListItemDeselectButton，是否展示取消选中按钮。
-                        var DropdownListItemDeselectButton = rootElement.getAttribute('DropdownListItemDeselectButton');
+                        const DropdownListItemDeselectButton = rootElement.getAttribute('DropdownListItemDeselectButton');
 
                         //为了不影响已经在使用此功能的客户， 默认情况下是展示按钮的。除非用户设置值为false才不展示按钮
                         if (DropdownListItemDeselectButton !== 'false') {
-                            var closeSpan = rootElement.ownerDocument.createElement("span");
+                            const closeSpan = rootElement.ownerDocument.createElement("span");
                             closeSpan.innerHTML = '&times;';
                             closeSpan.title = '取消选择';
                             closeSpan.style.cssText = `display: inline-block;
@@ -273,17 +271,8 @@ export let WriterControl_ListBoxControl = {
                             ListItemBox.appendChild(closeSpan);
                             closeSpan.addEventListener('click', function (e) {
                                 e.stopPropagation();// 阻止冒泡
-                                // 设置为不选择内容
-                                rootElement.SetElementProperties(currentInputProps.NativeHandle, { InnerValue: null, text: null });
-                                // 关闭单选下拉
-                                var hasDropDown = rootElement.querySelector('#divDropdownContainer20230111');
-                                hasDropDown.CloseDropdown('true');
-                                // 触发文档内容变化事件
-                                var opt = {
-                                    /** 触发事件类型 */
-                                    TriggerType: "ListBoxControlClearContent"
-                                };
-                                WriterControl_Event.RaiseControlEvent(rootElement, "DocumentContentChanged", opt);
+                                // 设置为不选择内容，清空文本
+                                callBack.call(e.target, "", "", rootElement);
                             });
                         }
                     }
@@ -299,14 +288,14 @@ export let WriterControl_ListBoxControl = {
                                 listBox.appendChild(ListItemBox);
                             } else {
                                 //如果是不同group
-                                var hasSameGroup = listBox.querySelectorAll(`[dc_group="${item.Group}"]`);
+                                const hasSameGroup = listBox.querySelectorAll(`[dc_group="${item.Group}"]`);
                                 if (hasSameGroup && hasSameGroup.length > 0) {
                                     //存在相同的group
                                     hasSameGroup[hasSameGroup.length - 1].after(ListItemBox);
                                 } else {
                                     //不存在相同的group
                                     //创建一个分割线
-                                    var groupLine = rootElement.ownerDocument.createElement("span");
+                                    const groupLine = rootElement.ownerDocument.createElement("span");
                                     groupLine.style.cssText = "display:flex;heigth:0px;width:100%;border-top:2px solid #000;line-height:0px;margin: 1px 0px;padding: 0px;";
                                     groupLine.setAttribute('dcignore', '1');
                                     listBox.appendChild(groupLine);
@@ -328,8 +317,8 @@ export let WriterControl_ListBoxControl = {
                 listBox.setAttribute("TwoColumnDisplay", "true");
                 // 添加标题
                 /** 存储标题的元素 */
-                var titleBox = rootElement.ownerDocument.createElement("div");
-                var Text_Title = "代码值", Value_Title = "代码标题";
+                const titleBox = rootElement.ownerDocument.createElement("div");
+                const Text_Title = "代码值", Value_Title = "代码标题";
                 // 设置class名称
                 titleBox.className = "dc_titleDiv";
                 // 设置过滤掉的属性
@@ -339,10 +328,10 @@ export let WriterControl_ListBoxControl = {
                 // 填充标题元素
                 titleBox.innerHTML = "<div dc-data='text' title='" + Text_Title + "'>" + Text_Title + "</div><div dc-data='value' title='" + Value_Title + "'>" + Value_Title + "</div>";
                 listBox.appendChild(titleBox);
-                for (var i = 0; i < listItems.length; i++) {
-                    var item = listItems[i];
+                for (let i = 0; i < listItems.length; i++) {
+                    const item = listItems[i];
                     // 原本文本和值
-                    var nativeText, nativeValue;
+                    let nativeText, nativeValue;
                     if (typeof (item) == "string") {
                         // 数据是字符串
                         nativeText = item ? item : "";
@@ -352,7 +341,7 @@ export let WriterControl_ListBoxControl = {
                         nativeValue = item.Value ? item.Value : "";
                     }
                     /** 存储列表项的元素 */
-                    var ListItemBox = rootElement.ownerDocument.createElement("div");
+                    const ListItemBox = rootElement.ownerDocument.createElement("div");
                     // 设置class名称
                     ListItemBox.className = "dc_ListItem";
                     // 赋值内容
@@ -363,18 +352,14 @@ export let WriterControl_ListBoxControl = {
                     ListItemBox.innerHTML = "<div dc-data='text' title='" + nativeText + "'>" + nativeText + "</div><div dc-data='value' title='" + nativeValue + "'>" + nativeValue + "</div>";
                     // 如果oldValue或者oldText存在,给上样式并将下拉滚动到对应位置
                     if (oldValue != null && oldText != null && nativeValue == oldValue && nativeText == oldText) {
-                        ListItemBox.style.backgroundColor = '#eaf2ff';
-                        ListItemBox.style.color = '#000000';
-                        ListItemBox.style.outline = '1px solid #b7d2ff';
-                        ListItemBox.style.position = 'relative';
                         ListItemBox.setAttribute("targetLi", true);
 
                         //[DUWRITER5_0-1907]lxy20240201:增加自定义属性DropdownListItemDeselectButton，是否展示取消选中按钮。
-                        var DropdownListItemDeselectButton = rootElement.getAttribute('DropdownListItemDeselectButton');
+                        const DropdownListItemDeselectButton = rootElement.getAttribute('DropdownListItemDeselectButton');
                         //为了不影响已经在使用此功能的客户， 默认情况下是展示按钮的。除非用户设置值为false才不展示按钮
                         if (DropdownListItemDeselectButton !== 'false') {
                             //[DUWRITER5_0-1657]lxy20240109：给单选列表增加一个删除选中项功能
-                            var closeSpan = rootElement.ownerDocument.createElement("span");
+                            const closeSpan = rootElement.ownerDocument.createElement("span");
                             closeSpan.innerHTML = '&times;';
                             closeSpan.title = '取消选择';
                             closeSpan.style.cssText = `display: inline-block;
@@ -391,17 +376,8 @@ export let WriterControl_ListBoxControl = {
                             ListItemBox.appendChild(closeSpan);
                             closeSpan.addEventListener('click', function (e) {
                                 e.stopPropagation();// 阻止冒泡
-                                // 设置为不选择内容
-                                rootElement.SetElementProperties(currentInputProps.NativeHandle, { InnerValue: null, text: null });
-                                // 关闭单选下拉
-                                var hasDropDown = rootElement.querySelector('#divDropdownContainer20230111');
-                                hasDropDown.CloseDropdown('true');
-                                // 触发文档内容变化事件
-                                var opt = {
-                                    /** 触发事件类型 */
-                                    TriggerType: "ListBoxControlClearContent"
-                                };
-                                WriterControl_Event.RaiseControlEvent(rootElement, "DocumentContentChanged", opt);
+                                // 设置为不选择内容，清空文本
+                                callBack.call(e.target, "", "", rootElement);
                             });
                         }
                     }
@@ -419,17 +395,17 @@ export let WriterControl_ListBoxControl = {
             //         (e.detail && (e.detail > 0 ? -1 : 1)); // firefox
             //     if (this.scrollHeight > (this.innerHeight || this.clientHeight)) {
             //         if (this.scrollTop == 0 && delta == 1) {
-            //             return;
-            //         }
+            //         return;
+            //     }
             //         if (this.scrollHeight - (this.scrollTop + this.clientHeight) == 0 && delta == -1) {
             //             return;
-            //         }
+            //     }
             //         // 阻止事件冒泡,允许上下滑动
             //         if (e.stopPropagation) {
             //             e.stopPropagation();
             //         } else {
             //             e.cancelBubble = true;
-            //         }
+            //     }
             //     }
             // });
             // listBox.addEventListener('mouseover', function (e) {
@@ -469,7 +445,7 @@ export let WriterControl_ListBoxControl = {
      * @param {Element} rootElement 编辑器对象
      */
     CheckListBox: function (e, callBack, currentInputProps, listBox, rootElement) {
-        var _target = e.srcElement ? e.srcElement : e.target ? e.target : e;
+        let _target = e.srcElement ? e.srcElement : e.target;
         if (_target == null) {
             return;
         }
@@ -478,18 +454,18 @@ export let WriterControl_ListBoxControl = {
         }
         if (_target != null && _target.hasAttribute("native-text")) {
             if (!!callBack && typeof (callBack) == "function") {
-                var AssignmentText = _target.getAttribute("native-text");// 赋值的Text值
-                var AssignmentValue = _target.getAttribute("value");// 赋值的Value值
+                const AssignmentText = _target.getAttribute("native-text");// 赋值的Text值
+                const AssignmentValue = _target.getAttribute("value");// 赋值的Value值
                 if (currentInputProps && currentInputProps.ListValueFormatString) {// 存在格式化字符串
-                    // 修复存在格式化字符串单选列表没有“无”后面内容的问题【DUWRITER5_0-3861】
-                    var AllListItems = listBox.querySelectorAll("div[native-text]");// 所有的下拉列表
-                    var ListValueSeparatorChar = currentInputProps.ListValueSeparatorChar || ",";
+                    // 修复存在格式化字符串单选列表没有"无"后面内容的问题【DUWRITER5_0-3861】
+                    const AllListItems = listBox.querySelectorAll("div[native-text]");// 所有的下拉列表
+                    let ListValueSeparatorChar = currentInputProps.ListValueSeparatorChar || ",";
                     //wyc20250311:兼容CS端的\n明文换行符DUWRITER5_0-4236
                     if (ListValueSeparatorChar === "\\n") {
                         ListValueSeparatorChar = "\n";
                     }
-                    var excludeText = "", excludeValue = "";
-                    for (var i = 0; i < AllListItems.length; i++) {
+                    let excludeText = "", excludeValue = "";
+                    for (let i = 0; i < AllListItems.length; i++) {
                         if (AllListItems[i] != _target) {
                             if (excludeText != "") {
                                 excludeText += ListValueSeparatorChar;
@@ -501,28 +477,29 @@ export let WriterControl_ListBoxControl = {
                             excludeValue += AllListItems[i].getAttribute("value");
                         }
                     }
-                    var opt = {
+                    const opt = {
                         includeText: AssignmentText,
                         includeValue: AssignmentValue,
                         excludeText: excludeText,
                         excludeValue: excludeValue
                     };
                     // 获取当前的格式化文本数据
-                    var FormatStrData = WriterControl_ListBoxControl.GetListValueFormatString(currentInputProps, opt);
+                    const FormatStrData = WriterControl_ListBoxControl.GetListValueFormatString(currentInputProps, opt);
                     callBack.call(_target, FormatStrData.Text, FormatStrData.Value, rootElement);
                 } else {
                     callBack.call(_target, AssignmentText, AssignmentValue, rootElement);
                 }
                 /** 是否启动快速辅助录入模式 */
-                var FastInputMode = false;
+                let FastInputMode = false;
                 if (rootElement && rootElement.DocumentOptions && rootElement.DocumentOptions.BehaviorOptions) {
                     FastInputMode = rootElement.DocumentOptions.BehaviorOptions.FastInputMode;
                 }
                 if (FastInputMode) {
-                    var nextInput = rootElement.GetNextFocusFieldElement(currentInputProps.NativeHandle);
-                    if (nextInput) {
-                        rootElement.FocusElement(nextInput);
-                    }
+                    //const nextInput = rootElement.GetNextFocusFieldElement(currentInputProps.NativeHandle);
+                    //if (nextInput) {
+                    //    rootElement.FocusElement(nextInput);
+                    //}
+                    rootElement.FocusNextInput(true)
                 }
             }
         }
@@ -541,19 +518,19 @@ export let WriterControl_ListBoxControl = {
      * @returns 
      */
     CreateMultiSelectControl: function (listItems, rootElement, divContainer, oldText, oldValue, currentInputProps, args) {
-        var FormatData = this.DecompilationListValueFormatString(currentInputProps, {
+        const FormatData = this.DecompilationListValueFormatString(currentInputProps, {
             Text: oldText,
             Value: oldValue
         });
         oldText = FormatData.Text, oldValue = FormatData.Value;
-        var meunDiv = null;
-        if (listItems != null && Array.isArray(listItems)) {
+        let meunDiv = null;
+        if (listItems != null && Array.isArray(listItems) && listItems.length > 0) {
             meunDiv = rootElement.ownerDocument.createElement('div');
             meunDiv.setAttribute('id', 'MultiSelectControl');
             //meunDiv.innerHTML = `<div class="MultiSelect-line"></div>`;
             //min-width: 144px;
             // 获取用户设置的下拉大小和字体
-            var DropdownListFontSize = 12, DropdownListFontName = 'auto';
+            let DropdownListFontSize = 12, DropdownListFontName = 'auto';
             // 添加判断避免报错
             if (rootElement && rootElement.DocumentOptions && rootElement.DocumentOptions.ViewOptions) {
                 // 下拉列表字体大小
@@ -585,7 +562,7 @@ export let WriterControl_ListBoxControl = {
             `;
 
             // 样式元素
-            var ContextMenuCss = rootElement.ownerDocument.createElement('style');
+            const ContextMenuCss = rootElement.ownerDocument.createElement('style');
             ContextMenuCss.setAttribute('id', 'MultiSelectCss');
             ContextMenuCss.innerHTML = `
                 #MultiSelectControl{
@@ -619,10 +596,15 @@ export let WriterControl_ListBoxControl = {
                     border-bottom: 1px solid rgb(238, 238, 238);
                 }
                 #MultiSelectControl .MultiSelect-item:hover,
-                #MultiSelectControl .MultiSelect-item[moveli=true]{
-                    background-color:#eaf2ff!important;
+                #MultiSelectControl .MultiSelect-item[targetli=true]{
+                    background-color:#e6f3ff!important;
                     color:#000000!important;
-                    outline:1px solid #b7d2ff!important;
+                    outline:1px solid #4da6ff!important;
+                }
+                #MultiSelectControl .MultiSelect-item[moveli=true]{
+                    background-color:#fff2e6!important;
+                    color:#000000!important;
+                    outline:1px solid #ffb366!important;
                 }
                 #MultiSelectControl .MultiSelect-item .MultiSelect-text{
                     float: left;
@@ -661,7 +643,7 @@ export let WriterControl_ListBoxControl = {
                 }`;
             divContainer.appendChild(ContextMenuCss);
 
-            var separatorChar = currentInputProps.ListValueSeparatorChar ? currentInputProps.ListValueSeparatorChar : ',';//列表项目分割字符
+            let separatorChar = currentInputProps.ListValueSeparatorChar ? currentInputProps.ListValueSeparatorChar : ',';//列表项目分割字符
             //wyc20250311:兼容CS端的\n明文换行符DUWRITER5_0-4236
             if (separatorChar === "\\n") {
                 separatorChar = "\n";
@@ -674,7 +656,7 @@ export let WriterControl_ListBoxControl = {
                 /** 是否通过Value属性进行判断 */
                 // var IsCheckValue = true;
                 /** 判断需要的数组 */
-                var CheckArray = [];
+                let CheckArray = [];
                 if (oldValue) {
                     CheckArray = oldValue.split(separatorChar);
                 }
@@ -684,12 +666,12 @@ export let WriterControl_ListBoxControl = {
                 //     IsCheckValue = false;
                 //     CheckArray = oldText.split(separatorChar);
                 // }
-                // 下拉搜索中‘使用此文本’按钮可以展示时，将已插入的文本作为下拉项展示
+                // 下拉搜索中'使用此文本'按钮可以展示时，将已插入的文本作为下拉项展示
                 if (rootElement.getAttribute("DropdownListIsShowUsingSearchContent") == "true") {
                     //多选：使用搜索的内容为下拉项的处理，将已使用的搜索内容以下拉选项的形式展示，便于用户选中和取消
-                    var diyTextArr = currentInputProps.Text ? currentInputProps.Text.split(',') : [];
-                    var ListItemText = listItems && listItems.length ? listItems.map(item => item.Text) : [];
-                    for (var i = 0; i < diyTextArr.length; i++) {
+                    const diyTextArr = currentInputProps.Text ? currentInputProps.Text.split(',') : [];
+                    const ListItemText = listItems && listItems.length ? listItems.map(item => item.Text) : [];
+                    for (let i = 0; i < diyTextArr.length; i++) {
                         if (ListItemText.indexOf(diyTextArr[i]) === -1) {
                             //isUserDefinedDomHidden 用于隐藏用户自定义插入的下拉选项值
                             listItems.push({ "Text": diyTextArr[i], "Value": diyTextArr[i], isUserDefinedDomHidden: true });
@@ -698,11 +680,11 @@ export let WriterControl_ListBoxControl = {
                 }
 
                 // 在此处判断是否为分组互斥
-                var oldGroupText = null;
+                let oldGroupText = null;
                 //根据listItems显示元素
-                for (var option = 0; option < listItems.length; option++) {
+                for (let option = 0; option < listItems.length; option++) {
                     //if (typeof listItems[option] == 'object') {
-                    var itemEle = rootElement.ownerDocument.createElement('div');
+                    const itemEle = rootElement.ownerDocument.createElement('div');
                     itemEle.setAttribute('class', 'MultiSelect-item');
                     //isUserDefinedDomHidden用于隐藏用户自定义插入的下拉选项值
                     itemEle.style.cssText = `min-height: 30px;display:${listItems[option].isUserDefinedDomHidden ? 'none;' : 'block'}`;
@@ -710,7 +692,7 @@ export let WriterControl_ListBoxControl = {
                         itemEle.setAttribute('isUserDefinedDomHidden', "true");
                         itemEle.setAttribute('dcignore', '1');
                     }
-                    var nativeText = '',//赋值内容
+                    let nativeText = '',//赋值内容
                         innerText = '',//下拉展示内容
                         innerValue = '';//value值
                     if (typeof (listItems[option]) == "string") {
@@ -727,13 +709,14 @@ export let WriterControl_ListBoxControl = {
                     // } else {
                     //     isChecked = CheckArray.includes(nativeText);
                     // }
-                    var isChecked = CheckArray.includes(innerValue);
+                    const isChecked = CheckArray.includes(innerValue);
                     // Value值包含在CheckArray中，并且确保Text值包含在文本中
-                    if (isChecked) {
-                        isChecked = oldText.indexOf(nativeText) > -1;
-                    }
+                    //wyc20250915注释这一段，不判断文本只判断值是否包含
+                    //if (isChecked) {
+                    //    isChecked = oldText.indexOf(nativeText) > -1;
+                    //}
                     /** 多选框的Html值 */
-                    var MultiSelectIconHtml = isChecked ? WriterControl_ListBoxControl.CheckedSvg : WriterControl_ListBoxControl.NoCheckedSvg;
+                    const MultiSelectIconHtml = isChecked ? WriterControl_ListBoxControl.CheckedSvg : WriterControl_ListBoxControl.NoCheckedSvg;
                     itemEle.innerHTML = `
                         <div class="MultiSelect-text" native-text="${nativeText}" value="${innerValue}">
                             <span class="dc_ListItemText" title="${innerText}">${innerText}</span>
@@ -756,14 +739,14 @@ export let WriterControl_ListBoxControl = {
                                 meunDiv.appendChild(itemEle);
                             } else {
                                 //如果是不同group
-                                var hasSameGroup = meunDiv.querySelectorAll(`[dc_group="${listItems[option].Group}"]`);
+                                const hasSameGroup = meunDiv.querySelectorAll(`[dc_group="${listItems[option].Group}"]`);
                                 if (hasSameGroup && hasSameGroup.length > 0) {
                                     //存在相同的group
                                     hasSameGroup[hasSameGroup.length - 1].after(itemEle);
                                 } else {
                                     //不存在相同的group
                                     //创建一个分割线
-                                    var groupLine = rootElement.ownerDocument.createElement("span");
+                                    const groupLine = rootElement.ownerDocument.createElement("span");
                                     groupLine.style.cssText = "display:flex;heigth:0px;width:100%;border-top:2px solid #000;line-height:0px;margin: 1px 0px;padding: 0px;";
                                     groupLine.setAttribute('dcignore', '1');
                                     meunDiv.appendChild(groupLine);
@@ -779,81 +762,82 @@ export let WriterControl_ListBoxControl = {
                         meunDiv.appendChild(itemEle);
                     }
                 }
-                //找到所有的下拉框并给上样式
-                var alllargetLi = meunDiv.querySelectorAll('[targetLi=true]');
-                if (alllargetLi && alllargetLi.length > 0) {
-                    var lastLi = alllargetLi[alllargetLi.length - 1];
-                    lastLi.style.backgroundColor = '#eaf2ff';
-                    lastLi.style.color = '#000000';
-                    lastLi.style.outline = '1px solid #b7d2ff';
-                }
             }
 
             //对listBox进行判断
             meunDiv.addEventListener('click', function (e) {
                 WriterControl_ListBoxControl.CheckMultiSelect(e, meunDiv, separatorChar, currentInputProps, rootElement);
             });
+
+            /** 多选下拉底部工具条是否可见,使用编辑器属性DropdownListMultiSelectFooterVisible判断 */
+            let MultiSelectFooterVisible = true;
+            // 添加编辑器属性DropdownListMultiSelectFooterVisible判断多选下拉底部工具条是否可见【DUWRITER5_0-4628】
+            const _MultiSelectFooterVisible = rootElement.getAttribute("DropdownListMultiSelectFooterVisible");
+            if (_MultiSelectFooterVisible && typeof _MultiSelectFooterVisible === "string" && _MultiSelectFooterVisible.toLowerCase().trim() == "false") {
+                MultiSelectFooterVisible = false;
+            }
+            if (MultiSelectFooterVisible) {
+                // wyc20250422:添加确定取消按钮
+                const MultiSelectFooterNode = rootElement.ownerDocument.createElement("div");
+                MultiSelectFooterNode.id = "DCMultiSelectFooter";
+                MultiSelectFooterNode.style.cssText = "text-align:center;padding:5px 0;border-top:1px solid #000;background-color: buttonface;";
+                MultiSelectFooterNode.innerHTML = `
+                <input id='DCSubmitBtn' type='button' value='确定'/>
+                <input id='DCCancelBtn' type='button' value='取消'/>
+                <input id='DCToggleSelectAllBtn' type='button' value='全(不)选'/>`;
+                divContainer.appendChild(MultiSelectFooterNode);
+                const submitInput = divContainer.querySelector("#DCSubmitBtn");
+                if (submitInput) {
+                    submitInput.onclick = function (e) {
+                        WriterControl_ListBoxControl.MultiSelectApplyCurrentEditorCallBackFunc(divContainer, meunDiv, separatorChar, currentInputProps, rootElement);
+                    };
+                }
+                const cancelInput = divContainer.querySelector("#DCCancelBtn");
+                if (cancelInput) {
+                    cancelInput.onclick = function (e) {
+                        WriterControl_ListBoxControl.MultiSelectCancelCallBackFunc(divContainer);
+                    };
+                }
+                const toggleSelectAllInput = divContainer.querySelector("#DCToggleSelectAllBtn");
+                if (toggleSelectAllInput) {
+                    toggleSelectAllInput.onclick = function (e) {
+                        WriterControl_ListBoxControl.MultiSelectToggleSelectAllCallBackFunc(meunDiv, currentInputProps);
+                    };
+                }
+            }
         }
         // 给下拉框插入搜索框
         WriterControl_ListBoxControl.CreateDropdownCodeArea(meunDiv, rootElement, divContainer, currentInputProps, args);
-        // wyc20250422:添加确定取消按钮
-        if (Array.isArray(listItems) && listItems.length > 0) {
-            var MultiSelectFooterNode = rootElement.ownerDocument.createElement("div");
-            MultiSelectFooterNode.id = "DCMultiSelectFooter";
-            MultiSelectFooterNode.style.cssText = "text-align:center;padding:5px 0;border-top:1px solid #000;background-color: buttonface;";
-            MultiSelectFooterNode.innerHTML = `
-            <input id='DCSubmitBtn' type='button' value='确定'/>
-            <input id='DCCancelBtn' type='button' value='取消'/>
-            <input id='DCToggleSelectAllBtn' type='button' value='全(不)选'/>`;
-            divContainer.appendChild(MultiSelectFooterNode);
-            var submitInput = divContainer.querySelector("#DCSubmitBtn");
-            if (submitInput) {
-                submitInput.onclick = function (e) {
-                    WriterControl_ListBoxControl.MultiSelectSubmitCallBackFunc(divContainer, meunDiv, separatorChar, currentInputProps, rootElement);
-                };
-            }
-            var cancelInput = divContainer.querySelector("#DCCancelBtn");
-            if (cancelInput) {
-                cancelInput.onclick = function (e) {
-                    WriterControl_ListBoxControl.MultiSelectCancelCallBackFunc(divContainer);
-                };
-            }
-            var toggleSelectAllInput = divContainer.querySelector("#DCToggleSelectAllBtn");
-            if (toggleSelectAllInput) {
-                toggleSelectAllInput.onclick = function (e) {
-                    WriterControl_ListBoxControl.MultiSelectToggleSelectAllCallBackFunc(meunDiv, currentInputProps);
-                };
-            }
-        }
         return meunDiv;
     },
 
     /**
-     * 多选下拉框提交回调函数
+     * 多选下拉框赋值输入域回调函数
      * @param {HTMLElement} divContainer - 页面上的下拉列表元素
      * @param {HTMLElement} meunDiv - 下拉框菜单的DOM元素
      * @param {string} separatorChar - 分隔符
      * @param {Object} currentInputProps - 当前输入框的属性
      * @param {HTMLElement} rootElement - 根元素
+     * @param {HTMLElement} isCloseDropDown - 赋值是否关闭下拉
      */
-    MultiSelectSubmitCallBackFunc: function (divContainer, meunDiv, separatorChar, currentInputProps, rootElement) {
+    MultiSelectApplyCurrentEditorCallBackFunc: function (divContainer, meunDiv, separatorChar, currentInputProps, rootElement, isCloseDropDown = true) {
         // var _target = e.srcElement || e.target;
         //获取到所有的值
-        var MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item");
-        var opt = {
+        const MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item");
+        const opt = {
             includeText: "",
             includeValue: "",
             excludeText: "",
             excludeValue: ""
         };
         // 修改顺序代码【暂时没有】
-        for (var i = 0; i < MultiSelectItems.length; i++) {
+        for (let i = 0; i < MultiSelectItems.length; i++) {
             if (MultiSelectItems[i] && MultiSelectItems[i].getAttribute('isuserdefineddomhidden') == "true") {
                 continue;
             }
-            var textEle = MultiSelectItems[i].querySelector('.MultiSelect-text');//存储值的元素
-            var LsTxt = textEle.getAttribute("native-text");//Text值
-            var LsValue = textEle.getAttribute("value");//value值
+            const textEle = MultiSelectItems[i].querySelector('.MultiSelect-text');//存储值的元素
+            const LsTxt = textEle.getAttribute("native-text");//Text值
+            const LsValue = textEle.getAttribute("value");//value值
             if (MultiSelectItems[i].hasAttribute("targetLi")) {//选择的项
                 if (opt.includeText != "") {
                     opt.includeText += separatorChar;
@@ -874,24 +858,66 @@ export let WriterControl_ListBoxControl = {
                 opt.excludeValue += LsValue;
             }
         }
-        var FormatStrData = {
+        let FormatStrData = {
             Text: opt.includeText,
             Value: opt.includeValue
         };
         if (currentInputProps && currentInputProps.ListValueFormatString) {//存在格式化字符串
             FormatStrData = WriterControl_ListBoxControl.GetListValueFormatString(currentInputProps, opt);
         }
-        if (currentInputProps.Text == FormatStrData.Text && currentInputProps.InnerValue == FormatStrData.Value) {
-            // 让输入域获取焦点
-            rootElement.FocusElement(currentInputProps.NativeHandle);
+        if (isCloseDropDown) {
+            // 赋值后会关闭下拉
+            if (currentInputProps.Text == FormatStrData.Text && currentInputProps.InnerValue == FormatStrData.Value) {
+                // 文本没有修改,因为currentInputProps是旧数据，所以在不关闭下拉时不判断这个
+                // 让输入域获取焦点
+                rootElement.FocusElement(currentInputProps.NativeHandle);
+                // 关闭下拉列表
+                WriterControl_ListBoxControl.MultiSelectCancelCallBackFunc(divContainer);
+                return;
+            }
+            // 将多选下拉赋值代码修改为ApplyCurrentEditorCallBack, 以便在赋值后触发EventContentChanged（内容改变事件）【DUWRITER5_0-4410】
+            rootElement.ApplyCurrentEditorCallBack(FormatStrData.Text, FormatStrData.Value, currentInputProps.Text, rootElement);
             // 关闭下拉列表
             WriterControl_ListBoxControl.MultiSelectCancelCallBackFunc(divContainer);
-            return;
+        } else {
+            // 赋值后不会关闭下拉
+            // 不存在页脚元素时，多选下拉项需要点击时赋值输入域时添加触发EventBeforeFieldContentEdit / EventAfterFieldContentEdit事件【DUWRITER5_0-5122】
+            // 是否发生内容变更（文本或值）
+            const contentChanged = currentInputProps.Text !== FormatStrData.Text || currentInputProps.InnerValue !== FormatStrData.Value;
+            // 是否触发 Before/After 事件：配置强制触发 或 内容有变更
+            const forceRaise = rootElement.DocumentOptions.BehaviorOptions.ForceRaiseEventAfterFieldContentEdit || contentChanged;
+            // 输入域编辑事件参数（供 EventBeforeFieldContentEdit / EventAfterFieldContentEdit 使用）
+            const fieldContentEditEventArgs = {
+                "Cancel": false,
+                "EditorTypeName": "XTextInputFieldElementListValueEditor",
+                "ElementID": currentInputProps.ID,
+                "ElementName": currentInputProps.Name,
+                "NewText": FormatStrData.Text,
+                "NewValue": FormatStrData.Value,
+                "OldText": currentInputProps.Text,
+                "OldValue": currentInputProps.InnerValue,
+                "SelectedItems": [],
+                "SelectedIndexs": "",
+            };
+            if (forceRaise) {
+                // 触发编辑器修改输入域内容前事件
+                WriterControl_Event.RaiseControlEvent(rootElement, "EventBeforeFieldContentEdit", fieldContentEditEventArgs);
+            }
+            // 设置输入域内容
+            rootElement.SetElementProperties(currentInputProps.NativeHandle, { Text: FormatStrData.Text, InnerValue: FormatStrData.Value }, true);
+            if (forceRaise) {
+                // 触发编辑器修改输入域内容后事件
+                WriterControl_Event.RaiseControlEvent(rootElement, "EventAfterFieldContentEdit", fieldContentEditEventArgs);
+            }
+            if (contentChanged) {
+                // 触发文档内容变化事件
+                const opt = {
+                    /** 触发事件类型 */
+                    TriggerType: "ApplyCurrentEditorCallBack"
+                };
+                WriterControl_Event.RaiseControlEvent(rootElement, "DocumentContentChanged", opt);
+            }
         }
-        // 将多选下拉赋值代码修改为ApplyCurrentEditorCallBack, 以便在赋值后触发EventContentChanged（内容改变事件）【DUWRITER5_0-4410】
-        rootElement.ApplyCurrentEditorCallBack(FormatStrData.Text, FormatStrData.Value, currentInputProps.Text, rootElement);
-        // 关闭下拉列表
-        WriterControl_ListBoxControl.MultiSelectCancelCallBackFunc(divContainer);
     },
 
     /**
@@ -915,49 +941,49 @@ export let WriterControl_ListBoxControl = {
      */
     MultiSelectToggleSelectAllCallBackFunc: function (meunDiv, currentInputProps) {
         //获取到所有的值
-        var MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item");
-        var checkedMultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[targetli=true]");
-        var LastGroupName = null;
+        let MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item");
+        let checkedMultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[targetli=true]");
+        let LastGroupName = null;
         if (currentInputProps.RepulsionForGroup) {
             // 分组互斥，获取最后一组
-            var LastMultiSelectItems = MultiSelectItems[MultiSelectItems.length - 1];
+            const LastMultiSelectItems = MultiSelectItems[MultiSelectItems.length - 1];
             LastGroupName = LastMultiSelectItems.getAttribute("dc_group");
             MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[dc_group='" + LastGroupName + "']");
             checkedMultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[dc_group='" + LastGroupName + "'][targetli=true]");
             // 取消选中其他分组的选中项目
-            var otherCheckedMultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[targetli=true]:not([dc_group='" + LastGroupName + "'])");
-            for (var i = 0; i < otherCheckedMultiSelectItems.length; i++) {
+            const otherCheckedMultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item[targetli=true]:not([dc_group='" + LastGroupName + "'])");
+            for (let i = 0; i < otherCheckedMultiSelectItems.length; i++) {
                 if (!otherCheckedMultiSelectItems[i]) {
                     continue;
                 }
                 if (otherCheckedMultiSelectItems[i].getAttribute("isuserdefineddomhidden") == "true") {
                     continue;
                 }
-                var iconEle = otherCheckedMultiSelectItems[i].querySelector(".MultiSelect-icon");
+                const iconEle = otherCheckedMultiSelectItems[i].querySelector(".MultiSelect-icon");
                 otherCheckedMultiSelectItems[i].removeAttribute("targetLi");
                 iconEle.innerHTML = WriterControl_ListBoxControl.NoCheckedSvg;
             }
         }
         /** 是否有选中项目 */
-        var isHasChecked = checkedMultiSelectItems.length > 0;
-        for (var i = 0; i < MultiSelectItems.length; i++) {
+        const isHasChecked = checkedMultiSelectItems.length > 0;
+        for (let i = 0; i < MultiSelectItems.length; i++) {
             if (!MultiSelectItems[i]) {
                 continue;
             }
             if (MultiSelectItems[i].getAttribute("isuserdefineddomhidden") == "true") {
                 continue;
             }
-            var isChecked = MultiSelectItems[i].getAttribute("targetLi") == "true";
+            const isChecked = MultiSelectItems[i].getAttribute("targetLi") == "true";
             // 如果有选中项目,就取消已选中的项目
             if (isHasChecked) {
                 if (isChecked) {
-                    var iconEle = MultiSelectItems[i].querySelector(".MultiSelect-icon");
+                    const iconEle = MultiSelectItems[i].querySelector(".MultiSelect-icon");
                     MultiSelectItems[i].removeAttribute("targetLi");
                     iconEle.innerHTML = WriterControl_ListBoxControl.NoCheckedSvg;
                 }
             } else {
                 if (!isChecked) {
-                    var iconEle = MultiSelectItems[i].querySelector(".MultiSelect-icon");
+                    const iconEle = MultiSelectItems[i].querySelector(".MultiSelect-icon");
                     MultiSelectItems[i].setAttribute("targetLi", "true");
                     iconEle.innerHTML = WriterControl_ListBoxControl.CheckedSvg;
                 }
@@ -975,7 +1001,7 @@ export let WriterControl_ListBoxControl = {
      * @returns 
      */
     CheckMultiSelect: function (e, meunDiv, separatorChar, currentInputProps, rootElement) {
-        var _target = e.srcElement ? e.srcElement : e.target ? e.target : e;
+        let _target = e.srcElement ? e.srcElement : e.target ? e.target : e;
         if (_target != null && _target != meunDiv) {
             if (!_target.getAttribute || _target.getAttribute('class') != 'MultiSelect-item') {
                 if (_target.getAttribute('class') == 'MultiSelect-line') {
@@ -995,102 +1021,41 @@ export let WriterControl_ListBoxControl = {
             //在此处进行数据拼接
             if (_target != null && _target.getAttribute && _target.getAttribute('class') == 'MultiSelect-item') {
                 //获取到元素并拼接
-                var hasChecked = _target.getAttribute('targetLi');
+                const hasChecked = _target.getAttribute('targetLi');
                 //如果存在选中则清除页面数据,没有就添加
                 if (hasChecked != null) {
-                    var iconEle = _target.querySelector('.MultiSelect-icon');
+                    const iconEle = _target.querySelector('.MultiSelect-icon');
                     _target.removeAttribute('targetLi');
                     iconEle.innerHTML = WriterControl_ListBoxControl.NoCheckedSvg;
                 } else {
-                    var iconEle = _target.querySelector('.MultiSelect-icon');
+                    const iconEle = _target.querySelector('.MultiSelect-icon');
                     _target.setAttribute('targetLi', 'true');
                     iconEle.innerHTML = WriterControl_ListBoxControl.CheckedSvg;
                 }
 
                 if (currentInputProps.RepulsionForGroup) {
                     // 判断所有的选中项
-                    var allChecked = meunDiv.querySelectorAll(`[targetLi="true"]`);
+                    const allChecked = meunDiv.querySelectorAll(`[targetLi="true"]`);
                     if (allChecked && allChecked.length > 0) {
-                        for (var check = 0; check < allChecked.length; check++) {
+                        for (let check = 0; check < allChecked.length; check++) {
                             if (allChecked[check].getAttribute('dc_group') != _target.getAttribute('dc_group')) {
-                                var iconEle = allChecked[check].querySelector('.MultiSelect-icon');
+                                const iconEle = allChecked[check].querySelector('.MultiSelect-icon');
                                 allChecked[check].removeAttribute('targetLi');
                                 iconEle.innerHTML = WriterControl_ListBoxControl.NoCheckedSvg;
                             }
                         }
                     }
                 }
-                return;
-                // 以下是赋值的代码
-                //获取到所有的值
-                var MultiSelectItems = meunDiv.querySelectorAll(".MultiSelect-item");
-                var opt = {
-                    includeText: "",
-                    includeValue: "",
-                    excludeText: "",
-                    excludeValue: ""
-                };
-                // 修改顺序代码【暂时没有】
-                for (var i = 0; i < MultiSelectItems.length; i++) {
-                    if (MultiSelectItems[i] && MultiSelectItems[i].getAttribute('isuserdefineddomhidden') == "true") {
-                        continue;
-                    }
-                    var textEle = MultiSelectItems[i].querySelector('.MultiSelect-text');//存储值的元素
-                    var LsTxt = textEle.getAttribute("native-text");//Text值
-                    var LsValue = textEle.getAttribute("value");//value值
-                    if (MultiSelectItems[i].hasAttribute("targetLi")) {//选择的项
-                        if (opt.includeText != "") {
-                            opt.includeText += separatorChar;
-                        }
-                        opt.includeText += LsTxt;
-                        if (opt.includeValue != "") {
-                            opt.includeValue += separatorChar;
-                        }
-                        opt.includeValue += LsValue;
-                    } else {//未选择的项
-                        if (opt.excludeText != "") {
-                            opt.excludeText += separatorChar;
-                        }
-                        opt.excludeText += LsTxt;
-                        if (opt.excludeValue != "") {
-                            opt.excludeValue += separatorChar;
-                        }
-                        opt.excludeValue += LsValue;
+                /** 下拉元素 */
+                const divContainer = rootElement.querySelector("#divDropdownContainer20230111");
+                if (divContainer) {
+                    /**多选下拉的页脚元素*/
+                    const MultiSelectFooterNode = divContainer.querySelector("#DCMultiSelectFooter");
+                    if (!MultiSelectFooterNode) {
+                        // 不存在页脚元素时，多选下拉项需要点击时赋值输入域
+                        WriterControl_ListBoxControl.MultiSelectApplyCurrentEditorCallBackFunc(divContainer, meunDiv, separatorChar, currentInputProps, rootElement, false);
                     }
                 }
-                var FormatStrData = {
-                    Text: opt.includeText,
-                    Value: opt.includeValue
-                };
-                if (currentInputProps && currentInputProps.ListValueFormatString) {//存在格式化字符串
-                    FormatStrData = WriterControl_ListBoxControl.GetListValueFormatString(currentInputProps, opt);
-                }
-                // rootElement.CurrentMultiSelect = rootElement.CurrentMultiSelect ? rootElement.CurrentMultiSelect : currentInput
-                // 通过NativeHandle可以赋值
-                //if ('ontouchstart' in rootElement.ownerDocument.documentElement) {
-                //    rootElement.CloseDropdown = true;
-                //}
-
-                //wyc20250422下面代码移植到OK函数中，不再勾选即赋值了
-                meunDiv.ResultData = {
-                    Text: FormatStrData.Text,
-                    InnerValue: FormatStrData.Value
-                };
-                //rootElement.SetElementProperties(currentInputProps.NativeHandle, {
-                //    Text: FormatStrData.Text,
-                //    InnerValue: FormatStrData.Value
-                //}, true);
-                ////rootElement.CloseDropdown = false;
-                //// rootElement.CurrentMultiSelect = rootElement.CurrentInputField();
-                //// 触发文档内容变化事件
-                //var opt = {
-                //    /** 触发事件类型 */
-                //    TriggerType: "ApplyCurrentEditorCallBack"
-                //};
-                //WriterControl_Event.RaiseControlEvent(rootElement, "DocumentContentChanged", opt);
-                ////if (!!callBack && typeof (callBack) == "function") {
-                ////    callBack.call(newText, newValue);
-                ////}
             }
         }
     },
@@ -1109,12 +1074,119 @@ export let WriterControl_ListBoxControl = {
             return;
         }
         // MinCountForDropdownListSpellCodeArea: 显示下拉列表中拼音码区域的最小项目个数，默认值是4
-        var hasMinCount = rootElement.DocumentOptions.BehaviorOptions.MinCountForDropdownListSpellCodeArea || 4;
-        var listItems = listBox.querySelectorAll("[native-text]");
+        const hasMinCount = rootElement.DocumentOptions.BehaviorOptions.MinCountForDropdownListSpellCodeArea || 4;
+        const listItems = listBox.querySelectorAll("[native-text]");
+        const EventShowDropdownOnce = function (rootElement, divContainer) {
+            if (!divContainer) {
+                return;
+            }
+            // 需要特殊样式
+            divContainer.style.display = "flex";
+            divContainer.style.flexDirection = "column";
+            // 修复下拉弹框没有搜索框时两栏展示标题未固定在下拉弹框顶部的问题
+            // 把两栏展示的标题提出
+            const first_listitem = listBox.firstChild;
+            if (first_listitem && first_listitem.getAttribute("TwoColumnDisplay") == "true" && first_listitem.className == "dc_titleDiv") {
+                const parentNode = listBox.parentNode;
+                parentNode.insertBefore(first_listitem, listBox);
+                // 给标题添加边框
+                first_listitem.style.border = "1px solid #000";
+                // 给包裹元素添加样式
+                parentNode.style.display = "flex";
+                parentNode.style.flexDirection = "column";
+                // parentNode.style.cssText = "display:flex;flex-direction: column;";
+                // 给列表盒子添加滚动条
+                listBox.style.overflowY = "auto";
+            }
+            // 多选下拉的页脚元素
+            const MultiSelectFooterNode = divContainer.querySelector("#DCMultiSelectFooter");
+            if (MultiSelectFooterNode) {
+                divContainer.appendChild(MultiSelectFooterNode);
+            }
+            // 用户自定义下拉框最大高度：
+            let DropDownListMaxHeight = rootElement.getAttribute("DropDownListMaxHeight") || null;
+            DropDownListMaxHeight = DropDownListMaxHeight ? parseInt(DropDownListMaxHeight) : null;
+            if (!DropDownListMaxHeight && listItems.length > 6) {
+                //当没有设置固定高度时：
+                //DUWRITER5_0-2970 20240702 lxy 重新计算下拉框的高度，修改下拉输入域的高度防止文字展示一半：
+                let divContainerHeight = 0;
+                const MultiSelectControl = divContainer.querySelector('#MultiSelectControl');
+                const dcListBox = divContainer.querySelector('.dcListBox');
+                let selectChildren = [];//下拉选项
+                let dc_dropdown_box = null;//选择项父级盒子
+                if (MultiSelectControl && MultiSelectControl.children) {
+                    //多选
+                    selectChildren = MultiSelectControl.children;
+                    dc_dropdown_box = MultiSelectControl;
+                } else if (dcListBox && dcListBox.children) {
+                    //单选
+                    selectChildren = dcListBox.children;
+                    dc_dropdown_box = dcListBox;
+                }
+                let SelectItemNum = 0;
+                //多选的高度，定义一次展示6个子元素，包括分组横线的高度
+                for (let i = 0; i < selectChildren.length; i++) {
+                    const item = selectChildren[i];
+                    if (SelectItemNum < 6) {
+                        //分组横线
+                        if (item.nodeName === 'SPAN') {
+                            divContainerHeight += 2;
+                        }
+                        //每一个下拉
+                        if (item.nodeName === 'DIV') {
+                            SelectItemNum += 1;//用于计数
+                        }
+                        divContainerHeight += item.offsetHeight;
+                    }
+                }
+                //设置父级样式
+                if (dc_dropdown_box.parentElement.className.indexOf('listBoxContainer') != -1) {
+                    //判断是否增加双列展示时的表头高度
+                    const dc_titleDiv = divContainer.querySelector('.dc_titleDiv');
+                    if (dc_titleDiv) {
+                        divContainerHeight += dc_titleDiv.offsetHeight;
+                    }
+                }
+                //判断是否需要增加搜索框的高度
+                const searchInput = divContainer.querySelector('.dropdownCodeArea');
+                if (searchInput) {
+                    divContainerHeight += searchInput.offsetHeight;
+                }
+                //判断是否需要增加"使用此文本"的高度
+                const fillButton = divContainer.querySelector('.fullButtonDiv');
+                if (fillButton) {
+                    divContainerHeight += fillButton.offsetHeight;
+                }
+                //判断是否需要增加多选下拉的页脚元素的高度
+                if (MultiSelectFooterNode) {
+                    divContainerHeight += MultiSelectFooterNode.offsetHeight;
+                }
+                //设置整个容器高度
+                divContainer.style.maxHeight = divContainerHeight + 'px';
+                divContainer.style.overflowY = 'auto';
+            }
+            // 定位第一个选中项;修复下拉展示没有跳转到选中项的问题【DUWRITER5_0-4551】
+            const targetLiNode = listBox.querySelector('[targetLi]');
+            if (targetLiNode) {
+                // 获取可以滚动的元素
+                let scrollElement = targetLiNode.parentNode;
+                while (scrollElement.scrollHeight <= (scrollElement.innerHeight || scrollElement.clientHeight) && scrollElement != divContainer) {
+                    scrollElement = scrollElement.parentNode;
+                }
+                if (WriterControl_ListBoxControl.isElementInView(targetLiNode, scrollElement) == false) {
+                    // 选中的列表项不在视图中，需要滚动
+                    WriterControl_ListBoxControl.scrollElementIntoView(targetLiNode, {
+                        container: scrollElement,
+                        behavior: 'instant',
+                        block: 'start'
+                    });
+                }
+            }
+        }
         // 判断是否存在下拉数量判断
         if (hasMinCount && hasMinCount <= listItems.length) {
             //在此之前先插入一个搜索框
-            var searchSpan = rootElement.ownerDocument.createElement('span');
+            const searchSpan = rootElement.ownerDocument.createElement('span');
             searchSpan.setAttribute('class', 'dropdownCodeArea');
             searchSpan.style.cssText = `
                     position: relative;
@@ -1129,10 +1201,10 @@ export let WriterControl_ListBoxControl = {
                     box-sizing: border-box;
                     width: 100%;
                     flex: none;`;
-            var searchInput = rootElement.ownerDocument.createElement('input');
+            let searchInput = rootElement.ownerDocument.createElement('input');
             //在此处可以设置搜索框的背景文字
             if (rootElement.EventGetSearchInputPlaceholder != null && typeof rootElement.EventGetSearchInputPlaceholder == 'function') {
-                var placeholder = rootElement.EventGetSearchInputPlaceholder();
+                const placeholder = rootElement.EventGetSearchInputPlaceholder();
                 searchInput.placeholder = placeholder || '';
             }
             searchInput.style.cssText = `
@@ -1152,12 +1224,13 @@ export let WriterControl_ListBoxControl = {
                     width: 100%;`;
             searchSpan.appendChild(searchInput);
             /** 设置搜索不到内容时，是否展示使用此文本按钮 */
-            var IsShowUsingSearchContent = rootElement.getAttribute('DropdownListIsShowUsingSearchContent');
+            let IsShowUsingSearchContent = rootElement.getAttribute('DropdownListIsShowUsingSearchContent');
             IsShowUsingSearchContent = IsShowUsingSearchContent && (IsShowUsingSearchContent === 'true');
-            var fillButton = null;
+            let fillButton = null;
             if (IsShowUsingSearchContent) {
                 //当没有搜索内容时，展示填充按钮
                 fillButton = rootElement.ownerDocument.createElement('div');
+                searchSpan.setAttribute('class', 'fullButtonDiv');
                 fillButton.innerHTML = '使用此文本';
                 fillButton.title = '点击将输入域内容设置为搜索内容';
                 fillButton.style.cssText = 'display:none;';//填充按钮默认不展示
@@ -1165,13 +1238,13 @@ export let WriterControl_ListBoxControl = {
                 fillButton.onclick = function () {
                     //重新获取一下searchInput，解决在某些情况下获取不到searchInput的问题[DUWRITER5_0-3224]
                     searchInput = searchSpan.querySelector('input');
-                    var changeValue = {
+                    let changeValue = {
                         Text: '',
                         InnerValue: ''
                     };
                     if (currentInputProps.InnerMultiSelect) {
                         //再多选情况下，始终获取最新的输入域值
-                        var currentElement = rootElement.GetElementProperties(rootElement.CurrentElement());
+                        const currentElement = rootElement.GetElementProperties(rootElement.CurrentElement());
                         changeValue = {
                             Text: currentElement.Text ? currentElement.Text + ',' + searchInput.value : searchInput.value,
                             InnerValue: currentElement.InnerValue ? currentElement.InnerValue + ',' + searchInput.value : searchInput.value,
@@ -1185,27 +1258,41 @@ export let WriterControl_ListBoxControl = {
                         rootElement.SetElementProperties(currentInputProps, changeValue);
                     }
                     // 触发文档内容变化事件
-                    var opt = {
+                    const opt = {
                         /** 触发事件类型 */
                         TriggerType: "ApplyCurrentEditorCallBack"
                     };
                     WriterControl_Event.RaiseControlEvent(rootElement, "DocumentContentChanged", opt);
-                    //关闭下拉
-                    var hasDropDown = rootElement.querySelector('#divDropdownContainer20230111');
-                    hasDropDown.CloseDropdown('true');
+                    // 关闭下拉
+                    const divDropdownContainer = rootElement.querySelector('#divDropdownContainer20230111');
+                    if (divDropdownContainer && typeof (divDropdownContainer.CloseDropdown) == "function") {
+                        divDropdownContainer.CloseDropdown('true');
+                    }
                     return true;
                 };
             }
 
             //让下拉框获取焦点
             searchInput.onfocus = function () {
+                //console.log(22222222222)
                 // 清除编辑器光标
                 WriterControl_UI.HideCaret(rootElement);
             };
+            //searchInput.onblur = function (e) {
+            //    console.log(222222222,e)
+            //    //判断光标
+            //    setTimeout(() => {
+            //        //console.log(22222222222)
+            //        var divDropdownContainer = rootElement.querySelector('#divDropdownContainer20230111');
+            //        if (divDropdownContainer) {
+            //            //divDropdownContainer.CloseDropdown();
+            //        }
+            //    },100)
+            //};
             searchInput.onkeydown = function (e) {
                 WriterControl_ListBoxControl.ChangeListBoxCheck(rootElement, e, currentInputProps);
             };
-            var eventObj = {
+            const eventObj = {
                 Value: '',
                 ElementID: currentInputProps.ID,
                 ListSourceName: currentInputProps.InnerListSourceName,
@@ -1226,23 +1313,23 @@ export let WriterControl_ListBoxControl = {
                     if (eventObj.NewListItems != null && eventObj.NewListItems.length > 0) {
                         listBox.innerHTML = '';
                         if (currentInputProps != null && (currentInputProps.InnerMultiSelect === true || currentInputProps.InnerMultiSelect == 'true')) {
-                            for (var i = 0; i < eventObj.NewListItems.length; i++) {
-                                var itemEle = rootElement.ownerDocument.createElement('div');
+                            for (let i = 0; i < eventObj.NewListItems.length; i++) {
+                                const itemEle = rootElement.ownerDocument.createElement('div');
                                 itemEle.setAttribute('class', 'MultiSelect-item');
                                 itemEle.style.cssText = 'height: 30px;';
                                 listBox.appendChild(itemEle);
-                                var innerText = eventObj.NewListItems[i].Text ? eventObj.NewListItems[i].Text : '';;
-                                var innerValue = eventObj.NewListItems[i].Value ? eventObj.NewListItems[i].Value : '';
+                                const innerText = eventObj.NewListItems[i].Text ? eventObj.NewListItems[i].Text : '';;
+                                const innerValue = eventObj.NewListItems[i].Value ? eventObj.NewListItems[i].Value : '';
                                 itemEle.innerHTML = `
                                             <div class="MultiSelect-text" style="height: 30px; line-height: 30px;"  native-text="${innerText}" value="${innerValue}">${innerText}</div>
                                             <div class="MultiSelect-icon">${WriterControl_ListBoxControl.NoCheckedSvg}</div>
                                         `;
                             }
                         } else {
-                            for (var i = 0; i < eventObj.NewListItems.length; i++) {
-                                var text = eventObj.NewListItems[i].TextInList || eventObj.NewListItems[i].Text || '';
-                                var value = eventObj.NewListItems[i].Value;
-                                var liBox = rootElement.ownerDocument.createElement('div');
+                            for (let i = 0; i < eventObj.NewListItems.length; i++) {
+                                const text = eventObj.NewListItems[i].TextInList || eventObj.NewListItems[i].Text || '';
+                                const value = eventObj.NewListItems[i].Value;
+                                const liBox = rootElement.ownerDocument.createElement('div');
                                 listBox.appendChild(liBox);
                                 /*liBox.style.cssText = 'height: 30px;line-height: 30px;background-color: transparent;padding: 0 10px;overflow: hidden;white-space: nowrap;cursor: pointer;border-bottom: 1px solid #eee;font-size: 12px';*/
                                 liBox.outerHTML = `<div class="dc_ListItem" native-text="${eventObj.NewListItems[i].Text || ''}" value="${value}" style="padding: 0px 10px;">${text}</div>`;
@@ -1253,7 +1340,7 @@ export let WriterControl_ListBoxControl = {
                         //如果存在此方法，不再需要搜索框使用此文本
                         searchInput.changeCode = true;
                         fillButton && (fillButton.style.cssText = 'display:none;');
-                        if (!('ontouchstart' in rootElement.ownerDocument.documentElement)) {
+                        if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
                             if (containerDiv.scrollHeight > containerDiv.clientHeight) {
                                 containerDiv.onwheel = function (e) {
                                     e.stopPropagation();
@@ -1268,16 +1355,15 @@ export let WriterControl_ListBoxControl = {
             searchInput.oninput = function (e) {
                 //在此处处理listBox
                 if (e.target.value && e.target.value.length > 0) {
-                    var allLi = null;
+                    let allLi = null;
+                    let isHasSearch = false;//用于判断是否查找到结果
                     if (currentInputProps != null && (currentInputProps.InnerMultiSelect === true || currentInputProps.InnerMultiSelect == 'true')) {
                         allLi = listBox.querySelectorAll('.MultiSelect-item');
                     } else {
                         allLi = listBox.querySelectorAll('.dc_ListItem');
                     }
-
                     if (allLi != null && allLi.length > 0) {
-                        var isHasSearch = false;//用于判断是否查找到结果
-                        for (var i = 0; i < allLi.length; i++) {
+                        for (let i = 0; i < allLi.length; i++) {
                             if (allLi[i].innerText.indexOf(e.target.value) < 0) {
                                 allLi[i].style.display = 'none';
                             } else {
@@ -1308,7 +1394,7 @@ export let WriterControl_ListBoxControl = {
                         // containerDiv.style.maxHeight = 'calc(250px - 26px)';
                     }
                     // 修复下拉框中搜索框内容删除为空时不展示全部下拉项的问题【DUWRITER5_0-2646】
-                    var allLi = null;
+                    let allLi = null;
                     if (currentInputProps != null && (currentInputProps.InnerMultiSelect === true || currentInputProps.InnerMultiSelect == 'true')) {
                         allLi = listBox.querySelectorAll('.MultiSelect-item');
                     } else {
@@ -1316,7 +1402,7 @@ export let WriterControl_ListBoxControl = {
                     }
                     if (allLi != null && allLi.length > 0) {
                         //将数据全部显示
-                        for (var i = 0; i < allLi.length; i++) {
+                        for (let i = 0; i < allLi.length; i++) {
                             allLi[i].style.display = '';
                         }
                     }
@@ -1327,27 +1413,31 @@ export let WriterControl_ListBoxControl = {
                     eventObj.Value = e.target.value;
                     rootElement.EventChangeSearchInputSpellCode(eventObj);
                 }
-
-
             };
             divContainer.appendChild(searchSpan);
             divContainer.style.removeProperty('border-radius');
             //在此处创建一个包裹元素来先显示滚动条
-            var containerDiv = rootElement.ownerDocument.createElement('div');
+            const containerDiv = rootElement.ownerDocument.createElement('div');
             containerDiv.appendChild(listBox);
             containerDiv.setAttribute('class', 'listBoxContainer');
             containerDiv.style.cssText += "position: relative;overflow-y: auto;overscroll-behavior: contain;height:100%;flex:1;";
 
             divContainer.appendChild(containerDiv);
             // divContainer.style.width = 'auto';
-            divContainer.ShowDropdown();
-            if (!('ontouchstart' in rootElement.ownerDocument.documentElement)) {
+            divContainer.ShowDropdown(EventShowDropdownOnce);
+            if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
                 //防止下拉存在滚动条时，鼠标滚轮事件不生效
                 // containerDiv.addEventListener('wheel', function (e) {
                 //     e.stopPropagation(); // 停止事件传播
                 //     return true; // 继续执行默认事件
                 // });
-                searchInput.focus();
+                // DCDorpDownAllowKeyBoardEntry判断是否允许键盘输入,默认值为false，不允许键盘输入
+                // 设置DCDorpDownAllowKeyBoardEntry为true时不默认光标聚焦到下拉搜索框中【DUWRITER5_0-4576】
+                let DCDorpDownAllowKeyBoardEntry = rootElement.getAttribute('DCDorpDownAllowKeyBoardEntry') || 'false';
+                DCDorpDownAllowKeyBoardEntry = DCDorpDownAllowKeyBoardEntry.toLowerCase().trim() === 'true' || DCDorpDownAllowKeyBoardEntry === true;
+                if (DCDorpDownAllowKeyBoardEntry === false || DCDorpDownAllowKeyBoardEntry === "false") {
+                    searchInput.focus();
+                }
             }
 
             // 判断宽度
@@ -1355,116 +1445,30 @@ export let WriterControl_ListBoxControl = {
             // if (Number(liWidth) > 0) {
             //     searchInput.style.width = (liWidth - 2) + 'px';
             // }
-            var hasTargetLi = listBox.querySelectorAll('[targetLi]');
-            if (hasTargetLi != null && hasTargetLi.length > 0) {
-                hasTargetLi = hasTargetLi[hasTargetLi.length - 1];
-                containerDiv.scrollTo(0, hasTargetLi.offsetTop);
-            }
-
         } else {
             divContainer.appendChild(listBox);
             // divContainer.style.width = 'auto';
-            divContainer.ShowDropdown();
-            var hasTargetLi = listBox.querySelectorAll('[targetLi]');
-            if (hasTargetLi != null && hasTargetLi.length > 0) {
-                hasTargetLi = hasTargetLi[hasTargetLi.length - 1];
-                divContainer.scrollTo(0, hasTargetLi.offsetTop);
-            }
+            divContainer.ShowDropdown(EventShowDropdownOnce);
         }
-        // 修复下拉弹框没有搜索框时两栏展示标题未固定在下拉弹框顶部的问题
-        // 把两栏展示的标题提出
-        var first_listitem = listBox.firstChild;
-        if (first_listitem && first_listitem.getAttribute("TwoColumnDisplay") == "true" && first_listitem.className == "dc_titleDiv") {
-            var parentNode = listBox.parentNode;
-            parentNode.insertBefore(first_listitem, listBox);
-            // 给标题添加边框
-            first_listitem.style.border = "1px solid #000";
-            // 给包裹元素添加样式
-            parentNode.style.display = "flex";
-            parentNode.style.flexDirection = "column";
-            // parentNode.style.cssText = "display:flex;flex-direction: column;";
-            // 给列表盒子添加滚动条
-            listBox.style.overflowY = "auto";
-        }
-        //用户自定义下拉框最大高度：
-        let DropDownListMaxHeight = rootElement.getAttribute("DropDownListMaxHeight") || null;
-        DropDownListMaxHeight = DropDownListMaxHeight ? parseInt(DropDownListMaxHeight) : null;
-        if (!DropDownListMaxHeight && listItems.length > 6) {
-            //当没有设置固定高度时：
-            //DUWRITER5_0-2970 20240702 lxy 重新计算下拉框的高度，修改下拉输入域的高度防止文字展示一半：
-            var divContainerHeight = 0;
-            var MultiSelectControl = divContainer.querySelector('#MultiSelectControl');
-            var dcListBox = divContainer.querySelector('.dcListBox');
-            var selectChildren = [];//下拉选项
-            var dc_dropdown_box = null;//选择项父级盒子
-            if (MultiSelectControl && MultiSelectControl.children) {
-                //多选
-                selectChildren = MultiSelectControl.children;
-                dc_dropdown_box = MultiSelectControl;
-            } else if (dcListBox && dcListBox.children) {
-                //单选
-                selectChildren = dcListBox.children;
-                dc_dropdown_box = dcListBox;
-            }
-
-            var SelectItemNum = 0;
-            //多选的高度，定义一次展示6个子元素，包括分组横线的高度
-            for (var i = 0; i < selectChildren.length; i++) {
-                var item = selectChildren[i];
-                if (SelectItemNum < 6) {
-                    //分组横线
-                    if (item.nodeName === 'SPAN') {
-                        divContainerHeight += 2;
-                    }
-                    //每一个下拉
-                    if (item.nodeName === 'DIV') {
-                        SelectItemNum += 1;//用于计数
-                    }
-                    divContainerHeight += item.offsetHeight;
-                }
-            }
-
-            //设置父级样式
-            if (dc_dropdown_box.parentElement.className.indexOf('listBoxContainer') != -1) {
-                //判断是否增加双列展示时的表头高度
-                var dc_titleDiv = divContainer.querySelector('.dc_titleDiv');
-                if (dc_titleDiv) {
-                    divContainerHeight += dc_titleDiv.offsetHeight;
-                }
-            }
-            //判断是否需要增加搜索框的高度
-            var searchInput = divContainer.querySelector('.dropdownCodeArea');
-            if (searchInput) {
-                divContainerHeight += searchInput.offsetHeight;
-            }
-
-            //判断是否需要增加"使用此文本"的高度
-            if (fillButton) {
-                divContainerHeight += fillButton.offsetHeight;
-            }
-
-
-            //[DUWRITER5_0-3273]获取输入域是否是从上方弹出的，输入域从上方弹出，则需要重新计算一下高度，防止弹出位置过高
-            var dc_up = divContainer.getAttribute("dc_up");
-            if (dc_up === 'true') {
-                //先保留一下原本高度，用于解决在下拉框展示在输入域顶部时，下拉高度过高问题
-                var divContainerOldHeight = divContainer.style.maxHeight || divContainer.style.height;
-                divContainerOldHeight = parseInt(divContainerOldHeight) || 0;
-                // 获取原有的top值
-                var divContainerOldTop = divContainer.style.top || 0;
-                divContainerOldTop = parseInt(divContainerOldTop) || 0;
-                //设置新的高度
-                if (divContainerOldHeight > divContainerHeight) {
-                    divContainer.style.top = (divContainerOldTop + (divContainerOldHeight - divContainerHeight)) + 'px';
-                }
-            }
-
-            //设置整个容器高度
-            divContainer.style.maxHeight = divContainerHeight + 'px';
-            divContainer.style.overflowY = 'auto';
-        }
-
-
+        // // 用户自定义下拉框最大高度：
+        // let DropDownListMaxHeight = rootElement.getAttribute("DropDownListMaxHeight") || null;
+        // DropDownListMaxHeight = DropDownListMaxHeight ? parseInt(DropDownListMaxHeight) : null;
+        // if (!DropDownListMaxHeight && listItems.length > 6) {
+        //     //[DUWRITER5_0-3273]获取输入域是否是从上方弹出的，输入域从上方弹出，则需要重新计算一下高度，防止弹出位置过高
+        //     var dc_up = divContainer.getAttribute("dc_up");
+        //     if (dc_up === 'true') {
+        //         //先保留一下原本高度，用于解决在下拉框展示在输入域顶部时，下拉高度过高问题
+        //         var divContainerOldHeight = divContainer.style.maxHeight || divContainer.style.height;
+        //         divContainerOldHeight = parseInt(divContainerOldHeight) || 0;
+        //         // 获取原有的top值
+        //         var divContainerOldTop = divContainer.style.top || 0;
+        //         divContainerOldTop = parseInt(divContainerOldTop) || 0;
+        //         //设置新的高度
+        //         if (divContainerOldHeight > divContainerHeight) {
+        //             divContainer.style.top = (divContainerOldTop + (divContainerOldHeight - divContainerHeight)) + 'px';
+        //         }
+        //     }
+        // }
     },
 
     /**
@@ -1476,20 +1480,20 @@ export let WriterControl_ListBoxControl = {
      */
     ChangeListBoxCheck: function (rootElement, e, currentInputProps) {
         // 判断是否存在下拉输入域是否显示
-        var hasDropDown = rootElement.querySelector("#divDropdownContainer20230111");
+        const divDropdownContainer = rootElement.querySelector("#divDropdownContainer20230111");
         //var txtEdit = rootElement.querySelector("#txtEdit20221213");
-        if (hasDropDown == null) {
+        if (divDropdownContainer == null) {
             return false;
         }
-        if (hasDropDown.style.display != "none" || hasDropDown.thisApi != null) {
+        if (divDropdownContainer.style.display != "none" || divDropdownContainer.thisApi != null) {
             // 下拉框显示或者时间选择框展示
             // Esc 退出
             if (e.keyCode == 27) {
-                hasDropDown.CloseDropdown("true");
+                divDropdownContainer.CloseDropdown("true");
                 return true;
             }
         }
-        if (hasDropDown.style.display != "none") {
+        if (divDropdownContainer.style.display != "none") {
             // 下拉框显示时
             //if (!('ontouchstart' in document.documentElement)) {
             //    var isPassword = txtEdit.getAttribute('type');
@@ -1498,7 +1502,7 @@ export let WriterControl_ListBoxControl = {
             //    }
             //}
             // 判断是否为下拉输入域
-            var hasListBox = hasDropDown.querySelector('.dcListBox,#MultiSelectControl');
+            const hasListBox = divDropdownContainer.querySelector('.dcListBox,#MultiSelectControl');
             if (!hasListBox) {
                 // 不是下拉输入域
                 return;
@@ -1507,15 +1511,15 @@ export let WriterControl_ListBoxControl = {
             //判断是否为tab键
             if (e.keyCode == 9) {
                 //获取到输入域
-                var inputEle = rootElement.CurrentInputField();
+                const inputEle = rootElement.CurrentInputField();
                 if (inputEle) {
-                    var inputAttr = rootElement.GetElementProperties(inputEle);
-                    if (inputAttr && inputAttr.MoveFocusHotKey == "Tab") {
+                    //const inputAttr = rootElement.GetElementProperties(inputEle);
+                    //if (inputAttr && inputAttr.MoveFocusHotKey == "Tab") {
                         //判断是否存在跳转
-                        hasDropDown.CloseDropdown("true");
+                        divDropdownContainer.CloseDropdown("true");
                         //跳转到下一个输入域
-                        rootElement.FocusNextInput();
-                    }
+                        rootElement.FocusNextInput(true);
+                    //}
                 }
                 e.stopPropagation();
                 e.preventDefault();
@@ -1523,9 +1527,9 @@ export let WriterControl_ListBoxControl = {
             }
 
             /** 是否是多选下拉 */
-            var isMultiSelect = false;
+            let isMultiSelect = false;
             /** 是否是快捷辅助录入下拉列表 */
-            var isAssistListBox = false;
+            let isAssistListBox = false;
             if (hasListBox.id == "MultiSelectControl") {
                 // 是多选下拉
                 isMultiSelect = true;
@@ -1533,33 +1537,48 @@ export let WriterControl_ListBoxControl = {
                 // 是快捷辅助录入下拉
                 isAssistListBox = true;
             }
-            // 最先判读是否存在moveli,moveli表示是当前选中的内容
-            var hasTargetLi = hasListBox.querySelectorAll("[moveli]");
-            if (hasTargetLi && hasTargetLi.length == 0) {
-                // 查找下拉元素内部是否存在targetli属性
+            // 判断元素是否可见的辅助函数：过滤 dcignore、隐藏的用户自定义元素、display为none的元素、以及视觉上不可见的元素
+            function isElementVisible(item) {
+                return item.getAttribute("dcignore") != "1"
+                    && item.getAttribute("isuserdefineddomhidden") != "true"
+                    && item.style.display != "none"
+                    && item.offsetParent !== null;
+            }
+            // 获取目标元素：优先查找moveli，否则查找targetli
+            let hasTargetLi = hasListBox.querySelectorAll("[moveli]");
+            if (!hasTargetLi || hasTargetLi.length == 0) {
                 hasTargetLi = hasListBox.querySelectorAll("[targetli]:not([isuserdefineddomhidden])");
             }
+            // 过滤不可见的目标元素
+            hasTargetLi = hasTargetLi && hasTargetLi.length > 0 
+                ? Array.from(hasTargetLi).filter(isElementVisible) 
+                : [];
             /** 上下移动的元素列表数组 */
-            var moveLis = [];
+            const moveLis = [];
+            /** 不可选中的元素列表数组 */
+            const unselectableLis = [];
             /** 现在需要选中的列表项 */
-            var NowMoveLi;
+            let NowMoveLi;
             /** 当前选中的元素在sz列表中的索引 */
-            var NextLiIndex = 0;
-            for (var i = 0; i < hasListBox.children.length; i++) {
-                var item = hasListBox.children[i];
-                // 过滤元素
-                if (item.getAttribute("dcignore") != "1") {
+            let NextLiIndex = 0;
+            /** 是否是上移动 */
+            let isMoveUp;
+            // 遍历所有子元素，分类为可见和不可见
+            for (let i = 0; i < hasListBox.children.length; i++) {
+                const item = hasListBox.children[i];
+                if (isElementVisible(item)) {
                     moveLis.push(item);
-                }
-                if (hasTargetLi && hasTargetLi.length > 0) {
-                    if (item == hasTargetLi[hasTargetLi.length - 1]) {
+                    // 检查是否是目标元素
+                    if (hasTargetLi.length > 0 && item == hasTargetLi[hasTargetLi.length - 1]) {
                         NextLiIndex = moveLis.length - 1;
                     }
+                } else {
+                    unselectableLis.push(item);
                 }
             }
             // 处理上下选中项的情况
             if (e.keyCode == 38 || e.keyCode == 40) {
-                if (hasTargetLi && hasTargetLi.length > 0) {
+                if (hasTargetLi.length > 0) {
                     // 存在选中元素
                     if (e.keyCode == 38) {
                         // 方向键--上
@@ -1567,46 +1586,43 @@ export let WriterControl_ListBoxControl = {
                         if (NextLiIndex < 0) {
                             NextLiIndex = 0;
                         }
+                        isMoveUp = true;
                     } else if (e.keyCode == 40) {
                         // 方向键--下
                         NextLiIndex++;
                         if (NextLiIndex >= moveLis.length) {
                             NextLiIndex = moveLis.length - 1;
                         }
+                        isMoveUp = false;
                     }
                 }
                 NowMoveLi = moveLis[NextLiIndex];
             }
 
             if (NowMoveLi) {
+                for (let i = 0; i < unselectableLis.length; i++) {
+                    unselectableLis[i].removeAttribute("moveli");
+                }
                 // 设置选中样式
-                for (var i = 0; i < moveLis.length; i++) {
+                for (let i = 0; i < moveLis.length; i++) {
                     if (moveLis[i] == NowMoveLi) {
                         moveLis[i].setAttribute("moveli", "true");
                     } else {
                         moveLis[i].removeAttribute("moveli");
                     }
                 }
-                // 处理是否需要滚动
-                function isElementInView(element, scrollElement) {
-                    var rect = element.getBoundingClientRect();
-                    var parentRect = scrollElement.getBoundingClientRect();
-                    // 检查元素是否在父元素的边界内
-                    return (
-                        rect.top >= parentRect.top &&
-                        rect.left >= parentRect.left &&
-                        rect.bottom <= parentRect.bottom &&
-                        rect.right <= parentRect.right
-                    );
+                // 获取可以滚动的元素
+                let scrollElement = NowMoveLi.parentNode;
+                while (scrollElement.scrollHeight <= (scrollElement.innerHeight || scrollElement.clientHeight) && scrollElement != divDropdownContainer) {
+                    scrollElement = scrollElement.parentNode;
                 }
-                if (isElementInView(NowMoveLi, hasDropDown) == false) {
+                if (WriterControl_ListBoxControl.isElementInView(NowMoveLi, scrollElement) == false) {
                     // 选中的列表项不在视图中，需要滚动
-                    // 获取可以滚动的元素
-                    var scrollElement = NowMoveLi;
-                    while (scrollElement.scrollHeight <= (scrollElement.innerHeight || scrollElement.clientHeight) && scrollElement != hasDropDown) {
-                        scrollElement = scrollElement.parentNode;
-                    }
-                    scrollElement.scrollTop = NowMoveLi.offsetTop;
+                    WriterControl_ListBoxControl.scrollElementIntoView(NowMoveLi, {
+                        container: scrollElement,
+                        behavior: 'instant',
+                        block: isMoveUp ? 'start' : 'end'
+                    });
                 }
                 // 修复进入快捷辅助录入下拉列表时上下方向键无法选中下拉项的问题
                 return true;
@@ -1614,25 +1630,25 @@ export let WriterControl_ListBoxControl = {
             // 获取属性列表
             currentInputProps = currentInputProps ? currentInputProps : rootElement.GetElementProperties(rootElement.CurrentInputField());
             /** 是否启动快速辅助录入模式 */
-            var FastInputMode = false;
+            let FastInputMode = false;
             if (rootElement && rootElement.DocumentOptions && rootElement.DocumentOptions.BehaviorOptions) {
                 FastInputMode = rootElement.DocumentOptions.BehaviorOptions.FastInputMode;
             }
             /** 是否移动光标 */
-            var needChangeFocus = false;
-            var divCaret = rootElement.querySelector('#divCaret20221213');
-            var isShowCaret = true;
+            let needChangeFocus = false;
+            const divCaret = rootElement.querySelector('#divCaret20221213');
+            let isShowCaret = true;
             if (!divCaret || divCaret.style.display == "none") {
                 isShowCaret = false;
             }
             /** 当前光标的输入域 */
-            var currentInputField = rootElement.CurrentInputField();
+            const currentInputField = rootElement.CurrentInputField();
             if (FastInputMode === true && isShowCaret == false) {
                 // 快速辅助录入模式
                 if (e.shiftKey == false && e.ctrlKey == false && e.altKey == false) {
                     if (e.keyCode == 13 || e.keyCode == 9) {
                         // 获取输入域
-                        var thisAttr = rootElement.GetElementProperties(currentInputField);
+                        const thisAttr = rootElement.GetElementProperties(currentInputField);
                         if (thisAttr) {
                             needChangeFocus = (e.keyCode == 13 && thisAttr.MoveFocusHotKey == "Enter") || (e.keyCode == 9 && thisAttr.MoveFocusHotKey == "Tab");
                         }
@@ -1642,32 +1658,56 @@ export let WriterControl_ListBoxControl = {
 
             // Enter
             if (e.keyCode == 13) {
-                NowMoveLi = moveLis[NextLiIndex];
+                // 修复Enter键默认选中第一个选项的问题【DUWRITER5_0-4745】
+                NowMoveLi = moveLis.find(item => item.getAttribute("moveli") == "true");
+                // 如果未选中项，检查是否启用Enter键默认选中第一个选项的属性
+                if (NowMoveLi == null && moveLis.length > 0) {
+                    hasTargetLi = moveLis.find(item => item.getAttribute("targetli") == "true");
+                    if (hasTargetLi) {
+                        NowMoveLi = hasTargetLi
+                    } else {
+                        const DropdownListEnterSelectFirst = rootElement.getAttribute("DropdownListEnterSelectFirst");
+                        if (DropdownListEnterSelectFirst === "true" || DropdownListEnterSelectFirst === true) {
+                            // 默认选中第一个可见选项
+                            NowMoveLi = moveLis[0];
+                        }
+                    }
+                    //const DropdownListEnterSelectFirst = rootElement.getAttribute("DropdownListEnterSelectFirst");
+                    //if (DropdownListEnterSelectFirst === "true" || DropdownListEnterSelectFirst === true) {
+                    //    // 默认选中第一个可见选项
+                    //    NowMoveLi = moveLis[0];
+                    //}
+                }
                 if (isMultiSelect == false) {
                     // 单选下拉列表
                     // 兼容四代接口EventAfterEnter
                     if (rootElement.EventAfterEnter != null && typeof (rootElement.EventAfterEnter) == "function") {
                         e.preventDefault();
-                        return rootElement.EventAfterEnter(NowMoveLi);
+                        const result = rootElement.EventAfterEnter(NowMoveLi, e, moveLis);
+                        if (result === false) {
+                            return false;
+                        }
                     }
-
                 }
                 if (NowMoveLi && typeof (NowMoveLi.click) == "function") {
                     // 模拟点击事件
                     NowMoveLi.click();
+                    //if (FastInputMode === true) {
+                    //    rootElement.FocusNextInput(true);
+                    //}
                 }
                 if (NowMoveLi == null) {
                     // 当前未选中列表项
                     // 判断是否有触发焦点快捷键，移动光标到下一个输入域
                     if (needChangeFocus) {
-                        var nextInput = rootElement.GetNextFocusFieldElement(currentInputField);
+                        const nextInput = rootElement.GetNextFocusFieldElement(currentInputField);
                         if (nextInput) {
                             rootElement.FocusElement(nextInput);
                         }
                         e.returnValue = false;
                     } else {
-                        hasDropDown.CloseDropdown();
-                        var content = rootElement.CurrentElement("xtextcontainerelement");
+                        divDropdownContainer.CloseDropdown();
+                        const content = rootElement.CurrentElement("xtextcontainerelement");
                         rootElement.FocusElement(content);
                     }
                 }
@@ -1679,7 +1719,7 @@ export let WriterControl_ListBoxControl = {
             if (e.keyCode == 9) {
                 //判断是否有触发焦点快捷键，移动光标到下一个输入域
                 if (needChangeFocus) {
-                    var nextInput = rootElement.GetNextFocusFieldElement(currentInputField);
+                    const nextInput = rootElement.GetNextFocusFieldElement(currentInputField);
                     if (nextInput) {
                         rootElement.FocusElement(nextInput);
                     }
@@ -1702,4 +1742,63 @@ export let WriterControl_ListBoxControl = {
         }
         return false;
     },
+    // 处理是否需要滚动
+    isElementInView: function (element, scrollElement) {
+        const rect = element.getBoundingClientRect();
+        const parentRect = scrollElement.getBoundingClientRect();
+        // 检查元素是否在父元素的边界内
+        return (
+            rect.top >= parentRect.top &&
+            rect.left >= parentRect.left &&
+            rect.bottom <= parentRect.bottom &&
+            rect.right <= parentRect.right
+        );
+    },
+    scrollElementIntoView: function (element, options = {}) {
+        const {
+            behavior = 'instant',
+            block = 'center',
+            inline = 'center',
+            container = element.parentElement
+        } = options;
+
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+
+        // 计算垂直方向滚动距离
+        let scrollTop = container.scrollTop;
+        if (block === 'start') {
+            scrollTop += elementRect.top - containerRect.top;
+        } else if (block === 'end') {
+            scrollTop += elementRect.bottom - containerRect.bottom;
+        } else if (block === 'center') {
+            scrollTop += (elementRect.top + elementRect.height / 2) - (containerRect.top + containerRect.height / 2);
+        }
+
+        // 计算水平方向滚动距离
+        let scrollLeft = container.scrollLeft;
+        if (inline === 'start') {
+            scrollLeft += elementRect.left - containerRect.left;
+        } else if (inline === 'end') {
+            scrollLeft += elementRect.right - containerRect.right;
+        } else if (inline === 'center') {
+            scrollLeft += (elementRect.left + elementRect.width / 2) - (containerRect.left + containerRect.width / 2);
+        }
+        // 判断是否为 IOS
+        const u = navigator.userAgent;
+        const isIOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); // ios终端
+        // 重点标记处（ 主要代码 ）
+        if (isIOS) {
+            // IOS 项目一般都是使用 scrollTop = n
+            container.scrollTop = scrollTop;
+            container.scrollLeft = scrollLeft;
+        } else {
+            // 执行滚动
+            container.scrollTo({
+                top: scrollTop,
+                left: scrollLeft,
+                behavior
+            });
+        }
+    }
 };

@@ -1,5 +1,4 @@
 * text=auto eol=lf
-
 *.png binary
 *.jpg binary
 *.jpeg binary
@@ -12,3 +11,12 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+reverse-engineering/full-prelogin-package/dll/*.dll filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/wasm/*.wasm filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/wasm-decompiled/*.wasm filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/wasm-decompiled/*.wat filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/wasm-decompiled/*.c filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/wasm-decompiled/*.txt filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/icu/*.dat filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/images/* filter=lfs diff=lfs merge=lfs -text
+reverse-engineering/full-prelogin-package/fonts/* filter=lfs diff=lfs merge=lfs -text

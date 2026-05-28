@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 import { DCTools20221228 } from "./DCTools20221228.js";
 import { PageContentDrawer } from "./PageContentDrawer.js";
@@ -84,8 +84,7 @@ export let WriterControl_Rule = {
                             // 标尺不可用
                             return;
                         }
-                        var strResult = rootElement.__DCWriterReference.invokeMethod(
-                            "RuleHandleMouseEvent",
+                        var strResult = rootElement.__DCWriterReference.invokeMethod("RuleHandleMouseEvent",
                             this.getAttribute("dctype"),
                             e.type,
                             e.altKey,
@@ -204,12 +203,38 @@ export let WriterControl_Rule = {
             //ruleElement.height = rootElement.offsetHeight - 24;
         }
         var drawer = new PageContentDrawer(ruleElement);
+        drawer.EventSource = "DrawRuleContent_" + strRuleName;
         drawer.AllowClip = false;
         drawer.SetClearRectangle(0, 0, ruleElement.width, ruleElement.height);
         drawer.EventQueryCodes = function () {
             var positionOffset = 0;
             var viewSize = strRuleName == "hrule" ? ruleElement.width : ruleElement.height;
-            {
+            //区分打印控件和编辑器            
+            if (rootElement.IsWriterPrintPreviewControlForWASM === true) {
+                //打印控件下，直接使用pageContainer的scrollLeft和scrollTop
+                let pageContainer = rootElement.querySelector('div[dctype="page-container"]');
+                let pageContainerFirstSvg = pageContainer.firstChild;
+                let pageContainerRect = pageContainer && pageContainer.getBoundingClientRect();
+                let pageContainerFirstSvgRect = pageContainerFirstSvg && pageContainerFirstSvg.getBoundingClientRect();
+
+                if (pageContainer === null) {
+                    return;
+                }
+                if (strRuleName == "hrule") {
+                    var offsetLeft = pageContainerFirstSvgRect.left - pageContainerRect.left;
+                    // 水平标尺
+                    positionOffset = offsetLeft + 25 - pageContainer.scrollLeft;
+                    viewSize = pageContainer.offsetWidth;
+                }
+                else if (strRuleName == "vrule") {
+                    var offsetTop = pageContainerFirstSvgRect.top - pageContainerRect.top;
+
+                    // 垂直标尺
+                    positionOffset = offsetTop - pageContainer.scrollTop + 0;
+                    viewSize = pageContainer.offsetHeight;
+                }
+
+            } else {
                 var curPage = null;
                 curPage = WriterControl_UI.GetCurrentPageElement(rootElement);
                 if (curPage != null) {
@@ -232,8 +257,7 @@ export let WriterControl_Rule = {
             //wyc20250311: getprintpreviewSVGhtml会暂时中止绘制标尺防止后台报错DUWRITER5_0-4238
             var strCode = null
             if (WriterControl_Rule.SuppressPaintRule !== true && rootElement.__DCWriterReference) {
-                strCode = rootElement.__DCWriterReference.invokeMethod(
-                    "PaintRuleControl",
+                strCode = rootElement.__DCWriterReference.invokeMethod("PaintRuleControl",
                     strRuleName,
                     positionOffset,
                     viewSize);

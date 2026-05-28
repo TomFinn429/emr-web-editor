@@ -164,14 +164,35 @@ export async function preloadExternalRenderer() {
       return
     }
 
-    const script = document.createElement('script')
-    script.src = rendererBootstrapPath
-    script.async = true
-    script.onload = () => {
-      waitForExternalStart().then(resolve)
+    // DCWriter 5.0 depends on jQuery as a global
+    const jQueryBasePath = import.meta.env.DEV
+      ? '/renderer-dev/_framework/'
+      : '/renderer/_framework/'
+
+    function loadBootstrap() {
+      const script = document.createElement('script')
+      script.src = rendererBootstrapPath
+      script.async = true
+      script.onload = () => {
+        waitForExternalStart().then(resolve)
+      }
+      script.onerror = () => reject(new Error('Failed to load renderer bootstrap'))
+      document.head.appendChild(script)
     }
-    script.onerror = () => reject(new Error('无法加载现有渲染入口，已切换到预览模式。'))
-    document.head.appendChild(script)
+
+    if (typeof (window as any).jQuery === 'undefined') {
+      const jq = document.createElement('script')
+      jq.src = jQueryBasePath + 'jquery-1.7.2.min.js'
+      jq.async = true
+      jq.onload = loadBootstrap
+      jq.onerror = () => {
+        console.warn('jQuery load failed, some dialog features may be unavailable')
+        loadBootstrap()
+      }
+      document.head.appendChild(jq)
+    } else {
+      loadBootstrap()
+    }
   })
 
   return window.__medicalRecordRendererLoading

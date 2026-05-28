@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 //import { es6laydate as laydate } from './js/laydate.js'
 
 export let WriterControl_DateTimeControl = {
@@ -54,8 +54,26 @@ export let WriterControl_DateTimeControl = {
                 dateFormat = 'Y-m-d H:i:s';
                 break;
         }
+        var startDate = new Date().getFullYear() - 100;
+        var isMinDateTodayForDateFieldElement = false;
+        //获取当前元素中的自定义属性isMinDateTodayForDateFieldElement="true"
+        var currentElement = rootElement.GetElementProperties(rootElement.CurrentElement());
+        if (currentElement && currentElement.Attributes && currentElement.Attributes.isMinDateTodayForDateFieldElement) {
+            isMinDateTodayForDateFieldElement = currentElement.Attributes.isMinDateTodayForDateFieldElement;
+        }
+        isMinDateTodayForDateFieldElement = (isMinDateTodayForDateFieldElement === "true" || isMinDateTodayForDateFieldElement === true);
+        if (isMinDateTodayForDateFieldElement && (dateType === 'date' || dateType === 'datetime')) {
+            //当天日期作为最小日期，禁用今天之前的日期
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            var year = today.getFullYear();
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+            startDate = year + '-' + month + '-' + day;
+        }
+
         var thisApi = WriterControl_DateTimeControl.rootElement.ownerDocument.cxCalendar.attach(hiddenInput, {
-            startDate: new Date().getFullYear() - 100,
+            startDate,
             endDate: new Date().getFullYear() + 100
         });
         thisApi.setOptions({
@@ -114,7 +132,7 @@ export let WriterControl_DateTimeControl = {
         --cxcalendar-btn-color: #fff;
         --cxcalendar-btn-bg: #666;
         --cxcalendar-confirm-bg: #4a89dc;
-        --cxcalendar-gap-out: 8px;
+        --cxcalendar-gap-out: 4px;
         --cxcalendar-text-size: 14px;
         --cxcalendar-title-size: 16px;
         --cxcalendar-unit-size: 10px;
@@ -123,7 +141,7 @@ export let WriterControl_DateTimeControl = {
         z-index: 10000;
         top: -999px;
         left: -999px;
-        width: 400px;
+        width: 370px;
         border: 1px solid var(--cxcalendar-border);
         border-radius: 3px;
         background-color: var(--cxcalendar-bg);
@@ -138,9 +156,11 @@ export let WriterControl_DateTimeControl = {
         -webkit-user-select: none;
         user-select: none
         box-sizing: border-box;
+        display: flex;
         }
         .dc_cxcalendar *{
         box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         .dc_cxcalendar_mask {
         display: none;
@@ -159,41 +179,51 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar.dc_show + .dc_cxcalendar_mask {
         display: block
         }
+        .dc_cxcalendar_content{
+        width: 100%;
+        border-left: 1px solid var(--cxcalendar-border);
+        }
         .dc_cxcalendar_wp {
         }
         .dc_cxcalendar_wp_body {
-         margin-left:70px;
+        //  margin-left:70px;
         }
         .dc_cxcalendar_sb{
-        position: absolute;
+        position: relative;
         top: 0;
         // width: 378px;
         box-sizing: border-box;
-        padding-top: 6px;
-        background-color: #fff;
-        overflow: auto;
+        // padding-top: 6px;
+        background-color: #f8f9fa;
+        // overflow: auto;
+        // width: 70px;
         }
         .dc_cxcalendar_sb ul{
         text-align: left;
-        padding-left: 7px;
-        
+        padding: 6px 4px;
+        width:70px;
+        list-style: none;
         }
         .dc_cxcalendar_sb ul li{
         // margin-top:5px;
-        font-size:14px;
-        line-height: 28px;
+        
+        // line-height: 28px;
         }
         .dc_cxcalendar_sb ul li span{
+            font-size:14px;
             display: block;
-            border-radius: 8px;
+            border-radius: 2px;
             min-width: 50px;
             border: 1px solid var(--cxcalendar-border);
             text-align: center;
-            margin-top: 10px;
-            padding: 0px 13px;
+            /* margin-top: 10px; */
+            /* padding: 0px 13px; */
+            padding: 4px 4px;
+            margin-bottom: 4px;
+            background: white;
         }
         .dc_cxcalendar_sb ul li:first-child span{
-             margin-top: 2px;
+            //  margin-top: 2px;
         }
         .dc_cxcalendar_sb ul li:hover{
         cursor: pointer;
@@ -201,11 +231,11 @@ export let WriterControl_DateTimeControl = {
         }
         .dc_cxcalendar_hd {
         position: relative;
-        height: 84px;
+        height: 40px;
         //padding:0 var(--cxcalendar-gap-out);
         padding-bottom: 0;
         font-size: var(--cxcalendar-title-size);
-        line-height: 32px;
+        line-height: 40px;
         text-align: center;
         //zoom: 0.8
         }
@@ -254,17 +284,32 @@ export let WriterControl_DateTimeControl = {
 
         .dc_prev-next-box-group,.dc_prev-next-box{
             display:flex;
-            justify-content: space-between;
-            margin: 0 13px;
+            justify-content: space-around;
+            // margin: 0 13px;
         }
         .dc_prev-next-box{
-            width:50px;
+            width:40px;
+        }
+        .dc_prev-next-box-group .dc_prev-next-box:last-child{
+            margin-right: 40px;
         }
         .dc_prev-next-box-group .dc_prev-next-box:first-child{
-            margin-left: 7px;
+            margin-left: 30px;
         }
+            
         .dc_prevYear,.dc_prevMonth,.dc_nextMonth,.dc_nextYear :hover{
             cursor: pointer;
+        }
+        .dc_nextYear .dc_arrow-right::after,.dc_arrow-left::before{
+            height: 6px;
+            width: 6px;
+            top: 13px;
+        }
+
+        .dc_prevYear .dc_arrow-left::before{
+            height: 6px;
+            width: 6px;
+            top: 13px;
         }
         .dc_arrow-left,.dc_arrow-right{
             height: 22px;
@@ -273,8 +318,8 @@ export let WriterControl_DateTimeControl = {
           }
           .dc_arrow-right::after,.dc_arrow-left::before {
             content: "";
-            height: 6px;
-            width: 6px;
+            height: 8px;
+            width: 8px;
             top: 12px;
             border-width: 1px 1px 0 0;
             border-color: #303133;
@@ -289,13 +334,14 @@ export let WriterControl_DateTimeControl = {
           }
 
         .dc_cxcalendar_hd,.dc_cxcalendar_bd{
-        border-left: 1px solid var(--cxcalendar-border);
+        // border-left: 1px solid var(--cxcalendar-border);
+        border-bottom: 1px solid var(--cxcalendar-border);
         }
-        .dc_cxcalendar_hd .dc_times input,.dc_cxcalendar_hd .dc_times select,
+        .dc_times input,.dc_times select,
         .dc_cxcalendar_hd select {
         display: inline-block;
         box-sizing: border-box;
-        height: 30px;
+        height: 40px;
         margin: 0;
         padding: 0 .5em;
         border: 1px solid transparent;
@@ -313,17 +359,19 @@ export let WriterControl_DateTimeControl = {
         transition-duration: .2s;
         -webkit-appearance: none;
         appearance: none;
+        width:auto;
         }
-        .dc_cxcalendar_hd .dc_times input{
-        width: 42px;
+        .dc_times input{
+        height:30px;
+        width: 34px;
         // background-color: #f3f3f3;
         padding: 0px;
         font-size: var(--cxcalendar-text-size);
         -webkit-appearance: none;
-        background-color: #fff;
+        background-color: #f8f9fa;
         background-image: none;
         border-radius: 4px;
-        border: 1px solid #dcdfe6;
+        border: 1px solid #eee;
         box-sizing: border-box;
         color: #606266;
         display: inline-block;
@@ -343,6 +391,90 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_hd .dc_month + em:after {
         content: '月'
         }
+        /* 自定义下拉组件样式 */
+        .dc_custom_select {
+        position: relative;
+        display: inline-block;
+        box-sizing: border-box;
+        height: 36px;
+        margin: 0;
+        padding: 0 .5em;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        background: 0 0;
+        color: var(--cxcalendar-text-color);
+        font-weight: 400;
+        font-size: var(--cxcalendar-title-size);
+        line-height: 30px;
+        text-align: center;
+        vertical-align: bottom;
+        outline: 0;
+        cursor: pointer;
+        transition-property: border-color,background-color;
+        transition-duration: .2s;
+        width: auto;
+        min-width: 50px;
+        }
+        .dc_custom_select:hover {
+        border-color: var(--cxcalendar-border);
+        background: var(--cxcalendar-item-bg)
+        }
+        .dc_custom_select.dc_open {
+        border-color: var(--cxcalendar-border);
+        background: var(--cxcalendar-item-bg)
+        }
+        .dc_custom_select .dc_select_display {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        }
+        .dc_custom_select .dc_select_dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 10001;
+        max-height: 200px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: var(--cxcalendar-bg);
+        border: 1px solid var(--cxcalendar-border);
+        border-radius: 3px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.15);
+        margin-top: 2px;
+        display: none;
+        }
+        .dc_custom_select.dc_open .dc_select_dropdown {
+        display: block;
+        }
+        .dc_custom_select .dc_select_option {
+        padding: 0;
+        cursor: pointer;
+        transition-property: background-color;
+        transition-duration: .2s;
+        text-align: center;
+        }
+        .dc_custom_select .dc_select_option:hover {
+        background-color: var(--cxcalendar-item-bg);
+        }
+        .dc_custom_select .dc_select_option.dc_selected {
+        background-color: var(--cxcalendar-confirm-bg);
+        color: var(--cxcalendar-btn-color);
+        }
+        .dc_custom_select .dc_select_dropdown::-webkit-scrollbar {
+        width: 6px;
+        }
+        .dc_custom_select .dc_select_dropdown::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        }
+        .dc_custom_select .dc_select_dropdown::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+        }
+        .dc_custom_select .dc_select_dropdown::-webkit-scrollbar-thumb:hover {
+        background: #555;
+        }
         .dc_cxcalendar_hd .dc_fill {
         font-weight: 400;
         font-size: var(--cxcalendar-text-size)
@@ -350,7 +482,7 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_hd .dc_fill span {
         padding: 0 4px
         }
-        .dc_cxcalendar_hd .dc_times select:hover,
+        .dc_times select:hover,
         .dc_cxcalendar_hd .dc_next:hover,
         .dc_cxcalendar_hd .dc_prev:hover,
         .dc_cxcalendar_hd select:hover {
@@ -369,6 +501,7 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_bd ul {
         position: relative;
         margin: 0;
+        margin-bottom: 7px;
         padding: 0;
         list-style: none;
         color: var(--cxcalendar-days-color);
@@ -382,35 +515,47 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_bd ul li {
         box-sizing: border-box;
         position: relative;
-        height: 36px;
+        height: 28px;
+        font-size: 14px;
         margin: 0;
         padding: 0;
         //border: 2px solid var(--cxcalendar-bg);
         border-radius: 5px;
         cursor: pointer;
-        flex: none;
+        // flex: none;
         transition-property: background-color,color;
-        transition-duration: .2s
+        transition-duration: .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         }
         .dc_cxcalendar_bd ul li.del,
+        .dc_cxcalendar_bd ul li.dc_del,
         .dc_cxcalendar_bd ul li.week {
         cursor: default
         }
         .dc_cxcalendar_bd ul li.del,
+        .dc_cxcalendar_bd ul li.dc_del,
         .dc_cxcalendar_bd ul li.del.holiday,
+        .dc_cxcalendar_bd ul li.dc_del.holiday,
         .dc_cxcalendar_bd ul li.del.now,
+        .dc_cxcalendar_bd ul li.dc_del.now,
         .dc_cxcalendar_bd ul li.del.sat,
-        .dc_cxcalendar_bd ul li.del.sun {
-        color: var(--cxcalendar-other-color);
-        text-decoration: line-through
+        .dc_cxcalendar_bd ul li.dc_del.sat,
+        .dc_cxcalendar_bd ul li.del.sun,
+        .dc_cxcalendar_bd ul li.dc_del.sun {
+            color: var(--cxcalendar-other-color);
+            cursor: not-allowed;
         }
         .dc_cxcalendar_bd ul li.now {
         /* background-color: var(--cxcalendar-now-bg) */
         }
         .dc_cxcalendar_bd ul li.del:hover,
+        .dc_cxcalendar_bd ul li.dc_del:hover,
         .dc_cxcalendar_bd ul li.now.del,
+        .dc_cxcalendar_bd ul li.now.dc_del,
         .dc_cxcalendar_bd ul li.week:hover {
-        background: 0 0
+            background: 0 0
         }
         .cxcalendar_bd ul li:hover {
         background-color: var(--cxcalendar-item-bg)
@@ -422,11 +567,12 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_bd ul li.DCcxCalendarSelected.dc_sun,
         .dc_cxcalendar_bd ul li.DCcxCalendarSelected:hover {
         /* background-color: var(--cxcalendar-set-bg); */
-        background-color: var(--cxcalendar-item-bg);
-        /* color: var(--cxcalendar-btn-color) */
-        color: var(--cxcalendar-text-color)
+        background-color: var(--cxcalendar-confirm-bg);
+        color: var(--cxcalendar-btn-color);
+        //color: var(--cxcalendar-text-color)
         }
         .dc_cxcalendar_bd ul li.del:after,
+        .dc_cxcalendar_bd ul li.dc_del:after,
         .dc_cxcalendar_bd ul li.DCcxCalendarSelected:after {
         color: inherit
         }
@@ -442,12 +588,21 @@ export let WriterControl_DateTimeControl = {
         /* color: var(--cxcalendar-sun-color) */
         color: var(--cxcalendar-days-color)
         }
+        /* 禁用的周六周日也要置灰 */
+        .dc_cxcalendar_bd .dc_days .dc_sat.dc_del,
+        .dc_cxcalendar_bd .dc_days .dc_sun.dc_del {
+        color: var(--cxcalendar-other-color);
+        }
         .dc_cxcalendar_bd .dc_days .dc_other {
         color: var(--cxcalendar-other-color)
         }
         .dc_cxcalendar_bd .dc_days li.dc_week.dc_sat,
         .dc_cxcalendar_bd .dc_days li.dc_week.dc_sun {
         color: inherit
+        }
+        .dc_week{
+            font-weight: 700;
+            color:var(--cxcalendar-text-color);
         }
         .dc_cxcalendar_bd .dc_months li {
         flex-basis: 33%
@@ -467,17 +622,20 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar_bd .dc_years li:after {
         content: '年'
         }
-        .dc_cxcalendar_hd .dc_times {
+        .dc_times {
         position: relative;
         //margin-top: var(--cxcalendar-gap-out);
         // padding-top: var(--cxcalendar-gap-out);
-        padding: var(--cxcalendar-gap-out) var(--cxcalendar-gap-out) 0;
-        border-bottom: 1px solid var(--cxcalendar-border);
+        //padding: var(--cxcalendar-gap-out) var(--cxcalendar-gap-out) 0;
+        padding: 10px 8px 8px;
+        margin: -5px -4px;
+        border-top: 1px solid var(--cxcalendar-border);
         color: var(--cxcalendar-note-color);
         line-height: 32px;
-        display: flex
+        display: flex;
+        background-color: #f8f9fa;
         }
-        .dc_cxcalendar_hd .dc_times:before {
+        .dc_times:before {
         content: '';
         position: absolute;
         top: 0;
@@ -486,71 +644,78 @@ export let WriterControl_DateTimeControl = {
         height: 1px;
         //background: linear-gradient(to right,rgba(0,0,0,0) 0,rgba(0,0,0,.1) 15%,rgba(0,0,0,.1) 85%,rgba(0,0,0,0) 100%)
         }
-        .dc_cxcalendar_hd .dc_times:only-child:before {
+        .dc_times:only-child:before {
         display: none
         }
-        .dc_cxcalendar_hd .dc_times section {
+        .dc_times section {
         flex: 1;
         display: flex;
         justify-content: center;
         height: 31.99px;
         margin-bottom: var(--cxcalendar-gap-out);
         }
-        .dc_cxcalendar_hd .dc_times section:before {
+        .dc_times section:before {
         content: '';
         margin-right: 3px;
         font-size: 13px;
         }
-        .dc_cxcalendar_hd .dc_times select {
+        .dc_times select {
         font-weight: 400;
         font-size: var(--cxcalendar-text-size)
         }
-        .dc_cxcalendar_hd .dc_times i {
+        .dc_times i {
         padding: 0 1px;
         font-style: normal
         }
-        .dc_cxcalendar_hd .dc_times .dc_time-group i:after {
+        .dc_times .dc_time-group i:after {
         content: ':'
         }
-        .dc_cxcalendar_hd .dc_times .dc_date-group i:after {
+        .dc_times .dc_date-group i:after {
         content: '-'
         }
-        .dc_cxcalendar_hd .dc_times .dc_date-group input:first-child {
-        width:60px;
+        .dc_times .dc_date-group i:first-child:after {
+        content: '年'
+        }
+
+        .dc_times .dc_date-group input:first-child {
+        width:50px;
         }
         .dc_cxcalendar_acts {
         padding: var(--cxcalendar-gap-out) 5px;
         border-top: 1px solid var(--cxcalendar-border);
         border-radius: 0 0 3px 3px;
         /* background-color: var(--cxcalendar-item-bg); */
-        font-size: 13px;
+        font-size: 15px;
         line-height: 30px;
         display: flex;
         justify-content: flex-end;
         //zoom: 0.8;
         }
         .dc_cxcalendar_acts a {
-        font-weight: 700;
+        font-weight: 500;
         padding: 0 15px;
         border-radius: 3px;
         /* background-color: var(--cxcalendar-btn-bg); */
-        background-color: var(--cxcalendar-now-bg);
+        //background-color: var(--cxcalendar-now-bg);
         /* color: var(--cxcalendar-btn-color); */
         color: var(--cxcalendar-text-color);
         text-decoration: none;
         text-align: center;
         transition-property: opacity;
         transition-duration: .2s;
-        height: 30px;
-        font-size: 13px;
+        //height: 30px;
+        font-size: 15px;
+        border: 1px solid #ddd;
+
         }
         .dc_cxcalendar_acts a + a {
         margin-left: 15px
         }
         .dc_cxcalendar_acts a:hover {
         /* color: var(--cxcalendar-btn-color); */
-        color: var(--cxcalendar-text-color);
-        opacity: .6
+        //color: var(--cxcalendar-text-color);
+        background-color: var(--cxcalendar-now-bg);
+        //opacity: .6
         }
         .dc_cxcalendar_acts .dc_today:before {
         content: '今天'
@@ -563,7 +728,11 @@ export let WriterControl_DateTimeControl = {
         }
         .dc_cxcalendar_acts .dc_confirm {
         background-color: var(--cxcalendar-confirm-bg);
-        height: 100%
+        color:#fff;
+        height: 100%;
+        }
+        .dc_cxcalendar_acts .dc_confirm:hover {
+            background-color: #106ebe;
         }
         .dc_cxcalendar_acts .dc_confirm:before {
         content: '确定'
@@ -625,10 +794,10 @@ export let WriterControl_DateTimeControl = {
         background-color: var(--cxcalendar-range-set-bg);
         color: var(--cxcalendar-btn-color)
         }
-        .dc_cxcalendar.dc_range .dc_cxcalendar_hd .dc_times section:first-child:before {
+        .dc_cxcalendar.dc_range .dc_times section:first-child:before {
         content: '开始时间'
         }
-        .dc_cxcalendar.dc_range .dc_cxcalendar_hd .dc_times section:nth-child(2):before {
+        .dc_cxcalendar.dc_range .dc_times section:nth-child(2):before {
         content: '结束时间'
         }
         .dc_cxcalendar.dc_fixed {
@@ -665,7 +834,7 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd section:nth-child(2) {
         display: none
         }
-        .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd .dc_times {
+        .dc_cxcalendar.dc_fixed .dc_times {
         display: block
         }
         .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd .dc_prev {
@@ -683,7 +852,7 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar.dc_fixed .dc_cxcalendar_bd ul li {
         height: 40px
         }
-        .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd .dc_times {
+        .dc_cxcalendar.dc_fixed .dc_times {
         padding-top: 10px;
         padding-bottom: 10px
         }
@@ -735,7 +904,7 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar.dc_en .dc_cxcalendar_hd .dc_year + em:after {
         content: ''
         }
-        .dc_cxcalendar.dc_en .dc_cxcalendar_hd .dc_times section:before {
+        .dc_cxcalendar.dc_en .dc_times section:before {
         content: 'Time:'
         }
         .dc_cxcalendar.dc_en .dc_cxcalendar_acts .dc_today:before {
@@ -747,10 +916,10 @@ export let WriterControl_DateTimeControl = {
         .dc_cxcalendar.dc_en .dc_cxcalendar_acts .dc_confirm:before {
         content: 'Ok'
         }
-        .dc_cxcalendar.dc_en.dc_range .dc_cxcalendar_hd .dc_times section:first-child:before {
+        .dc_cxcalendar.dc_en.dc_range .dc_times section:first-child:before {
         content: 'Start Time:'
         }
-        .dc_cxcalendar.dc_en.dc_range .dc_cxcalendar_hd .dc_times section:nth-child(2):before {
+        .dc_cxcalendar.dc_en.dc_range .dc_times section:nth-child(2):before {
         content: 'End Time:'
         }
 
@@ -771,16 +940,20 @@ export let WriterControl_DateTimeControl = {
             display:none;
         }
 
-        .dc_only-time .dc_cxcalendar_hd .dc_times input{
+        .dc_only-time .dc_times input{
             width: 50px;
-        }    
+        }   
+        .dc_only-time .dc_times{
+            padding: 7px 8px 0px;
+            margin:0px;
+        }
 
         @media (min-width:640px) {
         .dc_cxcalendar.dc_fixed .dc_cxcalendar_bd ul:nth-child(2),
         .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd section:nth-child(2) {
         display: inherit
         }
-        .dc_cxcalendar.dc_fixed .dc_cxcalendar_hd .dc_times {
+        .dc_cxcalendar.dc_fixed .dc_times {
         display: flex
         }
         }
@@ -1110,6 +1283,12 @@ export let WriterControl_DateTimeControl = {
                 self.dom.panel = rootElement.ownerDocument.createElement('div');
                 self.dom.panel.classList.add('dc_cxcalendar');
 
+                // self.dom.sidebar = rootElement.ownerDocument.createElement('div');
+                // self.dom.sidebar.classList.add('dc_cxcalendar_sidebar');
+
+                self.dom.content = rootElement.ownerDocument.createElement('div');
+                self.dom.content.classList.add('dc_cxcalendar_content');
+
                 self.dom.wrapper = rootElement.ownerDocument.createElement('div');
                 self.dom.wrapper.classList.add('dc_cxcalendar_wp');
 
@@ -1125,6 +1304,9 @@ export let WriterControl_DateTimeControl = {
                 self.dom.main = rootElement.ownerDocument.createElement('div');
                 self.dom.main.classList.add('dc_cxcalendar_bd');
 
+                self.dom.footer = rootElement.ownerDocument.createElement('div');
+                self.dom.footer.classList.add('dc_cxcalendar_ft');
+
                 self.dom.acts = rootElement.ownerDocument.createElement('div');
                 self.dom.acts.classList.add('dc_cxcalendar_acts');
 
@@ -1132,12 +1314,15 @@ export let WriterControl_DateTimeControl = {
 
                 self.dom.timeSet = rootElement.ownerDocument.createElement('div');
                 self.dom.timeSet.classList.add('dc_times');
-
+                //self.dom.main.insertAdjacentElement('beforeend', self.dom.timeSet);
                 self.dom.wrapperBody.insertAdjacentElement('beforeend', self.dom.main);
 
                 self.dom.wrapper.insertAdjacentElement('beforeend', self.dom.wrapperBody);
 
-                self.dom.panel.insertAdjacentElement('beforeend', self.dom.wrapper);
+
+                self.dom.content.insertAdjacentElement('beforeend', self.dom.wrapper);
+                // self.dom.panel.insertAdjacentElement('beforeend', self.dom.sidebar);
+                self.dom.panel.insertAdjacentElement('beforeend', self.dom.content);
 
                 rootElement.ownerDocument.body.insertAdjacentElement('beforeend', self.dom.panel);
 
@@ -1199,6 +1384,11 @@ export let WriterControl_DateTimeControl = {
                         }
                         // 选择日期
                     } else if (nodeName === 'li' && el.dataset.date) {
+                        // 如果日期被禁用（有dc_del类），阻止默认行为
+                        if (el.classList.contains('dc_del') || el.classList.contains('del')) {
+                            return;
+                        }
+
                         const dateText = el.dataset.date;
 
                         if (typeof dateText !== 'string' || !dateText.length) {
@@ -1260,7 +1450,7 @@ export let WriterControl_DateTimeControl = {
                     const el = e.target;
                     const nodeName = el.nodeName.toLowerCase();
 
-                    if (nodeName === 'select' && ['year', 'month'].indexOf(el.name) >= 0) {
+                    if ((nodeName === 'select' || el.classList.contains('dc_custom_select')) && ['year', 'month'].indexOf(el.name) >= 0) {
                         self.rebuildMonthSelect();
                         self.gotoDate();
                     }
@@ -1278,14 +1468,20 @@ export let WriterControl_DateTimeControl = {
                 // 左侧按钮事件
                 self.dom.sidebar.addEventListener('click', function (e) {
                     const el = e.target;
-                    const nodeName = el.nodeName.toLowerCase();
+                    // const nodeName = el.nodeName.toLowerCase();
+                    const headerYearSelect = self.findSelectElement(self.dom.head, 'dc_year');
+                    const headerMonthSelect = self.findSelectElement(self.dom.head, 'dc_month');
                     const today = new Date();
                     let selectDate;
                     switch (el.className) {
                         case 'dc_today':
                             //年月下拉框赋值
-                            jQuery("select.dc_year").val(today.getFullYear());
-                            jQuery("select.dc_month").val(today.getMonth() + 1);
+                            if (headerYearSelect) {
+                                headerYearSelect.value = today.getFullYear();
+                            }
+                            if (headerMonthSelect) {
+                                headerMonthSelect.value = today.getMonth() + 1;
+                            }
 
                             //日期输入框赋值
                             self.setDateValues(today);
@@ -1299,8 +1495,12 @@ export let WriterControl_DateTimeControl = {
                             //获取昨天日期
                             let yesterdayDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
                             //年月下拉框赋值
-                            jQuery("select.dc_year").val(yesterdayDate.getFullYear());
-                            jQuery("select.dc_month").val(yesterdayDate.getMonth() + 1);
+                            if (headerYearSelect) {
+                                headerYearSelect.value = yesterdayDate.getFullYear();
+                            }
+                            if (headerMonthSelect) {
+                                headerMonthSelect.value = yesterdayDate.getMonth() + 1;
+                            }
                             //日期输入框赋值
                             self.setDateValues(yesterdayDate);
                             //跳转指定日历
@@ -1323,12 +1523,248 @@ export let WriterControl_DateTimeControl = {
             };
 
             // 获取内部选框控件
+            // 辅助函数：查找自定义下拉组件或原生 select
+            theTool.findSelectElement = function (container, className) {
+                const self = this;
+                // 从类名中提取名称（例如 'dc_year' -> 'year', 'dc_month' -> 'month'）
+                const name = className.replace('dc_', '');
+
+                // 先查找自定义下拉组件（通过 data-name 属性或类名）
+                const customSelect = container.querySelector('.dc_custom_select[data-name="' + name + '"]') ||
+                    container.querySelector('.dc_custom_select.' + className);
+                if (customSelect) {
+                    return customSelect;
+                }
+                // 兼容原生 select
+                const nativeSelect = container.querySelector('select.' + className);
+                return nativeSelect || null;
+            };
+
+            // 创建自定义下拉组件
+            theTool.createCustomSelect = function (name, options, selectedValue) {
+                const self = this;
+                const selectId = 'dc_custom_select_' + name + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                let html = '<div class="dc_custom_select" data-name="' + name + '" id="' + selectId + '">';
+                html += '<div class="dc_select_display">' + (selectedValue || '') + '</div>';
+                html += '<div class="dc_select_dropdown">';
+
+                for (let i = 0; i < options.length; i++) {
+                    const option = options[i];
+                    const value = option.value;
+                    const text = option.text;
+                    const isSelected = option.selected || value == selectedValue;
+                    html += '<div class="dc_select_option' + (isSelected ? ' dc_selected' : '') + '" data-value="' + value + '">' + text + '</div>';
+                }
+
+                html += '</div></div>';
+
+                // 创建元素
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                const selectElement = tempDiv.firstElementChild;
+
+                // 添加属性以模拟 select 元素
+                selectElement.name = name;
+                selectElement.options = options.map((opt, idx) => ({
+                    value: opt.value,
+                    text: opt.text,
+                    selected: opt.selected || opt.value == selectedValue,
+                    index: idx
+                }));
+                let currentSelectedIndex = options.findIndex(opt => opt.selected || opt.value == selectedValue);
+                if (currentSelectedIndex < 0) currentSelectedIndex = 0;
+
+                // 添加 selectedIndex 属性
+                // 使用 selectElement 上的属性来控制是否触发事件
+                selectElement._suppressChangeEvent = false;
+                Object.defineProperty(selectElement, 'selectedIndex', {
+                    get: function () {
+                        const selectedOption = this.querySelector('.dc_select_option.dc_selected');
+                        if (selectedOption) {
+                            const options = Array.from(this.querySelectorAll('.dc_select_option'));
+                            return options.indexOf(selectedOption);
+                        }
+                        return 0;
+                    },
+                    set: function (index) {
+                        const options = this.querySelectorAll('.dc_select_option');
+                        const display = this.querySelector('.dc_select_display');
+
+                        if (index >= 0 && index < options.length) {
+                            // 移除所有选中状态
+                            options.forEach(opt => opt.classList.remove('dc_selected'));
+
+                            // 设置新的选中项
+                            const selectedOption = options[index];
+                            if (selectedOption) {
+                                selectedOption.classList.add('dc_selected');
+                                if (display) {
+                                    display.textContent = selectedOption.textContent;
+                                }
+
+                                // 只有在不抑制事件时才触发 change 事件
+                                if (!this._suppressChangeEvent) {
+                                    const changeEvent = new Event('change', { bubbles: true });
+                                    this.dispatchEvent(changeEvent);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 初始化 selectedIndex（不触发 change 事件）
+                selectElement._suppressChangeEvent = true;
+                selectElement.selectedIndex = currentSelectedIndex;
+                selectElement._suppressChangeEvent = false;
+
+                // 添加 value 属性
+                Object.defineProperty(selectElement, 'value', {
+                    get: function () {
+                        const selectedOption = this.querySelector('.dc_select_option.dc_selected');
+                        return selectedOption ? selectedOption.getAttribute('data-value') : '';
+                    },
+                    set: function (val) {
+                        const options = this.querySelectorAll('.dc_select_option');
+                        let newSelectedOption = null;
+                        const currentValue = this.value; // 获取当前值
+
+                        // 如果值没有变化，直接返回，避免不必要的更新和事件触发
+                        if (currentValue == val) {
+                            return;
+                        }
+
+                        options.forEach(opt => {
+                            if (opt.getAttribute('data-value') == val) {
+                                opt.classList.add('dc_selected');
+                                this.querySelector('.dc_select_display').textContent = opt.textContent;
+                                newSelectedOption = opt;
+                            } else {
+                                opt.classList.remove('dc_selected');
+                            }
+                        });
+
+                        // 更新 selectedIndex（但不触发 change 事件，避免循环）
+                        const newIndex = Array.from(options).findIndex(opt => opt.getAttribute('data-value') == val);
+                        if (newIndex >= 0) {
+                            // 抑制 change 事件，直接更新内部状态
+                            this._suppressChangeEvent = true;
+                            // 直接更新内部状态，避免通过 selectedIndex setter 触发事件
+                            const currentOptions = this.querySelectorAll('.dc_select_option');
+                            currentOptions.forEach(opt => opt.classList.remove('dc_selected'));
+                            if (currentOptions[newIndex]) {
+                                currentOptions[newIndex].classList.add('dc_selected');
+                            }
+                            this._suppressChangeEvent = false;
+
+                            // 手动触发 change 事件（只触发一次）
+                            const changeEvent = new Event('change', { bubbles: true });
+                            this.dispatchEvent(changeEvent);
+                        }
+
+                        // 如果下拉框是打开的，滚动到新选中的选项
+                        if (this.classList.contains('dc_open') && newSelectedOption) {
+                            setTimeout(() => {
+                                newSelectedOption.scrollIntoView({
+                                    behavior: 'auto',
+                                    block: 'nearest',
+                                    inline: 'nearest'
+                                });
+                            }, 10);
+                        }
+                    }
+                });
+
+                // 添加 length 属性
+                Object.defineProperty(selectElement, 'length', {
+                    get: function () {
+                        return this.querySelectorAll('.dc_select_option').length;
+                    }
+                });
+
+                // 添加事件监听
+                const display = selectElement.querySelector('.dc_select_display');
+                const dropdown = selectElement.querySelector('.dc_select_dropdown');
+                const optionElements = selectElement.querySelectorAll('.dc_select_option');
+
+                // 点击显示/隐藏下拉框
+                display.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const isOpen = selectElement.classList.contains('dc_open');
+                    // 关闭所有其他下拉框
+                    document.querySelectorAll('.dc_custom_select.dc_open').forEach(el => {
+                        if (el !== selectElement) {
+                            el.classList.remove('dc_open');
+                        }
+                    });
+                    selectElement.classList.toggle('dc_open', !isOpen);
+
+                    // 如果打开下拉框，滚动到已选中的选项
+                    if (!isOpen) {
+                        // 使用 setTimeout 确保下拉框已经显示
+                        setTimeout(function () {
+                            const selectedOption = dropdown.querySelector('.dc_select_option.dc_selected');
+                            if (selectedOption) {
+                                // 滚动到选中选项，使其可见
+                                selectedOption.scrollIntoView({
+                                    behavior: 'auto',
+                                    block: 'nearest',
+                                    inline: 'nearest'
+                                });
+                            }
+                        }, 10);
+                    }
+                });
+
+                // 点击选项
+                optionElements.forEach((option, index) => {
+                    option.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const value = this.getAttribute('data-value');
+                        const text = this.textContent;
+
+                        // 更新选中状态
+                        optionElements.forEach(opt => opt.classList.remove('dc_selected'));
+                        this.classList.add('dc_selected');
+                        display.textContent = text;
+                        selectElement.selectedIndex = index;
+
+                        // 触发 change 事件
+                        const changeEvent = new Event('change', { bubbles: true });
+                        selectElement.dispatchEvent(changeEvent);
+
+                        // 关闭下拉框
+                        selectElement.classList.remove('dc_open');
+                    });
+                });
+
+                // 点击外部关闭下拉框
+                document.addEventListener('click', function (e) {
+                    if (!selectElement.contains(e.target)) {
+                        selectElement.classList.remove('dc_open');
+                    }
+                });
+
+                return selectElement;
+            };
+
             theTool.getSelects = function (list, values) {
                 const self = this;
                 const selects = {};
 
-                for (let x of self.dom.head.querySelectorAll('select')) {
+                // 查找自定义下拉组件
+                for (let x of self.dom.head.querySelectorAll('.dc_custom_select')) {
                     if (list.indexOf(x.name) >= 0) {
+                        selects[x.name] = x;
+
+                        if (self.isObject(values)) {
+                            values[x.name] = parseInt(x.value, 10);
+                        }
+                    }
+                }
+
+                // 兼容原有的 select 元素
+                for (let x of self.dom.head.querySelectorAll('select')) {
+                    if (list.indexOf(x.name) >= 0 && !selects[x.name]) {
                         selects[x.name] = x;
 
                         if (self.isObject(values)) {
@@ -1340,7 +1776,7 @@ export let WriterControl_DateTimeControl = {
             };
 
             // 创建面板
-            theTool.buildPanel = function () {
+            theTool.buildPanel = function (rootElement) {
                 const self = this;
 
                 if (self.cacheApi.settings.date) {
@@ -1400,32 +1836,33 @@ export let WriterControl_DateTimeControl = {
                 let html = `<div class='dc_prev-next-box-group'>` + prevHtml + '<section>';
                 // let html ='<div><section>';
 
-                // 年份选择框
-                if (['month', 'date', 'datetime'].indexOf(self.cacheApi.settings.type) >= 0) {
-                    html += '<select name="year" class="dc_year">';
+                // 年份选择框 - 使用自定义下拉组件
+                let yearSelectElement = null;
+                let monthSelectElement = null;
 
+                if (['month', 'date', 'datetime'].indexOf(self.cacheApi.settings.type) >= 0) {
+                    const yearOptions = [];
                     for (let i = self.cacheApi.minDate.year; i <= self.cacheApi.maxDate.year; i++) {
-                        html += '<option value="' + i + '">' + i + '</option>';
+                        yearOptions.push({ value: i, text: i.toString() });
                     }
-                    html += '</select>';
+                    yearSelectElement = self.createCustomSelect('year', yearOptions, self.cacheApi.defDate.year);
+                    yearSelectElement.className += ' dc_year';
 
                 } else if (self.cacheApi.settings.type === 'year') {
                     const start = Math.floor(self.cacheApi.minDate.year / 10) * 10;
-
-                    html += '<select name="year" class="dc_year">';
-
+                    const yearOptions = [];
                     for (let i = start; i <= self.cacheApi.maxDate.year; i += self.cacheApi.settings.yearNum) {
                         const end = i + self.cacheApi.settings.yearNum - 1;
-                        html += '<option value="' + i + '">' + i + ' - ';
-                        // html += end < self.cacheApi.maxDate.year ? end : self.cacheApi.maxDate.year;
-                        html += end;
-                        html += '</option>';
+                        yearOptions.push({ value: i, text: i + ' - ' + end });
                     }
-                    html += '</select>';
+                    yearSelectElement = self.createCustomSelect('year', yearOptions, start);
+                    yearSelectElement.className += ' dc_year';
                 }
+
                 if (['date', 'datetime'].indexOf(self.cacheApi.settings.type) >= 0) {
                     html += splitHtml;
-                    html += '<select name="month" class="dc_month"></select>';
+                    // 月份选择框将在 rebuildMonthSelect 中创建
+                    html += '<span class="dc_month_placeholder"></span>';
                     html += splitHtml;
                     html += '</section>';
                     html += fillHtml;
@@ -1433,6 +1870,14 @@ export let WriterControl_DateTimeControl = {
                     html += '</div>';
 
                     self.dom.head.innerHTML = html;
+
+                    // 插入年份选择框
+                    if (yearSelectElement) {
+                        const section = self.dom.head.querySelector('section');
+                        if (section) {
+                            section.insertBefore(yearSelectElement, section.firstChild);
+                        }
+                    }
                     self.dom.dateSet.className = 'dc_days';
 
                     self.dom.main.insertAdjacentElement('beforeend', self.dom.dateSet);
@@ -1440,7 +1885,6 @@ export let WriterControl_DateTimeControl = {
                     self.dom.wrapperBody.insertAdjacentElement('afterbegin', self.dom.head);
                     self.dom.wrapper.insertAdjacentElement('afterbegin', self.dom.wrapperBody);
                     self.buildFlipFunc();
-
                     if (self.cacheApi.settings.type === 'datetime') {
                         self.buildDateTimes();
 
@@ -1450,9 +1894,24 @@ export let WriterControl_DateTimeControl = {
                     self.rebuildMonthSelect();
                     self.gotoDate([self.cacheApi.defDate.year, self.cacheApi.defDate.month].join('-'));
 
-                    let sidebarHTML = `<ul><li><span class='dc_today'>今天</span></li><li><span class='dc_yesterday'>昨天</span></li><li><span class='dc_lastMonth'>上月</span></li><li><span class='dc_nextMonth'>下月</span></li></ul>`;
+                    // 检查是否需要隐藏"昨天"和"上月"按钮
+                    var isMinDateTodayForDateFieldElement = false;
+                    //获取当前元素中的自定义属性isMinDateTodayForDateFieldElement="true"
+                    var currentElement = rootElement.GetElementProperties(rootElement.CurrentElement());
+                    if (currentElement && currentElement.Attributes && currentElement.Attributes.isMinDateTodayForDateFieldElement) {
+                        isMinDateTodayForDateFieldElement = currentElement.Attributes.isMinDateTodayForDateFieldElement;
+                    }
+                    isMinDateTodayForDateFieldElement = (isMinDateTodayForDateFieldElement === "true" || isMinDateTodayForDateFieldElement === true);
+
+                    var shouldHideYesterdayAndLastMonth = isMinDateTodayForDateFieldElement && (self.cacheApi.settings.type === 'date' || self.cacheApi.settings.type === 'datetime');
+
+                    var sidebarHTML = `<ul><li><span class='dc_today'>今天</span></li>`;
+                    if (!shouldHideYesterdayAndLastMonth) {
+                        sidebarHTML += `<li><span class='dc_yesterday'>昨天</span></li><li><span class='dc_lastMonth'>上月</span></li>`;
+                    }
+                    sidebarHTML += `<li><span class='dc_nextMonth'>下月</span></li></ul>`;
                     self.dom.sidebar.innerHTML = sidebarHTML;
-                    self.dom.wrapper.insertAdjacentElement('afterbegin', self.dom.sidebar);
+                    self.dom.panel.insertAdjacentElement('afterbegin', self.dom.sidebar);
 
                 } else if (self.cacheApi.settings.type === 'time') {
                     //if (self.dom.wrapperBody.contains(self.dom.head)) {
@@ -1489,6 +1948,15 @@ export let WriterControl_DateTimeControl = {
                     html += '</div>';
 
                     self.dom.head.innerHTML = html;
+
+                    // 插入年份选择框
+                    if (yearSelectElement) {
+                        const section = self.dom.head.querySelector('section');
+                        if (section) {
+                            section.insertBefore(yearSelectElement, section.firstChild);
+                        }
+                    }
+
                     self.dom.dateSet.className = 'dc_years';
 
                     self.dom.main.insertAdjacentElement('beforeend', self.dom.dateSet);
@@ -1526,10 +1994,10 @@ export let WriterControl_DateTimeControl = {
                 }
                 if (html.length) {
                     self.dom.acts.innerHTML = html;
-                    self.dom.panel.insertAdjacentElement('beforeend', self.dom.acts);
+                    self.dom.content.insertAdjacentElement('beforeend', self.dom.acts);
 
-                } else if (self.dom.panel.contains(self.dom.acts)) {
-                    self.dom.panel.removeChild(self.dom.acts);
+                } else if (self.dom.content.contains(self.dom.acts)) {
+                    self.dom.content.removeChild(self.dom.acts);
                 }
             };
 
@@ -1549,17 +2017,117 @@ export let WriterControl_DateTimeControl = {
                 } else if (values.year === self.cacheApi.maxDate.year) {
                     end = self.cacheApi.maxDate.month;
                 }
-                let html = '';
 
+                // 构建月份选项
+                const monthOptions = [];
                 for (let i = start; i <= end; i++) {
-                    html += '<option value="' + i + '"';
-
-                    if (values.month === i) {
-                        html += ' selected';
-                    }
-                    html += '>' + self.cacheApi.settings.language.monthList[i - 1] + '</option>';
+                    monthOptions.push({
+                        value: i,
+                        text: self.cacheApi.settings.language.monthList[i - 1],
+                        selected: values.month === i
+                    });
                 }
-                selects.month.innerHTML = html;
+
+                // 如果是自定义下拉组件，更新或创建
+                if (selects.month && selects.month.classList && selects.month.classList.contains('dc_custom_select')) {
+                    // 更新现有自定义下拉组件
+                    const currentValue = selects.month.value || values.month || start;
+                    const dropdown = selects.month.querySelector('.dc_select_dropdown');
+                    const display = selects.month.querySelector('.dc_select_display');
+
+                    // 清空选项
+                    dropdown.innerHTML = '';
+
+                    // 添加新选项
+                    monthOptions.forEach((opt, index) => {
+                        const optionEl = document.createElement('div');
+                        optionEl.className = 'dc_select_option' + (opt.selected ? ' dc_selected' : '');
+                        optionEl.setAttribute('data-value', opt.value);
+                        optionEl.textContent = opt.text;
+
+                        // 添加点击事件
+                        optionEl.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            const value = this.getAttribute('data-value');
+                            const text = this.textContent;
+
+                            // 更新选中状态
+                            dropdown.querySelectorAll('.dc_select_option').forEach(opt => opt.classList.remove('dc_selected'));
+                            this.classList.add('dc_selected');
+                            display.textContent = text;
+                            selects.month.selectedIndex = index;
+
+                            // 触发 change 事件
+                            const changeEvent = new Event('change', { bubbles: true });
+                            selects.month.dispatchEvent(changeEvent);
+
+                            // 关闭下拉框
+                            selects.month.classList.remove('dc_open');
+                        });
+
+                        dropdown.appendChild(optionEl);
+                    });
+
+                    // 更新显示值和选中索引（不触发 change 事件，因为这是内部更新）
+                    const selectedOption = monthOptions.find(opt => opt.selected) || monthOptions[0];
+                    display.textContent = selectedOption.text;
+                    // 直接更新内部状态，避免触发 change 事件
+                    const selectedIndex = monthOptions.findIndex(opt => opt.selected);
+                    const finalIndex = selectedIndex >= 0 ? selectedIndex : 0;
+                    const allOptions = dropdown.querySelectorAll('.dc_select_option');
+                    allOptions.forEach(opt => opt.classList.remove('dc_selected'));
+                    if (allOptions[finalIndex]) {
+                        allOptions[finalIndex].classList.add('dc_selected');
+                    }
+                    // 更新 selectedIndex 属性（但不触发事件）
+                    selects.month._suppressChangeEvent = true;
+                    // 通过设置 selectedIndex 来更新内部状态，但由于抑制了事件，不会触发 change
+                    selects.month.selectedIndex = finalIndex;
+                    selects.month._suppressChangeEvent = false;
+
+                    // 更新 options 属性
+                    selects.month.options = monthOptions.map((opt, idx) => ({
+                        value: opt.value,
+                        text: opt.text,
+                        selected: opt.selected,
+                        index: idx
+                    }));
+
+                    // 如果下拉框是打开的，滚动到已选中的选项
+                    if (selects.month.classList.contains('dc_open')) {
+                        setTimeout(function () {
+                            const selectedOption = dropdown.querySelector('.dc_select_option.dc_selected');
+                            if (selectedOption) {
+                                selectedOption.scrollIntoView({
+                                    behavior: 'auto',
+                                    block: 'nearest',
+                                    inline: 'nearest'
+                                });
+                            }
+                        }, 10);
+                    }
+
+                } else if (selects.month) {
+                    // 兼容原有的 select 元素
+                    let html = '';
+                    for (let i = start; i <= end; i++) {
+                        html += '<option value="' + i + '"';
+                        if (values.month === i) {
+                            html += ' selected';
+                        }
+                        html += '>' + self.cacheApi.settings.language.monthList[i - 1] + '</option>';
+                    }
+                    selects.month.innerHTML = html;
+                } else {
+                    // 创建新的自定义下拉组件
+                    const placeholder = self.dom.head.querySelector('.dc_month_placeholder');
+                    if (placeholder) {
+                        const selectedValue = values.month || start;
+                        const monthSelectElement = self.createCustomSelect('month', monthOptions, selectedValue);
+                        monthSelectElement.className += ' dc_month';
+                        placeholder.parentNode.replaceChild(monthSelectElement, placeholder);
+                    }
+                }
             };
 
             // 构建日期列表
@@ -1749,7 +2317,7 @@ export let WriterControl_DateTimeControl = {
                 const splitHtml = '<i></i>';
                 let html = `<section class='dc_time-group'>`;
 
-                html += '<input type="number" name="hour" class="dc_hour" min="0" max="23" autocomplete="false"/>';
+                html += '<input name="hour" class="dc_hour" min="0" max="23" autocomplete="off"/>';
                 //html += '<select name="hour" class="hour" >';
 
                 //for (let i = 0; i < 24; i += self.cacheApi.settings.hourStep) {
@@ -1758,7 +2326,7 @@ export let WriterControl_DateTimeControl = {
                 //}
                 //html += '</select>';
                 html += splitHtml;
-                html += '<input type="number" name="mint" class="dc_mint" min="0" max="59" autocomplete="false"/>';
+                html += '<input name="mint" class="dc_mint" min="0" max="59" autocomplete="off"/>';
                 //html += '<select name="mint" class="mint" >';
 
                 //for (let i = 0; i < 60; i += self.cacheApi.settings.minuteStep) {
@@ -1767,7 +2335,7 @@ export let WriterControl_DateTimeControl = {
                 //}
                 //html += '</select>';
                 html += splitHtml;
-                html += '<input type="number" name="secs" class="dc_secs" min="0" max="59" autocomplete="false"/>';
+                html += '<input name="secs" class="dc_secs" min="0" max="59" autocomplete="off"/>';
 
                 //html += '<select name="secs" class="secs">';
 
@@ -1783,36 +2351,83 @@ export let WriterControl_DateTimeControl = {
                 }
                 self.dom.timeSet.innerHTML += html;
                 self.dom.head.insertAdjacentElement('afterbegin', self.dom.timeSet);
+                //self.dom.main.insertAdjacentElement('beforeend', self.dom.timeSet);
                 var hourEle = self.dom.timeSet.querySelector('.dc_hour');//时
                 var mintEle = self.dom.timeSet.querySelector('.dc_mint');//分
                 var secsEle = self.dom.timeSet.querySelector('.dc_secs');//秒
-                if (hourEle) {
-                    hourEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            if (isNaN(e.target.value)) {
+
+                function hourInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
+                        } else {
+                            if (e.target.value > 23) {
+                                e.target.value = '23';
+                            } else if (e.target.value < 0) {
                                 e.target.value = '0';
-                            } else {
-                                if (e.target.value > 23) {
-                                    e.target.value = '23';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
+                            }
+                            if (e.target.value.length > 1 && e.data) {
+                                if (e.target.value > 9) {
+                                    e.target.value = parseInt(e.target.value);
                                 }
-                                if (e.target.value.length > 1 && e.data) {
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (mintEle) {
-                                        mintEle.select();
-                                        mintEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
+                                if (mintEle) {
+                                    mintEle.select();
+                                    mintEle.focus();
                                 }
                             }
-                        } else {
-                            //e.target.value = '0';
+                            if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
+                                e.target.value = '0' + e.target.value;
+                            }
                         }
+                    }
+                }
+                function mintInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
+                        } else {
+                            if (e.target.value > 59) {
+                                e.target.value = '59';
+                            } else if (e.target.value < 0) {
+                                e.target.value = '0';
+                            }
+                            if (e.target.value.length > 1 && e.data) {
+                                if (e.target.value > 9) {
+                                    e.target.value = parseInt(e.target.value);
+                                }
+                                if (secsEle) {
+                                    secsEle.select();
+                                    secsEle.focus();
+                                }
+                            }
+                            if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
+                                e.target.value = '0' + e.target.value;
+                            }
+                        }
+                    }
+                }
+                function secsInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+                        e.target.value = parseInt(e.target.value);
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
+                        } else {
+                            if (e.target.value > 59) {
+                                e.target.value = '59';
+                            } else if (e.target.value < 0) {
+                                e.target.value = '0';
+                            }
+                            if (e.target.value < 10) {
+                                e.target.value = '0' + e.target.value;
+                            }
+                        }
+                    }
+                }
+
+                if (hourEle) {
+                    hourEle.addEventListener('input', function (e) {
+                        hourInput(e);
                     });
                     hourEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -1821,37 +2436,20 @@ export let WriterControl_DateTimeControl = {
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            hourInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            hourInput(e);
+                        }
                     });
                 }
                 // var mintEle = self.dom.timeSet.querySelector('.mint');
                 if (mintEle) {
                     mintEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
-                            } else {
-                                if (e.target.value > 59) {
-                                    e.target.value = '59';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
-                                }
-                                if (e.target.value.length > 1 && e.data) {
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (secsEle) {
-                                        secsEle.select();
-                                        secsEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
-                                }
-                            }
-                        } else {
-                            //e.target.value = '0';
-                        }
+                        mintInput(e);
                     });
                     mintEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -1860,28 +2458,20 @@ export let WriterControl_DateTimeControl = {
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            mintInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            mintInput(e);
+                        }
                     });
                 }
                 // var secsEle = self.dom.timeSet.querySelector('.secs');
                 if (secsEle) {
                     secsEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
-                            } else {
-                                if (e.target.value > 59) {
-                                    e.target.value = '59';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
-                                }
-                                if (e.target.value < 10) {
-                                    e.target.value = '0' + e.target.value;
-                                }
-                            }
-                        } else {
-                            //e.target.value = '0';
-                        }
+                        secsInput(e);
                     });
                     secsEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -1889,133 +2479,215 @@ export let WriterControl_DateTimeControl = {
                             e.target.blur();
                             e.preventDefault();
                             self.confirmTime();
+                        }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            secsInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            secsInput(e);
                         }
                     });
                 }
                 self.setDateValues();
                 self.setTimesValues();
             };
-            // 构建日期选择
-            theTool.buildDate = function () {
+            // 日期下拉年月日输入框绑定事件
+            theTool.bindYearMonthDayInputEvents = function () {
                 const self = this;
-                const splitHtml = '<i></i>';
+                const yearEle = self.dom.timeSet.querySelector('.dc_year');// 年
+                const monthEle = self.dom.timeSet.querySelector('.dc_month');// 月
+                const dayEle = self.dom.timeSet.querySelector('.dc_day');// 日
 
+                // 获取指定年月的最大天数
+                const getMaxDayInMonth = function (year, month) {
+                    if (!year || !month) return 31;
+                    const monthDays = theTool.getMonthDays(parseInt(year, 10));
+                    return monthDays[parseInt(month, 10) - 1] || 31;
+                };
 
-
-                let html = `<section class='dc_date-group'>`;
-
-                html += '<input type="number" name="year" class="dc_year" min="1900" max="2300" autocomplete="false"/>';
-                html += splitHtml;
-                html += '<input type="number" name="month" class="dc_month" min="1" max="12" autocomplete="false"/>';
-                html += splitHtml;
-                html += '<input type="number" name="day" class="dc_day" min="1" max="31" autocomplete="false"/>';
-                html += '</section>';
-
-
-                if (self.cacheApi.settings.mode === 'range') {
-                    html += html;
-                }
-                self.dom.timeSet.innerHTML = html;
-                self.dom.head.insertAdjacentElement('afterbegin', self.dom.timeSet);
-                var yearEle = self.dom.timeSet.querySelector('.dc_year');//年
-                var monthEle = self.dom.timeSet.querySelector('.dc_month');//月
-                var dayEle = self.dom.timeSet.querySelector('.dc_day');//日
                 if (yearEle) {
-                    yearEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
+                    const yearInputEvent = function (e) {
+                        const target = e.target;
+                        const valueStr = String(target.value || '');
+                        if (valueStr && valueStr.length > 0) {
+                            const numValue = parseInt(valueStr, 10);
+                            const minYear = 1900;
+                            const maxYear = 2300;
+                            if (isNaN(numValue)) {
                                 const currentTime = new Date();
-                                e.target.value = currentTime.getFullYear();
+                                target.value = String(currentTime.getFullYear());
                             } else {
-                                if (e.target.value.length > 3 && e.data) {
-                                    if (monthEle) {
-                                        monthEle.select();
-                                        monthEle.focus();
-                                    }
+                                let finalYear = numValue;
+                                if (finalYear < minYear) finalYear = minYear;
+                                if (finalYear > maxYear) finalYear = maxYear;
+                                target.value = String(finalYear);
+
+                                // 如果输入了4位数字，自动跳转到月份输入框
+                                if (valueStr.length >= 4 && e.data && monthEle) {
+                                    monthEle.select();
+                                    monthEle.focus();
                                 }
                             }
-                        } else {
-                            //e.target.value = '0';
                         }
+                    };
+                    yearEle.addEventListener('input', function (e) {
+                        yearInputEvent(e);
                     });
                     yearEle.addEventListener('change', function (e) {
-                        jQuery("select.year").val(e.target.value);
+                        const headerYearSelect = self.findSelectElement(self.dom.head, 'dc_year');
+                        if (headerYearSelect) {
+                            headerYearSelect.value = e.target.value;
+                        }
                         self.gotoDate();
-                        let selectDate = theTool.formatDate('Y-m-d', e.target.value + '-' + monthEle.value + '-' + dayEle.value);
+                        const dateStr = e.target.value + '-' + monthEle.value + '-' + dayEle.value;
+                        const selectDate = theTool.formatDate('Y-m-d', dateStr);
                         self.locateDay(selectDate);
                     });
                     yearEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
+                        const headerYearSelect = self.findSelectElement(self.dom.head, 'dc_year');
                         if (key === 13) {
                             e.target.blur();
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38 || key === 40) {
+                            const increment = key === 38 ? 1 : -1;
+                            const minYear = 1900;
+                            const maxYear = 2300;
+                            let newYear = parseInt(e.target.value, 10) + increment;
+                            if (newYear < minYear) newYear = minYear;
+                            if (newYear > maxYear) newYear = maxYear;
+                            e.target.value = String(newYear);
+                            if (headerYearSelect) {
+                                headerYearSelect.value = newYear;
+                            }
+                            self.gotoDate();
+                            const dateStr = newYear + '-' + monthEle.value + '-' + dayEle.value;
+                            const selectDate = theTool.formatDate('Y-m-d', dateStr);
+                            self.locateDay(selectDate);
+                            yearInputEvent(e);
+                        }
                     });
                 }
                 if (monthEle) {
-                    monthEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
+                    const monthInputEvent = function (e) {
+                        const minValue = 1;
+                        const maxValue = 12;
+                        const target = e.target;
+                        let valueStr = String(target.value || '');
+                        if (valueStr && valueStr.length > 0) {
+                            const numValue = parseInt(valueStr, 10);
+                            if (isNaN(numValue)) {
+                                target.value = String(minValue);
                             } else {
-                                if (e.target.value > 12) {
-                                    e.target.value = '12';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '1';
+                                let finalValue = numValue;
+                                if (finalValue > maxValue) {
+                                    finalValue = maxValue;
+                                } else if (finalValue < minValue) {
+                                    finalValue = minValue;
                                 }
+                                valueStr = String(finalValue);
+                                target.value = valueStr;
 
-                                if ((e.target.value.length > 1 || (e.target.value > 1 && e.target.value < 10)) && e.data) {
+                                if (valueStr.length > 1 && e.data) {
+                                    if (finalValue > 9) {
+                                        target.value = String(finalValue);
+                                        valueStr = target.value;
+                                    }
                                     if (dayEle) {
                                         dayEle.select();
                                         dayEle.focus();
                                     }
                                 }
+                                if (valueStr.length < 2 && finalValue < 10 && finalValue != 0) {
+                                    target.value = '0' + valueStr;
+                                }
                             }
-                        } else {
-                            //e.target.value = '0';
                         }
+                    };
+                    monthEle.addEventListener('input', function (e) {
+                        monthInputEvent(e);
                     });
                     monthEle.addEventListener('change', function (e) {
-                        //e.target.value=self.fillLeadZero(e.target.value,2)
-                        jQuery("select.month").val(e.target.value);
+                        e.target.value = self.fillLeadZero(e.target.value, 2);
+                        const headerMonthSelect = self.findSelectElement(self.dom.head, 'dc_month');
+                        if (headerMonthSelect) {
+                            headerMonthSelect.value = parseInt(e.target.value, 10);
+                        }
                         self.gotoDate();
-                        let selectDate = theTool.formatDate('Y-m-d', yearEle.value + '-' + e.target.value + '-' + dayEle.value);
+                        const dateStr = yearEle.value + '-' + e.target.value + '-' + dayEle.value;
+                        const selectDate = theTool.formatDate('Y-m-d', dateStr);
                         self.locateDay(selectDate);
                     });
                     monthEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
+                        const headerMonthSelect = self.findSelectElement(self.dom.head, 'dc_month');
                         if (key === 13) {
                             e.target.blur();
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38 || key === 40) {
+                            const increment = key === 38 ? 1 : -1;
+                            let newMonth = parseInt(e.target.value, 10) + increment;
+                            // 判断是否允许月份循环，默认为false（不允许循环）
+                            const allowMonthCycle = false;
+                            if (allowMonthCycle) {
+                                // 允许循环：1变成12，12变成1
+                                if (newMonth < 1) newMonth = 12;
+                                if (newMonth > 12) newMonth = 1;
+                            } else {
+                                // 不允许循环：限制在1-12范围内
+                                if (newMonth < 1) newMonth = 1;
+                                if (newMonth > 12) newMonth = 12;
+                            }
+                            e.target.value = self.fillLeadZero(String(newMonth), 2);
+                            if (headerMonthSelect) {
+                                headerMonthSelect.value = newMonth;
+                            }
+                            self.gotoDate();
+                            const dateStr = yearEle.value + '-' + newMonth + '-' + dayEle.value;
+                            const selectDate = theTool.formatDate('Y-m-d', dateStr);
+                            self.locateDay(selectDate);
+                            monthInputEvent(e);
+                        }
                     });
                 }
                 if (dayEle) {
-                    dayEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
+                    const dayInputEvent = function (e) {
+                        const target = e.target;
+                        const valueStr = String(target.value || '');
+                        if (valueStr && valueStr.length > 0) {
+                            const numValue = parseInt(valueStr, 10);
+                            if (isNaN(numValue)) {
+                                target.value = '01';
                             } else {
-                                if (e.target.value > 31) {
-                                    e.target.value = '31';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '1';
+                                const year = parseInt(yearEle ? yearEle.value : new Date().getFullYear(), 10);
+                                const month = parseInt(monthEle ? monthEle.value : new Date().getMonth() + 1, 10);
+                                const maxDay = getMaxDayInMonth(year, month);
+                                const minValue = 1;
+
+                                let finalValue = numValue;
+                                if (finalValue > maxDay) {
+                                    finalValue = maxDay;
+                                } else if (finalValue < minValue) {
+                                    finalValue = minValue;
                                 }
-                                let selectDate = theTool.formatDate('Y-m-d', yearEle.value + '-' + monthEle.value + '-' + e.target.value)
-                                    ;
-                                self.locateDay(selectDate);
+                                target.value = self.fillLeadZero(String(finalValue), 2);
                             }
-                        } else {
-                            //e.target.value = '1';
                         }
+                    };
+                    dayEle.addEventListener('input', function (e) {
+                        dayInputEvent(e);
                     });
                     dayEle.addEventListener('change', function (e) {
                         e.target.value = self.fillLeadZero(e.target.value, 2);
+                        const dateStr = yearEle.value + '-' + monthEle.value + '-' + e.target.value;
+                        const selectDate = theTool.formatDate('Y-m-d', dateStr);
+                        self.locateDay(selectDate);
                     });
                     dayEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -2024,209 +2696,162 @@ export let WriterControl_DateTimeControl = {
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38 || key === 40) {
+                            const increment = key === 38 ? 1 : -1;
+                            const year = parseInt(yearEle ? yearEle.value : new Date().getFullYear(), 10);
+                            const month = parseInt(monthEle ? monthEle.value : new Date().getMonth() + 1, 10);
+                            const maxDay = getMaxDayInMonth(year, month);
+                            let newDay = parseInt(e.target.value, 10) + increment;
+                            const allowDayCycle = false;
+                            if (allowDayCycle) {
+                                // 允许循环：1变成31，31变成1
+                                if (newDay < 1) newDay = maxDay;
+                                if (newDay > maxDay) newDay = 1;
+                            } else {
+                                // 不允许循环：限制在1-maxDay范围内
+                                if (newDay < 1) newDay = 1;
+                                if (newDay > maxDay) newDay = maxDay;
+                            }
+                            e.target.value = self.fillLeadZero(String(newDay), 2);
+                            dayInputEvent(e);
+                            const dateStr = yearEle.value + '-' + monthEle.value + '-' + e.target.value;
+                            const selectDate = theTool.formatDate('Y-m-d', dateStr);
+                            self.locateDay(selectDate);
+                        }
                     });
                 }
+            };
+            // 构建日期选择
+            theTool.buildDate = function () {
+                const self = this;
+                let html = `<section class='dc_date-group'>`;
+                html += '<input name="year" class="dc_year" min="1900" max="2300" autocomplete="off"/>';
+                html += '<span>年</span>';
+                html += '<input name="month" class="dc_month" min="1" max="12" autocomplete="off"/>';
+                html += '<span>月</span>';
+                html += '<input name="day" class="dc_day" min="1" max="31" autocomplete="off"/>';
+                html += '<span>日</span>';
+                html += '</section>';
+                if (self.cacheApi.settings.mode === 'range') {
+                    html += html;
+                }
+                self.dom.timeSet.innerHTML = html;
+                //self.dom.head.insertAdjacentElement('afterbegin', self.dom.timeSet);
+                self.dom.main.insertAdjacentElement('beforeend', self.dom.timeSet);
+                self.bindYearMonthDayInputEvents();
                 self.setDateValues();
-
             };
             // 构建日期时间选择
             theTool.buildDateTimes = function () {
                 const self = this;
                 const splitHtml = '<i></i>';
-
-
-
+                // 日期
                 let html = `<section class='dc_date-group'>`;
-
-                html += '<input type="number" name="year" class="dc_year" min="1900" max="2300" autocomplete="false"/>';
-                html += splitHtml;
-                html += '<input type="number" name="month" class="dc_month" min="1" max="12" autocomplete="false"/>';
-                html += splitHtml;
-                html += '<input type="number" name="day" class="dc_day" min="1" max="31" autocomplete="false"/>';
+                html += '<input name="year" class="dc_year" min="1900" max="2300" autocomplete="off"/>';
+                html += '<span>年</span>';
+                html += '<input name="month" class="dc_month" min="1" max="12" autocomplete="off"/>';
+                html += '<span>月</span>';
+                html += '<input name="day" class="dc_day" min="1" max="31" autocomplete="off"/>';
+                html += '<span>日</span>';
                 html += '</section>';
-
+                // 时间
                 html += `<section class='dc_time-group'>`;
-                html += '<input type="number" name="hour" class="dc_hour" min="0" max="23" autocomplete="false"/>';
+                html += '<input name="hour" class="dc_hour" min="0" max="23" autocomplete="off"/>';
                 html += splitHtml;
-                html += '<input type="number" name="mint" class="dc_mint" min="0" max="59" autocomplete="false"/>';
+                html += '<input name="mint" class="dc_mint" min="0" max="59" autocomplete="off"/>';
                 html += splitHtml;
-                html += '<input type="number" name="secs" class="dc_secs" min="0" max="59" autocomplete="false"/>';
+                html += '<input name="secs" class="dc_secs" min="0" max="59" autocomplete="off"/>';
                 html += '</section>';
-
                 if (self.cacheApi.settings.mode === 'range') {
                     html += html;
                 }
                 self.dom.timeSet.innerHTML = html;
-                self.dom.head.insertAdjacentElement('afterbegin', self.dom.timeSet);
-                var yearEle = self.dom.timeSet.querySelector('.dc_year');//年
-                var monthEle = self.dom.timeSet.querySelector('.dc_month');//月
-                var dayEle = self.dom.timeSet.querySelector('.dc_day');//日
-
+                //self.dom.head.insertAdjacentElement('afterbegin', self.dom.timeSet);
+                self.dom.main.insertAdjacentElement('beforeend', self.dom.timeSet);
+                self.bindYearMonthDayInputEvents();
                 var hourEle = self.dom.timeSet.querySelector('.dc_hour');//时
                 var mintEle = self.dom.timeSet.querySelector('.dc_mint');//分
                 var secsEle = self.dom.timeSet.querySelector('.dc_secs');//秒
-
-                if (yearEle) {
-                    yearEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                const currentTime = new Date();
-                                e.target.value = currentTime.getFullYear();
-                            } else {
-                                if (e.target.value.length > 3 && e.data) {
-                                    if (monthEle) {
-                                        monthEle.select();
-                                        monthEle.focus();
-                                    }
-                                }
-                            }
+                function hourInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+                        //e.target.value = parseInt(e.target.value);
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
                         } else {
-                            //e.target.value = '0';
-                        }
-                    });
-                    yearEle.addEventListener('change', function (e) {
-                        jQuery("select.year").val(e.target.value);
-                        self.gotoDate();
-                        let selectDate = theTool.formatDate('Y-m-d', e.target.value + '-' + monthEle.value + '-' + dayEle.value);
-                        self.locateDay(selectDate);
-                    });
-
-                    yearEle.addEventListener('keydown', function (e) {
-                        const key = e.keyCode || e.which;
-                        if (key === 13) {
-                            e.target.blur();
-                            e.preventDefault();
-                            self.confirmTime();
-                        }
-                    });
-                }
-                if (monthEle) {
-                    monthEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            //e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
+                            if (e.target.value > 23) {
+                                e.target.value = '23';
+                            } else if (e.target.value < 0) {
                                 e.target.value = '0';
-                            } else {
-                                if (e.target.value > 12) {
-                                    e.target.value = '12';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '1';
+                            }
+                            if (e.target.value.length > 1 && e.data) {
+                                if (e.target.value > 9) {
+                                    e.target.value = parseInt(e.target.value);
                                 }
-
-                                if ((e.target.value.length > 1 || (e.target.value > 1 && e.target.value < 10)) && e.data) {
-                                    if (e.target.value == '00') {
-                                        e.target.value = '01';
-                                    }
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (dayEle) {
-                                        dayEle.select();
-                                        dayEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
+                                if (mintEle) {
+                                    mintEle.select();
+                                    mintEle.focus();
                                 }
                             }
-                        } else {
-                            //e.target.value = '0';
+                            if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
+                                e.target.value = '0' + e.target.value;
+                            }
                         }
-                    });
-                    monthEle.addEventListener('change', function (e) {
-                        //e.target.value=self.fillLeadZero(e.target.value,2)
-                        jQuery("select.month").val(e.target.value);
-                        self.gotoDate();
-                        let selectDate = theTool.formatDate('Y-m-d', yearEle.value + '-' + e.target.value + '-' + dayEle.value);
-                        self.locateDay(selectDate);
-                    });
-                    monthEle.addEventListener('keydown', function (e) {
-                        const key = e.keyCode || e.which;
-                        if (key === 13) {
-                            e.target.blur();
-                            e.preventDefault();
-                            self.confirmTime();
-                        }
-                    });
+                    } else {
+                        //e.target.value = '0';
+                    }
                 }
-                if (dayEle) {
-                    dayEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            //e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
+                function mintInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+                        // console.log(e.target.value);
+                        //e.target.value = parseInt(e.target.value);
+
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
+                        } else {
+                            if (e.target.value > 59) {
+                                e.target.value = '59';
+                            } else if (e.target.value < 0) {
                                 e.target.value = '0';
-                            } else {
-                                if (e.target.value > 31) {
-                                    e.target.value = '31';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '1';
+                            }
+                            if (e.target.value.length > 1 && e.data) {
+                                if (e.target.value > 9) {
+                                    e.target.value = parseInt(e.target.value);
                                 }
-                                let selectDate = theTool.formatDate('Y-m-d', yearEle.value + '-' + monthEle.value + '-' + e.target.value)
-                                    ;
-                                self.locateDay(selectDate);
-                                if (e.target.value.length > 1 && e.data) {
-                                    if (e.target.value == '00') {
-                                        e.target.value = '01';
-                                    }
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (hourEle) {
-
-                                        hourEle.select();
-                                        hourEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
+                                if (secsEle) {
+                                    secsEle.select();
+                                    secsEle.focus();
                                 }
                             }
-                        } else {
-                            //e.target.value = '1';
+                            if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
+                                e.target.value = '0' + e.target.value;
+                            }
                         }
-                    });
-                    dayEle.addEventListener('change', function (e) {
-                        e.target.value = self.fillLeadZero(e.target.value, 2);
-                    });
-                    dayEle.addEventListener('keydown', function (e) {
-                        const key = e.keyCode || e.which;
-                        if (key === 13) {
-                            e.target.blur();
-                            e.preventDefault();
-                            self.confirmTime();
-                        }
-                    });
+                    } else {
+                        //e.target.value = '0';
+                    }
                 }
-
+                function secsInput(e) {
+                    if (e.target.value && e.target.value.length > 0) {
+                        e.target.value = parseInt(e.target.value);
+                        if (isNaN(e.target.value)) {
+                            e.target.value = '0';
+                        } else {
+                            if (e.target.value > 59) {
+                                e.target.value = '59';
+                            } else if (e.target.value < 0) {
+                                e.target.value = '0';
+                            }
+                            if (e.target.value < 10) {
+                                e.target.value = '0' + e.target.value;
+                            }
+                        }
+                    } else {
+                        //e.target.value = '0';
+                    }
+                }
                 if (hourEle) {
                     hourEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            //e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
-                            } else {
-                                if (e.target.value > 23) {
-                                    e.target.value = '23';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
-                                }
-                                if (e.target.value.length > 1 && e.data) {
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (mintEle) {
-                                        mintEle.select();
-                                        mintEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
-                                }
-                            }
-                        } else {
-                            //e.target.value = '0';
-                        }
+                        hourInput(e);
                     });
                     hourEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -2235,39 +2860,20 @@ export let WriterControl_DateTimeControl = {
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            hourInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            hourInput(e);
+                        }
                     });
                 }
                 // var mintEle = self.dom.timeSet.querySelector('.mint');
                 if (mintEle) {
                     mintEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            // console.log(e.target.value);
-                            //e.target.value = parseInt(e.target.value);
-
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
-                            } else {
-                                if (e.target.value > 59) {
-                                    e.target.value = '59';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
-                                }
-                                if (e.target.value.length > 1 && e.data) {
-                                    if (e.target.value > 9) {
-                                        e.target.value = parseInt(e.target.value);
-                                    }
-                                    if (secsEle) {
-                                        secsEle.select();
-                                        secsEle.focus();
-                                    }
-                                }
-                                if (e.target.value.length < 2 && e.target.value < 10 && e.target.value != '0') {
-                                    e.target.value = '0' + e.target.value;
-                                }
-                            }
-                        } else {
-                            //e.target.value = '0';
-                        }
+                        mintInput(e);
                     });
                     mintEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -2276,28 +2882,20 @@ export let WriterControl_DateTimeControl = {
                             e.preventDefault();
                             self.confirmTime();
                         }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            mintInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            mintInput(e);
+                        }
                     });
                 }
                 // var secsEle = self.dom.timeSet.querySelector('.secs');
                 if (secsEle) {
                     secsEle.addEventListener('input', function (e) {
-                        if (e.target.value && e.target.value.length > 0) {
-                            e.target.value = parseInt(e.target.value);
-                            if (isNaN(e.target.value)) {
-                                e.target.value = '0';
-                            } else {
-                                if (e.target.value > 59) {
-                                    e.target.value = '59';
-                                } else if (e.target.value < 0) {
-                                    e.target.value = '0';
-                                }
-                                if (e.target.value < 10) {
-                                    e.target.value = '0' + e.target.value;
-                                }
-                            }
-                        } else {
-                            //e.target.value = '0';
-                        }
+                        secsInput(e);
                     });
                     secsEle.addEventListener('keydown', function (e) {
                         const key = e.keyCode || e.which;
@@ -2305,6 +2903,14 @@ export let WriterControl_DateTimeControl = {
                             e.target.blur();
                             e.preventDefault();
                             self.confirmTime();
+                        }
+                        if (key === 38) {
+                            e.target.value = parseInt(e.target.value) + 1;
+                            secsInput(e);
+                        }
+                        if (key === 40) {
+                            e.target.value = parseInt(e.target.value) - 1;
+                            secsInput(e);
                         }
                     });
                 }
@@ -2817,8 +3423,9 @@ export let WriterControl_DateTimeControl = {
                     case 'date':
                     case 'datetime':
                         const yearIndex = selects.year.selectedIndex;
+                        const yearMax = selects.year.length - 1;
 
-                        if (yearIndex > 0) {
+                        if (yearIndex < yearMax) {
                             selects.year.selectedIndex += 1;
                             self.gotoDate();
                         }
@@ -2826,7 +3433,7 @@ export let WriterControl_DateTimeControl = {
 
                     case 'month':
                     case 'year':
-                        if (selects.year.selectedIndex > 0) {
+                        if (selects.year.selectedIndex < selects.year.length - 1) {
                             selects.year.selectedIndex += 1;
                             self.gotoDate();
                         } break;
@@ -3022,13 +3629,12 @@ export let WriterControl_DateTimeControl = {
                     secs: 2,
                 };
 
-                for (let x of self.dom.timeSet.querySelectorAll('input[type=number]')) {
+                for (let x of self.dom.timeSet.querySelectorAll('input')) {
                     if (x.name in map) {
                         times[map[x.name]] = parseInt(x.value ? x.value : '00');
                     }
                 }
                 theDate.setHours(...times);
-
                 self.cacheApi.setDate(theDate.getTime());
             };
 
@@ -3263,7 +3869,7 @@ export let WriterControl_DateTimeControl = {
                 } self.setOptions();
 
                 theTool.cacheApi = self;
-                theTool.buildPanel();
+                theTool.buildPanel(rootElement);
                 theTool.showPanel(rootElement);
             };
 

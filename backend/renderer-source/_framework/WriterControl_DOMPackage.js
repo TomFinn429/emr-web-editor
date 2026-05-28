@@ -70,7 +70,7 @@ export class PromptProtectedContentEventArgs {
         this.ElementName = this.__Target.invokeMethod("get_ElementName");
         this.ElementID = this.__Target.invokeMethod("get_ElementID");
         this.ElementTypeName = this.__Target.invokeMethod("get_ElementTypeName");
-        this.PromptMode = this.__Target.invokeMethod("get_PromptMode"); 
+        this.PromptMode = this.__Target.invokeMethod("get_PromptMode");
     }
     get Handled() { return this.__Target.invokeMethod("get_Handled"); }
     set Handled(v) { this.__Target.invokeMethod("set_Handled", v); }
@@ -121,6 +121,7 @@ export class InsertObjectEventArgs {
         this.AllowDataFormats = this.__Target.invokeMethod("get_AllowDataFormats");
         this.AllowedEffect = this.__Target.invokeMethod("get_AllowedEffect");
         this.AutoSelectContent = this.__Target.invokeMethod("get_AutoSelectContent");
+        this.CheckMaxTextLengthForCopyPaste = this.__Target.invokeMethod("get_CheckMaxTextLengthForCopyPaste");
         this.ContainerElementID = this.__Target.invokeMethod("get_ContainerElementID");
         this.ContainerElementName = this.__Target.invokeMethod("get_ContainerElementName");
         this.DetectForDragContent = this.__Target.invokeMethod("get_DetectForDragContent");
@@ -229,184 +230,184 @@ export class WriterSectionElementCancelEventArgs {
 };
 
 
-/** 类型 DCSoft.Writer.Dom.XTextElement 的JS封装 */
-export class XTextElement {
-    constructor(obj) {
-        if (obj == null) throw "XTextElement:参数为空";
-        this.__TypeName == "XTextElement";
-        this.__Target = obj;
-        this.AbsLeft = this.__Target.invokeMethod("get_AbsLeft");
-        this.AbsTop = this.__Target.invokeMethod("get_AbsTop");
-        this.Bottom = this.__Target.invokeMethod("get_Bottom");
-        this.ClientHeight = this.__Target.invokeMethod("get_ClientHeight");
-        this.ClientWidth = this.__Target.invokeMethod("get_ClientWidth");
-        this.ColumnIndex = this.__Target.invokeMethod("get_ColumnIndex");
-        this.ContentIndex = this.__Target.invokeMethod("get_ContentIndex");
-        this.ContentVersion = this.__Target.invokeMethod("get_ContentVersion");
-        this.CreatorPermessionLevel = this.__Target.invokeMethod("get_CreatorPermessionLevel");
-        this.DeleterPermissionLevel = this.__Target.invokeMethod("get_DeleterPermissionLevel");
-        //this.ElementInstanceIndex = this.__Target.invokeMethod("get_ElementInstanceIndex");
-        this.Focused = this.__Target.invokeMethod("get_Focused");
-        this.HasSelection = this.__Target.invokeMethod("get_HasSelection");
-        this.Height = this.__Target.invokeMethod("get_Height");
-        this.IsLogicDeleted = this.__Target.invokeMethod("get_IsLogicDeleted");
-        this.IsNewInputContent = this.__Target.invokeMethod("get_IsNewInputContent");
-        this.Left = this.__Target.invokeMethod("get_Left");
-        this.OwnerLastPageIndex = this.__Target.invokeMethod("get_OwnerLastPageIndex");
-        this.OwnerPageIndex = this.__Target.invokeMethod("get_OwnerPageIndex");
-        this.OwnerPagePartyStyle = this.__Target.invokeMethod("get_OwnerPagePartyStyle");
-        this.PixelClientWidth = this.__Target.invokeMethod("get_PixelClientWidth");
-        this.Right = this.__Target.invokeMethod("get_Right");
-        this.RuntimeVisible = this.__Target.invokeMethod("get_RuntimeVisible");
-        this.Top = this.__Target.invokeMethod("get_Top");
-        this.Width = this.__Target.invokeMethod("get_Width");
-    }
-    get ElementIndex() { return this.__Target.invokeMethod("get_ElementIndex"); }
-    set ElementIndex(v) { return this.__Target.invokeMethod("set_ElementIndex", v); }
-    get FormulaValue() { return this.__Target.invokeMethod("get_FormulaValue"); }
-    set FormulaValue(v) { return this.__Target.invokeMethod("set_FormulaValue", v); }
-    get ID() { return this.__Target.invokeMethod("get_ID"); }
-    set ID(v) { return this.__Target.invokeMethod("set_ID", v); }
-    get InnerID() { return this.__Target.invokeMethod("get_InnerID"); }
-    set InnerID(v) { return this.__Target.invokeMethod("set_InnerID", v); }
-    get InnerText() { return this.__Target.invokeMethod("get_InnerText"); }
-    set InnerText(v) { return this.__Target.invokeMethod("set_InnerText", v); }
-    get OuterText() { return this.__Target.invokeMethod("get_OuterText"); }
-    set OuterText(v) { return this.__Target.invokeMethod("set_OuterText", v); }
-    get StyleIndex() { return this.__Target.invokeMethod("get_StyleIndex"); }
-    set StyleIndex(v) { return this.__Target.invokeMethod("set_StyleIndex", v); }
-    get Text() { return this.__Target.invokeMethod("get_Text"); }
-    set Text(v) { return this.__Target.invokeMethod("set_Text", v); }
-    get Visible() { return this.__Target.invokeMethod("get_Visible"); }
-    set Visible(v) { return this.__Target.invokeMethod("set_Visible", v); }
-    /**
-    * @returns {string}
-    */
-    DispalyTypeName() {
-        return this.__Target.invokeMethod("DispalyTypeName",);
-    }
-    /**
-    */
-    EditorRefreshView() {
-        return this.__Target.invokeMethod("EditorRefreshView",);
-    }
-    /**
-    * @param {boolean} fastMode
-    */
-    EditorRefreshViewExt(fastMode) {
-        return this.__Target.invokeMethod("EditorRefreshViewExt", fastMode);
-    }
-    /**
-    * @param {number} width
-    * @param {number} height
-    * @param {boolean} updateView
-    * @param {boolean} logUndo
-    * @returns {boolean}
-    */
-    EditorSetSize(width, height, updateView, logUndo) {
-        return this.__Target.invokeMethod("EditorSetSize", width, height, updateView, logUndo);
-    }
-    /**
-    * @param {boolean} visible
-    * @returns {boolean}
-    */
-    EditorSetVisible(visible) {
-        return this.__Target.invokeMethod("EditorSetVisible", visible);
-    }
-    /**
-    * @param {boolean} visible
-    * @param {boolean} logUndo
-    * @param {boolean} fastMode
-    * @returns {boolean}
-    */
-    EditorSetVisibleExt(visible, logUndo, fastMode) {
-        return this.__Target.invokeMethod("EditorSetVisibleExt", visible, logUndo, fastMode);
-    }
-    /**
-    * @param {string} name
-    * @returns {string}
-    */
-    ExtGetPropertyValue(name) {
-        return this.__Target.invokeMethod("ExtGetPropertyValue", name);
-    }
-    /**
-    * @param {string} name
-    * @param {string} strValue
-    * @returns {boolean}
-    */
-    ExtSetPropertyValue(name, strValue) {
-        return this.__Target.invokeMethod("ExtSetPropertyValue", name, strValue);
-    }
-    /**
-    */
-    Focus() {
-        return this.__Target.invokeMethod("Focus",);
-    }
-    /**
-    * @param {string} name
-    * @returns {string}
-    */
-    GetAttribute(name) {
-        return this.__Target.invokeMethod("GetAttribute", name);
-    }
-    /**
-    * @param {any} args 原始类型为DCSoft.Writer.Dom.GetTextArgs
-    * @returns {string}
-    */
-    GetText(args) {
-        return this.__Target.invokeMethod("GetText", args);
-    }
-    /**
-    * @returns {string}
-    */
-    GetXMLFragment() {
-        return this.__Target.invokeMethod("GetXMLFragment",);
-    }
-    /**
-    * @param {string} name
-    * @returns {boolean}
-    */
-    HasAttribute(name) {
-        return this.__Target.invokeMethod("HasAttribute", name);
-    }
-    /**
-    */
-    InvalidateView() {
-        return this.__Target.invokeMethod("InvalidateView",);
-    }
-    /**
-    * @returns {boolean}
-    */
-    Select() {
-        return this.__Target.invokeMethod("Select",);
-    }
-    /**
-    * @param {string} name
-    * @param {string} Value
-    * @returns {boolean}
-    */
-    SetAttribute(name, Value) {
-        return this.__Target.invokeMethod("SetAttribute", name, Value);
-    }
-    /**
-    * @returns {string}
-    */
-    ToDebugString() {
-        return this.__Target.invokeMethod("ToDebugString",);
-    }
-    /**
-    * @returns {string}
-    */
-    ToPlaintString() {
-        return this.__Target.invokeMethod("ToPlaintString",);
-    }
-    /**
-    * @returns {string}
-    */
-    ToString() {
-        return this.__Target.invokeMethod("ToString",);
-    }
-};
+///** 类型 DCSoft.Writer.Dom.XTextElement 的JS封装 */
+//export class XTextElement {
+//    constructor(obj) {
+//        if (obj == null) throw "XTextElement:参数为空";
+//        this.__TypeName == "XTextElement";
+//        this.__Target = obj;
+//        this.AbsLeft = this.__Target.invokeMethod("get_AbsLeft");
+//        this.AbsTop = this.__Target.invokeMethod("get_AbsTop");
+//        this.Bottom = this.__Target.invokeMethod("get_Bottom");
+//        this.ClientHeight = this.__Target.invokeMethod("get_ClientHeight");
+//        this.ClientWidth = this.__Target.invokeMethod("get_ClientWidth");
+//        this.ColumnIndex = this.__Target.invokeMethod("get_ColumnIndex");
+//        this.ContentIndex = this.__Target.invokeMethod("get_ContentIndex");
+//        this.ContentVersion = this.__Target.invokeMethod("get_ContentVersion");
+//        this.CreatorPermessionLevel = this.__Target.invokeMethod("get_CreatorPermessionLevel");
+//        this.DeleterPermissionLevel = this.__Target.invokeMethod("get_DeleterPermissionLevel");
+//        //this.ElementInstanceIndex = this.__Target.invokeMethod("get_ElementInstanceIndex");
+//        this.Focused = this.__Target.invokeMethod("get_Focused");
+//        this.HasSelection = this.__Target.invokeMethod("get_HasSelection");
+//        this.Height = this.__Target.invokeMethod("get_Height");
+//        this.IsLogicDeleted = this.__Target.invokeMethod("get_IsLogicDeleted");
+//        this.IsNewInputContent = this.__Target.invokeMethod("get_IsNewInputContent");
+//        this.Left = this.__Target.invokeMethod("get_Left");
+//        this.OwnerLastPageIndex = this.__Target.invokeMethod("get_OwnerLastPageIndex");
+//        this.OwnerPageIndex = this.__Target.invokeMethod("get_OwnerPageIndex");
+//        this.OwnerPagePartyStyle = this.__Target.invokeMethod("get_OwnerPagePartyStyle");
+//        this.PixelClientWidth = this.__Target.invokeMethod("get_PixelClientWidth");
+//        this.Right = this.__Target.invokeMethod("get_Right");
+//        this.RuntimeVisible = this.__Target.invokeMethod("get_RuntimeVisible");
+//        this.Top = this.__Target.invokeMethod("get_Top");
+//        this.Width = this.__Target.invokeMethod("get_Width");
+//    }
+//    get ElementIndex() { return this.__Target.invokeMethod("get_ElementIndex"); }
+//    set ElementIndex(v) { return this.__Target.invokeMethod("set_ElementIndex", v); }
+//    get FormulaValue() { return this.__Target.invokeMethod("get_FormulaValue"); }
+//    set FormulaValue(v) { return this.__Target.invokeMethod("set_FormulaValue", v); }
+//    get ID() { return this.__Target.invokeMethod("get_ID"); }
+//    set ID(v) { return this.__Target.invokeMethod("set_ID", v); }
+//    get InnerID() { return this.__Target.invokeMethod("get_InnerID"); }
+//    set InnerID(v) { return this.__Target.invokeMethod("set_InnerID", v); }
+//    get InnerText() { return this.__Target.invokeMethod("get_InnerText"); }
+//    set InnerText(v) { return this.__Target.invokeMethod("set_InnerText", v); }
+//    get OuterText() { return this.__Target.invokeMethod("get_OuterText"); }
+//    set OuterText(v) { return this.__Target.invokeMethod("set_OuterText", v); }
+//    get StyleIndex() { return this.__Target.invokeMethod("get_StyleIndex"); }
+//    set StyleIndex(v) { return this.__Target.invokeMethod("set_StyleIndex", v); }
+//    get Text() { return this.__Target.invokeMethod("get_Text"); }
+//    set Text(v) { return this.__Target.invokeMethod("set_Text", v); }
+//    get Visible() { return this.__Target.invokeMethod("get_Visible"); }
+//    set Visible(v) { return this.__Target.invokeMethod("set_Visible", v); }
+//    /**
+//    * @returns {string}
+//    */
+//    DispalyTypeName() {
+//        return this.__Target.invokeMethod("DispalyTypeName",);
+//    }
+//    /**
+//    */
+//    EditorRefreshView() {
+//        return this.__Target.invokeMethod("EditorRefreshView",);
+//    }
+//    /**
+//    * @param {boolean} fastMode
+//    */
+//    EditorRefreshViewExt(fastMode) {
+//        return this.__Target.invokeMethod("EditorRefreshViewExt", fastMode);
+//    }
+//    /**
+//    * @param {number} width
+//    * @param {number} height
+//    * @param {boolean} updateView
+//    * @param {boolean} logUndo
+//    * @returns {boolean}
+//    */
+//    EditorSetSize(width, height, updateView, logUndo) {
+//        return this.__Target.invokeMethod("EditorSetSize", width, height, updateView, logUndo);
+//    }
+//    /**
+//    * @param {boolean} visible
+//    * @returns {boolean}
+//    */
+//    EditorSetVisible(visible) {
+//        return this.__Target.invokeMethod("EditorSetVisible", visible);
+//    }
+//    /**
+//    * @param {boolean} visible
+//    * @param {boolean} logUndo
+//    * @param {boolean} fastMode
+//    * @returns {boolean}
+//    */
+//    EditorSetVisibleExt(visible, logUndo, fastMode) {
+//        return this.__Target.invokeMethod("EditorSetVisibleExt", visible, logUndo, fastMode);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {string}
+//    */
+//    ExtGetPropertyValue(name) {
+//        return this.__Target.invokeMethod("ExtGetPropertyValue", name);
+//    }
+//    /**
+//    * @param {string} name
+//    * @param {string} strValue
+//    * @returns {boolean}
+//    */
+//    ExtSetPropertyValue(name, strValue) {
+//        return this.__Target.invokeMethod("ExtSetPropertyValue", name, strValue);
+//    }
+//    /**
+//    */
+//    Focus() {
+//        return this.__Target.invokeMethod("Focus",);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {string}
+//    */
+//    GetAttribute(name) {
+//        return this.__Target.invokeMethod("GetAttribute", name);
+//    }
+//    /**
+//    * @param {any} args 原始类型为DCSoft.Writer.Dom.GetTextArgs
+//    * @returns {string}
+//    */
+//    GetText(args) {
+//        return this.__Target.invokeMethod("GetText", args);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    GetXMLFragment() {
+//        return this.__Target.invokeMethod("GetXMLFragment",);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {boolean}
+//    */
+//    HasAttribute(name) {
+//        return this.__Target.invokeMethod("HasAttribute", name);
+//    }
+//    /**
+//    */
+//    InvalidateView() {
+//        return this.__Target.invokeMethod("InvalidateView",);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    Select() {
+//        return this.__Target.invokeMethod("Select",);
+//    }
+//    /**
+//    * @param {string} name
+//    * @param {string} Value
+//    * @returns {boolean}
+//    */
+//    SetAttribute(name, Value) {
+//        return this.__Target.invokeMethod("SetAttribute", name, Value);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToDebugString() {
+//        return this.__Target.invokeMethod("ToDebugString",);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToPlaintString() {
+//        return this.__Target.invokeMethod("ToPlaintString",);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToString() {
+//        return this.__Target.invokeMethod("ToString",);
+//    }
+//};
 
 
 /** 类型 DCSoft.Writer.ContentChangedEventArgs 的JS封装 */
@@ -416,8 +417,13 @@ export class ContentChangedEventArgs {
         this.__TypeName == "ContentChangedEventArgs";
         this.__Target = obj;
         this.ElementID = this.__Target.invokeMethod("get_ElementID");
+        this.CellID = obj.invokeMethod("get_CellID");
         this.ElementIndex = this.__Target.invokeMethod("get_ElementIndex");
         this.ElementName = this.__Target.invokeMethod("get_ElementName");
+        this.ElementTypeName = this.__Target.invokeMethod("get_ElementTypeName");
+        this.ElementHashCode = this.__Target.invokeMethod("get_ElementHashCode");
+        this.ElementChecked = this.__Target.invokeMethod("get_ElementChecked");
+        this.PreviewElementText = this.__Target.invokeMethod("get_PreviewElementText");
         this.EventSource = this.__Target.invokeMethod("get_EventSource");
         this.OnlyStyleChanged = this.__Target.invokeMethod("get_OnlyStyleChanged");
         this.UndoRedoCause = this.__Target.invokeMethod("get_UndoRedoCause");
@@ -436,8 +442,10 @@ export class ContentChangingEventArgs {
         this.__TypeName == "ContentChangingEventArgs";
         this.__Target = obj;
         this.ElementID = this.__Target.invokeMethod("get_ElementID");
+        this.CellID = obj.invokeMethod("get_CellID");
         this.ElementIndex = this.__Target.invokeMethod("get_ElementIndex");
         this.ElementName = this.__Target.invokeMethod("get_ElementName");
+        this.ElementTypeName = this.__Target.invokeMethod("get_ElementTypeName");
     }
     get Cancel() { return this.__Target.invokeMethod("get_Cancel"); }
     set Cancel(v) { return this.__Target.invokeMethod("set_Cancel", v); }
@@ -461,14 +469,14 @@ export class ElementEventArgs {
         this.__TypeName == "ElementEventArgs";
         this.__Target = obj;
         this.ElementID = obj.invokeMethod("get_ElementID");
+        this.CellID = obj.invokeMethod("get_CellID");
         //this.ElementInstanceIndex = this.__Target.invokeMethod("get_ElementInstanceIndex");
         this.ElementName = obj.invokeMethod("get_ElementName");
         this.ElementTypeName = obj.invokeMethod("get_ElementTypeName");
         this.ElementHashCode = obj.invokeMethod("get_ElementHashCode");
     }
     get TargetElement() {
-        return this.WriterControl.__DCWriterReference.invokeMethod(
-            "GetElementByHashCode",
+        return this.WriterControl.__DCWriterReference.invokeMethod("GetElementByHashCode",
             this.ElementHashCode);
     }
     get CancelBubble() { return this.__Target.invokeMethod("get_CancelBubble"); }
@@ -490,8 +498,7 @@ export class WriterEventArgs {
         this.ElementHashCode = obj.invokeMethod("get_ElementHashCode");
     }
     get TargetElement() {
-        return this.WriterControl.__DCWriterReference.invokeMethod(
-            "GetElementByHashCode",
+        return this.WriterControl.__DCWriterReference.invokeMethod("GetElementByHashCode",
             this.ElementHashCode);
     }
 };
@@ -509,344 +516,344 @@ export class WriterSectionElementEventArgs {
 };
 
 
-/** 类型 DCSoft.Writer.Dom.XTextContainerElement 的JS封装 */
-export class XTextContainerElement extends XTextElement {
-    constructor(obj) {
-        if (obj == null) throw "XTextContainerElement:参数为空";
-        super(obj);
-        this.__TypeName == "XTextContainerElement";
-        this.__Target = obj;
-        this.ElementsCount = this.__Target.invokeMethod("get_ElementsCount");
-        this.HasSelection = this.__Target.invokeMethod("get_HasSelection");
-    }
-    get AcceptChildElementTypes2() { return this.__Target.invokeMethod("get_AcceptChildElementTypes2"); }
-    set AcceptChildElementTypes2(v) { return this.__Target.invokeMethod("set_AcceptChildElementTypes2", v); }
-    get AcceptTab() { return this.__Target.invokeMethod("get_AcceptTab"); }
-    set AcceptTab(v) { return this.__Target.invokeMethod("set_AcceptTab", v); }
-    get AutoFixTextMode() { return this.__Target.invokeMethod("get_AutoFixTextMode"); }
-    set AutoFixTextMode(v) { return this.__Target.invokeMethod("set_AutoFixTextMode", v); }
-    get AutoHideMode() { return this.__Target.invokeMethod("get_AutoHideMode"); }
-    set AutoHideMode(v) { return this.__Target.invokeMethod("set_AutoHideMode", v); }
-    get BringoutToSave() { return this.__Target.invokeMethod("get_BringoutToSave"); }
-    set BringoutToSave(v) { return this.__Target.invokeMethod("set_BringoutToSave", v); }
-    get CanBeReferenced() { return this.__Target.invokeMethod("get_CanBeReferenced"); }
-    set CanBeReferenced(v) { return this.__Target.invokeMethod("set_CanBeReferenced", v); }
-    get ContentLock() { return this.__Target.invokeMethod("get_ContentLock"); }
-    set ContentLock(v) { return this.__Target.invokeMethod("set_ContentLock", v); }
-    get ContentReadonly() { return this.__Target.invokeMethod("get_ContentReadonly"); }
-    set ContentReadonly(v) { return this.__Target.invokeMethod("set_ContentReadonly", v); }
-    get ContentReadonlyExpression() { return this.__Target.invokeMethod("get_ContentReadonlyExpression"); }
-    set ContentReadonlyExpression(v) { return this.__Target.invokeMethod("set_ContentReadonlyExpression", v); }
-    get CopySource() { return this.__Target.invokeMethod("get_CopySource"); }
-    set CopySource(v) { return this.__Target.invokeMethod("set_CopySource", v); }
-    get DataFeedback() { return this.__Target.invokeMethod("get_DataFeedback"); }
-    set DataFeedback(v) { return this.__Target.invokeMethod("set_DataFeedback", v); }
-    get DataName() { return this.__Target.invokeMethod("get_DataName"); }
-    set DataName(v) { return this.__Target.invokeMethod("set_DataName", v); }
-    get DefaultValueForValueBinding() { return this.__Target.invokeMethod("get_DefaultValueForValueBinding"); }
-    set DefaultValueForValueBinding(v) { return this.__Target.invokeMethod("set_DefaultValueForValueBinding", v); }
-    get Deleteable() { return this.__Target.invokeMethod("get_Deleteable"); }
-    set Deleteable(v) { return this.__Target.invokeMethod("set_Deleteable", v); }
-    get EditorText() { return this.__Target.invokeMethod("get_EditorText"); }
-    set EditorText(v) { return this.__Target.invokeMethod("set_EditorText", v); }
-    get EditorTextExt() { return this.__Target.invokeMethod("get_EditorTextExt"); }
-    set EditorTextExt(v) { return this.__Target.invokeMethod("set_EditorTextExt", v); }
-    get ElementIDForEditableDependent() { return this.__Target.invokeMethod("get_ElementIDForEditableDependent"); }
-    set ElementIDForEditableDependent(v) { return this.__Target.invokeMethod("set_ElementIDForEditableDependent", v); }
-    get EmitDataFieldName() { return this.__Target.invokeMethod("get_EmitDataFieldName"); }
-    set EmitDataFieldName(v) { return this.__Target.invokeMethod("set_EmitDataFieldName", v); }
-    get EmitDataSource() { return this.__Target.invokeMethod("get_EmitDataSource"); }
-    set EmitDataSource(v) { return this.__Target.invokeMethod("set_EmitDataSource", v); }
-    get EnablePermission() { return this.__Target.invokeMethod("get_EnablePermission"); }
-    set EnablePermission(v) { return this.__Target.invokeMethod("set_EnablePermission", v); }
-    get EnableValueValidate() { return this.__Target.invokeMethod("get_EnableValueValidate"); }
-    set EnableValueValidate(v) { return this.__Target.invokeMethod("set_EnableValueValidate", v); }
-    get EncryptContent() { return this.__Target.invokeMethod("get_EncryptContent"); }
-    set EncryptContent(v) { return this.__Target.invokeMethod("set_EncryptContent", v); }
-    get FormulaValue() { return this.__Target.invokeMethod("get_FormulaValue"); }
-    set FormulaValue(v) { return this.__Target.invokeMethod("set_FormulaValue", v); }
-    get HiddenPrintWhenEmpty() { return this.__Target.invokeMethod("get_HiddenPrintWhenEmpty"); }
-    set HiddenPrintWhenEmpty(v) { return this.__Target.invokeMethod("set_HiddenPrintWhenEmpty", v); }
-    get InnerText() { return this.__Target.invokeMethod("get_InnerText"); }
-    set InnerText(v) { return this.__Target.invokeMethod("set_InnerText", v); }
-    get JavaScriptForClick() { return this.__Target.invokeMethod("get_JavaScriptForClick"); }
-    set JavaScriptForClick(v) { return this.__Target.invokeMethod("set_JavaScriptForClick", v); }
-    get JavaScriptForDoubleClick() { return this.__Target.invokeMethod("get_JavaScriptForDoubleClick"); }
-    set JavaScriptForDoubleClick(v) { return this.__Target.invokeMethod("set_JavaScriptForDoubleClick", v); }
-    get LimitedInputChars() { return this.__Target.invokeMethod("get_LimitedInputChars"); }
-    set LimitedInputChars(v) { return this.__Target.invokeMethod("set_LimitedInputChars", v); }
-    get MaxInputLength() { return this.__Target.invokeMethod("get_MaxInputLength"); }
-    set MaxInputLength(v) { return this.__Target.invokeMethod("set_MaxInputLength", v); }
-    get Modified() { return this.__Target.invokeMethod("get_Modified"); }
-    set Modified(v) { return this.__Target.invokeMethod("set_Modified", v); }
-    get OuterText() { return this.__Target.invokeMethod("get_OuterText"); }
-    set OuterText(v) { return this.__Target.invokeMethod("set_OuterText", v); }
-    get PrintVisibility() { return this.__Target.invokeMethod("get_PrintVisibility"); }
-    set PrintVisibility(v) { return this.__Target.invokeMethod("set_PrintVisibility", v); }
-    get PrintVisibilityExpression() { return this.__Target.invokeMethod("get_PrintVisibilityExpression"); }
-    set PrintVisibilityExpression(v) { return this.__Target.invokeMethod("set_PrintVisibilityExpression", v); }
-    get PropertyExpressions() { return this.__Target.invokeMethod("get_PropertyExpressions"); }
-    set PropertyExpressions(v) { return this.__Target.invokeMethod("set_PropertyExpressions", v); }
-    get ReferencedDataName() { return this.__Target.invokeMethod("get_ReferencedDataName"); }
-    set ReferencedDataName(v) { return this.__Target.invokeMethod("set_ReferencedDataName", v); }
-    get Text() { return this.__Target.invokeMethod("get_Text"); }
-    set Text(v) { return this.__Target.invokeMethod("set_Text", v); }
-    get ToolTip() { return this.__Target.invokeMethod("get_ToolTip"); }
-    set ToolTip(v) { return this.__Target.invokeMethod("set_ToolTip", v); }
-    get TransparentEncryptMode() { return this.__Target.invokeMethod("get_TransparentEncryptMode"); }
-    set TransparentEncryptMode(v) { return this.__Target.invokeMethod("set_TransparentEncryptMode", v); }
-    get ValidateStyle() { return this.__Target.invokeMethod("get_ValidateStyle"); }
-    set ValidateStyle(v) { return this.__Target.invokeMethod("set_ValidateStyle", v); }
-    get ValueBinding() { return this.__Target.invokeMethod("get_ValueBinding"); }
-    set ValueBinding(v) { return this.__Target.invokeMethod("set_ValueBinding", v); }
-    get ValueExpression() { return this.__Target.invokeMethod("get_ValueExpression"); }
-    set ValueExpression(v) { return this.__Target.invokeMethod("set_ValueExpression", v); }
-    get Visible() { return this.__Target.invokeMethod("get_Visible"); }
-    set Visible(v) { return this.__Target.invokeMethod("set_Visible", v); }
-    get VisibleExpression() { return this.__Target.invokeMethod("get_VisibleExpression"); }
-    set VisibleExpression(v) { return this.__Target.invokeMethod("set_VisibleExpression", v); }
-    /**
-    * @returns {boolean}
-    */
-    CanResign() {
-        return this.__Target.invokeMethod("CanResign",);
-    }
-    /**
-    * @returns {boolean}
-    */
-    ClearSign() {
-        return this.__Target.invokeMethod("ClearSign",);
-    }
-    /**
-    * @returns {boolean}
-    */
-    CommitUserTrace() {
-        return this.__Target.invokeMethod("CommitUserTrace",);
-    }
-    /**
-    * @returns {boolean}
-    */
-    DeleteAllSign() {
-        return this.__Target.invokeMethod("DeleteAllSign",);
-    }
-    /**
-    * @returns {string}
-    */
-    DispalyTypeName() {
-        return this.__Target.invokeMethod("DispalyTypeName",);
-    }
-    /**
-    * @param {boolean} logUndo
-    * @returns {boolean}
-    */
-    EditorDelete(logUndo) {
-        return this.__Target.invokeMethod("EditorDelete", logUndo);
-    }
-    /**
-    * @param {boolean} logUndo
-    * @returns {boolean}
-    */
-    EditorDeletePreserveContent(logUndo) {
-        return this.__Target.invokeMethod("EditorDeletePreserveContent", logUndo);
-    }
-    /**
-    */
-    EditorRefreshView() {
-        return this.__Target.invokeMethod("EditorRefreshView",);
-    }
-    /**
-    * @param {boolean} fastMode
-    */
-    EditorRefreshViewExt(fastMode) {
-        return this.__Target.invokeMethod("EditorRefreshViewExt", fastMode);
-    }
-    /**
-    * @param {number} width
-    * @param {number} height
-    * @param {boolean} updateView
-    * @param {boolean} logUndo
-    * @returns {boolean}
-    */
-    EditorSetSize(width, height, updateView, logUndo) {
-        return this.__Target.invokeMethod("EditorSetSize", width, height, updateView, logUndo);
-    }
-    /**
-    * @param {boolean} visible
-    * @returns {boolean}
-    */
-    EditorSetVisible(visible) {
-        return this.__Target.invokeMethod("EditorSetVisible", visible);
-    }
-    /**
-    * @param {boolean} visible
-    * @param {boolean} logUndo
-    * @param {boolean} fastMode
-    * @returns {boolean}
-    */
-    EditorSetVisibleExt(visible, logUndo, fastMode) {
-        return this.__Target.invokeMethod("EditorSetVisibleExt", visible, logUndo, fastMode);
-    }
-    /**
-    * @param {string} name
-    * @returns {string}
-    */
-    ExtGetPropertyValue(name) {
-        return this.__Target.invokeMethod("ExtGetPropertyValue", name);
-    }
-    /**
-    * @param {string} name
-    * @param {string} strValue
-    * @returns {boolean}
-    */
-    ExtSetPropertyValue(name, strValue) {
-        return this.__Target.invokeMethod("ExtSetPropertyValue", name, strValue);
-    }
-    /**
-    * @param {string} name
-    * @returns {string}
-    */
-    GetAttribute(name) {
-        return this.__Target.invokeMethod("GetAttribute", name);
-    }
-    /**
-    * @param {any} args 原始类型为DCSoft.Writer.Dom.GetTextArgs
-    * @returns {string}
-    */
-    GetText(args) {
-        return this.__Target.invokeMethod("GetText", args);
-    }
-    /**
-    * @returns {string}
-    */
-    GetXMLFragment() {
-        return this.__Target.invokeMethod("GetXMLFragment",);
-    }
-    /**
-    * @param {string} name
-    * @returns {boolean}
-    */
-    HasAttribute(name) {
-        return this.__Target.invokeMethod("HasAttribute", name);
-    }
-    /**
-    */
-    InvalidateView() {
-        return this.__Target.invokeMethod("InvalidateView",);
-    }
-    /**
-    * @returns {boolean}
-    */
-    ReSign() {
-        return this.__Target.invokeMethod("ReSign",);
-    }
-    /**
-    * @param {any} mode 原始类型为DCSoft.Common.DCCASignMode
-    * @returns {boolean}
-    */
-    ReSignSpecifyMode(mode) {
-        return this.__Target.invokeMethod("ReSignSpecifyMode", mode);
-    }
-    /**
-    * @param {string} text
-    * @param {boolean} ignoreCase
-    * @param {number} maxResultCount
-    * @returns {any} 原始类型 DCSoft.Writer.Dom.SearchStringResultList
-    */
-    SearchString(text, ignoreCase, maxResultCount) {
-        return this.__Target.invokeMethod("SearchString", text, ignoreCase, maxResultCount);
-    }
-    /**
-    * @returns {boolean}
-    */
-    Select() {
-        return this.__Target.invokeMethod("Select",);
-    }
-    /**
-    * @param {string} name
-    * @param {string} Value
-    * @returns {boolean}
-    */
-    SetAttribute(name, Value) {
-        return this.__Target.invokeMethod("SetAttribute", name, Value);
-    }
-    /**
-    * @param {string} userID
-    * @param {string} authoriseUserIDList
-    * @param {boolean} logUndo
-    * @returns {boolean}
-    */
-    SetContentLock(userID, authoriseUserIDList, logUndo) {
-        return this.__Target.invokeMethod("SetContentLock", userID, authoriseUserIDList, logUndo);
-    }
-    /**
-    * @returns {boolean}
-    */
-    SetContentLockByCurrentUser() {
-        return this.__Target.invokeMethod("SetContentLockByCurrentUser",);
-    }
-    /**
-    * @param {string} newText
-    * @param {any} flags 原始类型为DCSoft.Writer.Dom.DomAccessFlags
-    * @param {boolean} disablePermissioin
-    * @param {boolean} updateContent
-    * @returns {boolean}
-    */
-    SetEditorTextExt(newText, flags, disablePermissioin, updateContent) {
-        return this.__Target.invokeMethod("SetEditorTextExt", newText, flags, disablePermissioin, updateContent);
-    }
-    /**
-    * @param {string} text
-    * @param {boolean} ignoreCase
-    * @param {any} foreColor
-    * @param {any} backColor
-    * @param {boolean} supportPrint
-    * @param {boolean} supportPDF
-    * @returns {any} 原始类型 DCSoft.Writer.Dom.SearchStringResultList
-    */
-    SetTextHighlight(text, ignoreCase, foreColor, backColor, supportPrint, supportPDF) {
-        return this.__Target.invokeMethod("SetTextHighlight", text, ignoreCase, foreColor, backColor, supportPrint, supportPDF);
-    }
-    /**
-    * @param {string} text
-    * @param {number} textStyleIndex
-    * @param {number} paragraphStyleIndex
-    */
-    SetTextRawDOM(text, textStyleIndex, paragraphStyleIndex) {
-        return this.__Target.invokeMethod("SetTextRawDOM", text, textStyleIndex, paragraphStyleIndex);
-    }
-    /**
-    * @param {any} input 原始类型为DCSoft.Writer.Security.DCSignInputInfo
-    * @returns {boolean}
-    */
-    Sign(input) {
-        return this.__Target.invokeMethod("Sign", input);
-    }
-    /**
-    * @returns {string}
-    */
-    ToDebugString() {
-        return this.__Target.invokeMethod("ToDebugString",);
-    }
-    /**
-    * @returns {string}
-    */
-    ToPlaintString() {
-        return this.__Target.invokeMethod("ToPlaintString",);
-    }
-    /**
-    * @returns {string}
-    */
-    ToString() {
-        return this.__Target.invokeMethod("ToString",);
-    }
-    /**
-    * @param {boolean} loadingDocument
-    * @returns {any} 原始类型 DCSoft.Writer.Dom.ValueValidateResult
-    */
-    Validating(loadingDocument) {
-        return this.__Target.invokeMethod("Validating", loadingDocument);
-    }
-};
+///** 类型 DCSoft.Writer.Dom.XTextContainerElement 的JS封装 */
+//export class XTextContainerElement extends XTextElement {
+//    constructor(obj) {
+//        if (obj == null) throw "XTextContainerElement:参数为空";
+//        super(obj);
+//        this.__TypeName == "XTextContainerElement";
+//        this.__Target = obj;
+//        this.ElementsCount = this.__Target.invokeMethod("get_ElementsCount");
+//        this.HasSelection = this.__Target.invokeMethod("get_HasSelection");
+//    }
+//    get AcceptChildElementTypes2() { return this.__Target.invokeMethod("get_AcceptChildElementTypes2"); }
+//    set AcceptChildElementTypes2(v) { return this.__Target.invokeMethod("set_AcceptChildElementTypes2", v); }
+//    get AcceptTab() { return this.__Target.invokeMethod("get_AcceptTab"); }
+//    set AcceptTab(v) { return this.__Target.invokeMethod("set_AcceptTab", v); }
+//    get AutoFixTextMode() { return this.__Target.invokeMethod("get_AutoFixTextMode"); }
+//    set AutoFixTextMode(v) { return this.__Target.invokeMethod("set_AutoFixTextMode", v); }
+//    get AutoHideMode() { return this.__Target.invokeMethod("get_AutoHideMode"); }
+//    set AutoHideMode(v) { return this.__Target.invokeMethod("set_AutoHideMode", v); }
+//    get BringoutToSave() { return this.__Target.invokeMethod("get_BringoutToSave"); }
+//    set BringoutToSave(v) { return this.__Target.invokeMethod("set_BringoutToSave", v); }
+//    get CanBeReferenced() { return this.__Target.invokeMethod("get_CanBeReferenced"); }
+//    set CanBeReferenced(v) { return this.__Target.invokeMethod("set_CanBeReferenced", v); }
+//    get ContentLock() { return this.__Target.invokeMethod("get_ContentLock"); }
+//    set ContentLock(v) { return this.__Target.invokeMethod("set_ContentLock", v); }
+//    get ContentReadonly() { return this.__Target.invokeMethod("get_ContentReadonly"); }
+//    set ContentReadonly(v) { return this.__Target.invokeMethod("set_ContentReadonly", v); }
+//    get ContentReadonlyExpression() { return this.__Target.invokeMethod("get_ContentReadonlyExpression"); }
+//    set ContentReadonlyExpression(v) { return this.__Target.invokeMethod("set_ContentReadonlyExpression", v); }
+//    get CopySource() { return this.__Target.invokeMethod("get_CopySource"); }
+//    set CopySource(v) { return this.__Target.invokeMethod("set_CopySource", v); }
+//    get DataFeedback() { return this.__Target.invokeMethod("get_DataFeedback"); }
+//    set DataFeedback(v) { return this.__Target.invokeMethod("set_DataFeedback", v); }
+//    get DataName() { return this.__Target.invokeMethod("get_DataName"); }
+//    set DataName(v) { return this.__Target.invokeMethod("set_DataName", v); }
+//    get DefaultValueForValueBinding() { return this.__Target.invokeMethod("get_DefaultValueForValueBinding"); }
+//    set DefaultValueForValueBinding(v) { return this.__Target.invokeMethod("set_DefaultValueForValueBinding", v); }
+//    get Deleteable() { return this.__Target.invokeMethod("get_Deleteable"); }
+//    set Deleteable(v) { return this.__Target.invokeMethod("set_Deleteable", v); }
+//    get EditorText() { return this.__Target.invokeMethod("get_EditorText"); }
+//    set EditorText(v) { return this.__Target.invokeMethod("set_EditorText", v); }
+//    get EditorTextExt() { return this.__Target.invokeMethod("get_EditorTextExt"); }
+//    set EditorTextExt(v) { return this.__Target.invokeMethod("set_EditorTextExt", v); }
+//    get ElementIDForEditableDependent() { return this.__Target.invokeMethod("get_ElementIDForEditableDependent"); }
+//    set ElementIDForEditableDependent(v) { return this.__Target.invokeMethod("set_ElementIDForEditableDependent", v); }
+//    get EmitDataFieldName() { return this.__Target.invokeMethod("get_EmitDataFieldName"); }
+//    set EmitDataFieldName(v) { return this.__Target.invokeMethod("set_EmitDataFieldName", v); }
+//    get EmitDataSource() { return this.__Target.invokeMethod("get_EmitDataSource"); }
+//    set EmitDataSource(v) { return this.__Target.invokeMethod("set_EmitDataSource", v); }
+//    get EnablePermission() { return this.__Target.invokeMethod("get_EnablePermission"); }
+//    set EnablePermission(v) { return this.__Target.invokeMethod("set_EnablePermission", v); }
+//    get EnableValueValidate() { return this.__Target.invokeMethod("get_EnableValueValidate"); }
+//    set EnableValueValidate(v) { return this.__Target.invokeMethod("set_EnableValueValidate", v); }
+//    get EncryptContent() { return this.__Target.invokeMethod("get_EncryptContent"); }
+//    set EncryptContent(v) { return this.__Target.invokeMethod("set_EncryptContent", v); }
+//    get FormulaValue() { return this.__Target.invokeMethod("get_FormulaValue"); }
+//    set FormulaValue(v) { return this.__Target.invokeMethod("set_FormulaValue", v); }
+//    get HiddenPrintWhenEmpty() { return this.__Target.invokeMethod("get_HiddenPrintWhenEmpty"); }
+//    set HiddenPrintWhenEmpty(v) { return this.__Target.invokeMethod("set_HiddenPrintWhenEmpty", v); }
+//    get InnerText() { return this.__Target.invokeMethod("get_InnerText"); }
+//    set InnerText(v) { return this.__Target.invokeMethod("set_InnerText", v); }
+//    get JavaScriptForClick() { return this.__Target.invokeMethod("get_JavaScriptForClick"); }
+//    set JavaScriptForClick(v) { return this.__Target.invokeMethod("set_JavaScriptForClick", v); }
+//    get JavaScriptForDoubleClick() { return this.__Target.invokeMethod("get_JavaScriptForDoubleClick"); }
+//    set JavaScriptForDoubleClick(v) { return this.__Target.invokeMethod("set_JavaScriptForDoubleClick", v); }
+//    get LimitedInputChars() { return this.__Target.invokeMethod("get_LimitedInputChars"); }
+//    set LimitedInputChars(v) { return this.__Target.invokeMethod("set_LimitedInputChars", v); }
+//    get MaxInputLength() { return this.__Target.invokeMethod("get_MaxInputLength"); }
+//    set MaxInputLength(v) { return this.__Target.invokeMethod("set_MaxInputLength", v); }
+//    get Modified() { return this.__Target.invokeMethod("get_Modified"); }
+//    set Modified(v) { return this.__Target.invokeMethod("set_Modified", v); }
+//    get OuterText() { return this.__Target.invokeMethod("get_OuterText"); }
+//    set OuterText(v) { return this.__Target.invokeMethod("set_OuterText", v); }
+//    get PrintVisibility() { return this.__Target.invokeMethod("get_PrintVisibility"); }
+//    set PrintVisibility(v) { return this.__Target.invokeMethod("set_PrintVisibility", v); }
+//    get PrintVisibilityExpression() { return this.__Target.invokeMethod("get_PrintVisibilityExpression"); }
+//    set PrintVisibilityExpression(v) { return this.__Target.invokeMethod("set_PrintVisibilityExpression", v); }
+//    get PropertyExpressions() { return this.__Target.invokeMethod("get_PropertyExpressions"); }
+//    set PropertyExpressions(v) { return this.__Target.invokeMethod("set_PropertyExpressions", v); }
+//    get ReferencedDataName() { return this.__Target.invokeMethod("get_ReferencedDataName"); }
+//    set ReferencedDataName(v) { return this.__Target.invokeMethod("set_ReferencedDataName", v); }
+//    get Text() { return this.__Target.invokeMethod("get_Text"); }
+//    set Text(v) { return this.__Target.invokeMethod("set_Text", v); }
+//    get ToolTip() { return this.__Target.invokeMethod("get_ToolTip"); }
+//    set ToolTip(v) { return this.__Target.invokeMethod("set_ToolTip", v); }
+//    get TransparentEncryptMode() { return this.__Target.invokeMethod("get_TransparentEncryptMode"); }
+//    set TransparentEncryptMode(v) { return this.__Target.invokeMethod("set_TransparentEncryptMode", v); }
+//    get ValidateStyle() { return this.__Target.invokeMethod("get_ValidateStyle"); }
+//    set ValidateStyle(v) { return this.__Target.invokeMethod("set_ValidateStyle", v); }
+//    get ValueBinding() { return this.__Target.invokeMethod("get_ValueBinding"); }
+//    set ValueBinding(v) { return this.__Target.invokeMethod("set_ValueBinding", v); }
+//    get ValueExpression() { return this.__Target.invokeMethod("get_ValueExpression"); }
+//    set ValueExpression(v) { return this.__Target.invokeMethod("set_ValueExpression", v); }
+//    get Visible() { return this.__Target.invokeMethod("get_Visible"); }
+//    set Visible(v) { return this.__Target.invokeMethod("set_Visible", v); }
+//    get VisibleExpression() { return this.__Target.invokeMethod("get_VisibleExpression"); }
+//    set VisibleExpression(v) { return this.__Target.invokeMethod("set_VisibleExpression", v); }
+//    /**
+//    * @returns {boolean}
+//    */
+//    CanResign() {
+//        return this.__Target.invokeMethod("CanResign",);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    ClearSign() {
+//        return this.__Target.invokeMethod("ClearSign",);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    CommitUserTrace() {
+//        return this.__Target.invokeMethod("CommitUserTrace",);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    DeleteAllSign() {
+//        return this.__Target.invokeMethod("DeleteAllSign",);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    DispalyTypeName() {
+//        return this.__Target.invokeMethod("DispalyTypeName",);
+//    }
+//    /**
+//    * @param {boolean} logUndo
+//    * @returns {boolean}
+//    */
+//    EditorDelete(logUndo) {
+//        return this.__Target.invokeMethod("EditorDelete", logUndo);
+//    }
+//    /**
+//    * @param {boolean} logUndo
+//    * @returns {boolean}
+//    */
+//    EditorDeletePreserveContent(logUndo) {
+//        return this.__Target.invokeMethod("EditorDeletePreserveContent", logUndo);
+//    }
+//    /**
+//    */
+//    EditorRefreshView() {
+//        return this.__Target.invokeMethod("EditorRefreshView",);
+//    }
+//    /**
+//    * @param {boolean} fastMode
+//    */
+//    EditorRefreshViewExt(fastMode) {
+//        return this.__Target.invokeMethod("EditorRefreshViewExt", fastMode);
+//    }
+//    /**
+//    * @param {number} width
+//    * @param {number} height
+//    * @param {boolean} updateView
+//    * @param {boolean} logUndo
+//    * @returns {boolean}
+//    */
+//    EditorSetSize(width, height, updateView, logUndo) {
+//        return this.__Target.invokeMethod("EditorSetSize", width, height, updateView, logUndo);
+//    }
+//    /**
+//    * @param {boolean} visible
+//    * @returns {boolean}
+//    */
+//    EditorSetVisible(visible) {
+//        return this.__Target.invokeMethod("EditorSetVisible", visible);
+//    }
+//    /**
+//    * @param {boolean} visible
+//    * @param {boolean} logUndo
+//    * @param {boolean} fastMode
+//    * @returns {boolean}
+//    */
+//    EditorSetVisibleExt(visible, logUndo, fastMode) {
+//        return this.__Target.invokeMethod("EditorSetVisibleExt", visible, logUndo, fastMode);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {string}
+//    */
+//    ExtGetPropertyValue(name) {
+//        return this.__Target.invokeMethod("ExtGetPropertyValue", name);
+//    }
+//    /**
+//    * @param {string} name
+//    * @param {string} strValue
+//    * @returns {boolean}
+//    */
+//    ExtSetPropertyValue(name, strValue) {
+//        return this.__Target.invokeMethod("ExtSetPropertyValue", name, strValue);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {string}
+//    */
+//    GetAttribute(name) {
+//        return this.__Target.invokeMethod("GetAttribute", name);
+//    }
+//    /**
+//    * @param {any} args 原始类型为DCSoft.Writer.Dom.GetTextArgs
+//    * @returns {string}
+//    */
+//    GetText(args) {
+//        return this.__Target.invokeMethod("GetText", args);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    GetXMLFragment() {
+//        return this.__Target.invokeMethod("GetXMLFragment",);
+//    }
+//    /**
+//    * @param {string} name
+//    * @returns {boolean}
+//    */
+//    HasAttribute(name) {
+//        return this.__Target.invokeMethod("HasAttribute", name);
+//    }
+//    /**
+//    */
+//    InvalidateView() {
+//        return this.__Target.invokeMethod("InvalidateView",);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    ReSign() {
+//        return this.__Target.invokeMethod("ReSign",);
+//    }
+//    /**
+//    * @param {any} mode 原始类型为DCSoft.Common.DCCASignMode
+//    * @returns {boolean}
+//    */
+//    ReSignSpecifyMode(mode) {
+//        return this.__Target.invokeMethod("ReSignSpecifyMode", mode);
+//    }
+//    /**
+//    * @param {string} text
+//    * @param {boolean} ignoreCase
+//    * @param {number} maxResultCount
+//    * @returns {any} 原始类型 DCSoft.Writer.Dom.SearchStringResultList
+//    */
+//    SearchString(text, ignoreCase, maxResultCount) {
+//        return this.__Target.invokeMethod("SearchString", text, ignoreCase, maxResultCount);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    Select() {
+//        return this.__Target.invokeMethod("Select",);
+//    }
+//    /**
+//    * @param {string} name
+//    * @param {string} Value
+//    * @returns {boolean}
+//    */
+//    SetAttribute(name, Value) {
+//        return this.__Target.invokeMethod("SetAttribute", name, Value);
+//    }
+//    /**
+//    * @param {string} userID
+//    * @param {string} authoriseUserIDList
+//    * @param {boolean} logUndo
+//    * @returns {boolean}
+//    */
+//    SetContentLock(userID, authoriseUserIDList, logUndo) {
+//        return this.__Target.invokeMethod("SetContentLock", userID, authoriseUserIDList, logUndo);
+//    }
+//    /**
+//    * @returns {boolean}
+//    */
+//    SetContentLockByCurrentUser() {
+//        return this.__Target.invokeMethod("SetContentLockByCurrentUser",);
+//    }
+//    /**
+//    * @param {string} newText
+//    * @param {any} flags 原始类型为DCSoft.Writer.Dom.DomAccessFlags
+//    * @param {boolean} disablePermissioin
+//    * @param {boolean} updateContent
+//    * @returns {boolean}
+//    */
+//    SetEditorTextExt(newText, flags, disablePermissioin, updateContent) {
+//        return this.__Target.invokeMethod("SetEditorTextExt", newText, flags, disablePermissioin, updateContent);
+//    }
+//    /**
+//    * @param {string} text
+//    * @param {boolean} ignoreCase
+//    * @param {any} foreColor
+//    * @param {any} backColor
+//    * @param {boolean} supportPrint
+//    * @param {boolean} supportPDF
+//    * @returns {any} 原始类型 DCSoft.Writer.Dom.SearchStringResultList
+//    */
+//    SetTextHighlight(text, ignoreCase, foreColor, backColor, supportPrint, supportPDF) {
+//        return this.__Target.invokeMethod("SetTextHighlight", text, ignoreCase, foreColor, backColor, supportPrint, supportPDF);
+//    }
+//    /**
+//    * @param {string} text
+//    * @param {number} textStyleIndex
+//    * @param {number} paragraphStyleIndex
+//    */
+//    SetTextRawDOM(text, textStyleIndex, paragraphStyleIndex) {
+//        return this.__Target.invokeMethod("SetTextRawDOM", text, textStyleIndex, paragraphStyleIndex);
+//    }
+//    /**
+//    * @param {any} input 原始类型为DCSoft.Writer.Security.DCSignInputInfo
+//    * @returns {boolean}
+//    */
+//    Sign(input) {
+//        return this.__Target.invokeMethod("Sign", input);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToDebugString() {
+//        return this.__Target.invokeMethod("ToDebugString",);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToPlaintString() {
+//        return this.__Target.invokeMethod("ToPlaintString",);
+//    }
+//    /**
+//    * @returns {string}
+//    */
+//    ToString() {
+//        return this.__Target.invokeMethod("ToString",);
+//    }
+//    /**
+//    * @param {boolean} loadingDocument
+//    * @returns {any} 原始类型 DCSoft.Writer.Dom.ValueValidateResult
+//    */
+//    Validating(loadingDocument) {
+//        return this.__Target.invokeMethod("Validating", loadingDocument);
+//    }
+//};
 
 
 /** 类型 DCSoft.Writer.ElementCancelEventArgs 的JS封装 */

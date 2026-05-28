@@ -1,4 +1,4 @@
-﻿//* 开始时间:
+//* 开始时间:
 //* 开发者:
 //* 重要描述:
 //*************************************************************************
@@ -18,11 +18,271 @@ import { WriterControl_Rule } from "./WriterControl_Rule.js";
 import { WriterControl_Task } from "./WriterControl_Task.js";
 import { WriterControl_Event } from "./WriterControl_Event.js";
 import { WriterControl_Print } from "./WriterControl_Print.js";
+import { WriterControl_KnowledgeBase } from "./WriterControl_KnowledgeBase.js";
+import { WriterControl_QueryListTableControl } from "./WriterControl_QueryListTableControl.js";
 import { WriterControl_Dialog } from "./WriterControl_Dialog.js";
 import { WriterControl_IO } from "./WriterControl_IO.js";
 
 export let WriterControl_UI = {
-
+    /**
+     * 检查文档批注列表，删除无效的批注
+     * @param {string} rootElement 编辑器编号
+     * @param {string} strHashCodeList 有效的文档批注的哈希编号数组JSON字符串
+     */
+    CheckDocumentComentList: function (rootElement, strHashCodeList) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return;
+        }
+        var idList = null;
+        if (strHashCodeList != null && strHashCodeList.length > 0) {
+            idList = JSON.parse(strHashCodeList);
+        }
+        var divs = rootElement.querySelectorAll("div[dctype='DocumentComment']");
+        if (divs != null && divs.length > 0) {
+            for (var div of divs) {
+                if (idList == null || idList.indexOf(div.CommentHashCode) < 0) {
+                    div.remove();
+                }
+            }
+        }
+    },
+    ///**
+    // * 计算文档批注对象的以像素为单位的显示高度
+    // * @param {any} rootElement
+    // * @param {any} options
+    // */
+    //CalcuteDocumentCommentHeight: function (rootElement, options) {
+    //    rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+    //    if (rootElement == null) {
+    //        return;
+    //    }
+    //    options.Height = 0;
+    //    // 触发事件让用户自己来计算文档批注的显示高度。
+    //    WriterControl_Event.InnerRaiseEvent(rootElement, "EventCalcuteDocumentCommentHeight", options);
+    //    // 计算结果放置在Height属性中。
+    //    return options.Height;
+    //},
+    /**
+     * 删除所有的自定义文档批注HTML元素
+     * @param {string | HTMLElement} rootElement 编辑器对象
+     */
+    RemoveAllDocumentCommentDivElement: function (rootElement) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return null;
+        }
+        var pc = WriterControl_UI.GetPageContainer(rootElement);
+        if (pc == null) {
+            return null;
+        }
+        var divs = pc.querySelectorAll("div[dctype='DocumentComment']");
+        if (divs != null && divs.length > 0) {
+            for (var item of divs) {
+                item.remove();
+            }
+        }
+    },
+    /**
+     * 创建自定义的文档批注内容
+     * @param {string} rootElement 编辑器编号
+     * @param {any} options 参数，成员参考DocumentCommentManager.cs中的ExecuteLayout()函数。
+     * @returns {string} 文档批注对象的像素高度
+     */
+    BuildDocumentCommentContent: function (rootElement, options) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return null;
+        }
+        var pc = WriterControl_UI.GetPageContainer(rootElement);
+        if (pc == null) {
+            return null;
+        }
+        var doc = rootElement.ownerDocument;
+        var newCommentOptionsJsonText = JSON.stringify(options);
+        /** 自定义批注承载DOM元素 */
+        var div = doc.getElementById("dcm$" + options.HashCode);
+        if (div == null) {
+            // 创建新的文档批注元素
+            div = doc.createElement("div");
+            // 设置文档批注元素的ID属性，以便在页面上唯一标识这个文档批注元素
+            div.id = "dcm$" + options.HashCode;
+            div.setAttribute("dctype", "DocumentComment");
+            // 设置文档批注元素样式
+            div.style.position = "absolute";
+            div.style.display = "block";
+            // 设置浮动位置，避免div在页面上显示，还有防止影响页面布局
+            div.style.left = "-10000px";
+            div.style.top = "-10000px";
+            div.style.overflow = "clip";
+            div.style.boxSizing = "border-box";
+            // 生成自定义批注时就添加边框，避免展示时高度变化【DUWRITER5_0-4357】
+            div.style.border = "1px solid rgb(255, 26, 26)";
+            // 创建文档批注元素内容容器，用来缩放编辑器时缩放自定义批注内容
+            var divContent = doc.createElement("div");
+            divContent.setAttribute("dctype", "DocumentCommentContent");
+            if (typeof (options.ZoomRate) == "number") {
+                divContent.style.zoom = options.ZoomRate;
+            }
+            div.appendChild(divContent);
+            div.divContent = divContent;
+            pc.appendChild(div);
+        }
+        // 处理自定义批注元素{第一次创建}和{数据更新}的情况
+        if (!div.LastCommentOptionsJsonText || div.LastCommentOptionsJsonText != newCommentOptionsJsonText) {
+            // 更新最后一次的批注元素数据
+            div.LastCommentOptionsJsonText = JSON.stringify(options);
+            div.WriterControl = rootElement;
+            div.CommentSettings = options;
+            div.CommentHashCode = options.HashCode;
+            div.onclick = function (e3) {
+                // 检查当前元素、WriterControl属性和WriterControl的__DCWriterReference属性是否存在
+                if (!this || !this.WriterControl || !this.WriterControl.__DCWriterReference) {
+                    // 如果上述任一属性不存在，则返回false终止函数执行
+                    return false;
+                }
+                // 选中文档批注元素
+                this.WriterControl.__DCWriterReference.invokeMethod("SelectDocumentCommentByHashCode", this.CommentHashCode);
+            };
+            // 更新文档批注元素宽度
+            div.style.width = (options.Width * options.ZoomRate) + "px";
+            // div.style.height = options.Height + "px";
+            // div.style.boxSizing = "border-box";
+            // 给options添加属性和方法
+            options.Handled = false;
+            options.TargetElement = div;
+            // 给options添加删除文档批注内容的方法
+            // 根据哈希编号删除文档批注对象 DeleteDocumentCommentByHashCode
+            options.DeleteComment = function (CommentHashCode) {
+                CommentHashCode = typeof (CommentHashCode) !== "number" ? this.HashCode : CommentHashCode;
+                if (typeof (CommentHashCode) !== "number") {
+                    return false;
+                }
+                const TargetElement = this.TargetElement;
+                if (!TargetElement || !TargetElement.WriterControl || !TargetElement.WriterControl.__DCWriterReference) {
+                    return false;
+                }
+                return TargetElement.WriterControl.__DCWriterReference.invokeMethod("DeleteDocumentCommentByHashCode", CommentHashCode);
+            }.bind(options);
+            // 触发事件来让用户自己来填充文档批注的内容
+            //if (options.IsInternal == true) {// 测试代码
+            //    options.Handled = true;// 测试代码
+            //    div.innerText = options.Title + ":" + options.Text;// 测试代码
+            //    div.style.height = "200px";// options.Height = 300;// 测试代码
+            //}
+            if (typeof (options.ZoomRate) == "number") {
+                div.divContent.style.zoom = options.ZoomRate;
+            }
+            WriterControl_Event.InnerRaiseEvent(rootElement, "EventBuildDocumentCommentContent", options);
+            if (options.Handled == false) {
+                // 用户没处理好事件，则采用编辑器默认的方式来排版和显示这个文档批注
+                div.remove();
+                return null;
+            }
+        }
+        // div.divContent.style.zoom = 1;
+        div.style.height = "auto";
+        if (div.offsetHeight > 0) {
+            return (div.offsetHeight / window.devicePixelRatio).toString();
+        } else {
+            return options.Height.toString();
+        }
+    },
+    /**
+     * 显示文档批注对象，此前已经调用过了BuildDocumentCommentContent(),内容已经生成好了。
+     * @param {string | HTMLElement} rootElement 编辑器对象
+     * @param {any} options 参数对象
+     */
+    ShowDocumentComment: function (rootElement, options) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null || rootElement.__DCWriterReference == null) {
+            return false;
+        }
+        if (typeof options != "object" || options.HashCode == null) {
+            return false;
+        }
+        var doc = rootElement.ownerDocument;
+        /** 批注自定义元素 */
+        var div = doc.getElementById("dcm$" + options.HashCode);
+        if (div == null) {
+            return false;
+        }
+        /** 批注所在页面 */
+        var page = WriterControl_Paint.GetCanvasElementByPageIndex(rootElement, options.PageIndex);
+        if (page == null) {
+            return false;
+        }
+        options.TargetElement = null;
+        var strLastJsonText = JSON.stringify(options) + "|" + page.offsetLeft + "|" + page.offsetTop;
+        if (div.LastJsonText == strLastJsonText) {
+            // 数据未发生改变，则不处理，提高性能
+            return true;
+        }
+        div.LastJsonText = strLastJsonText;
+        //// console.log(options,"options");
+        ///** 浏览器或者系统缩放率 */
+        //var baseZoomRate = rootElement.__DCWriterReference.invokeMethod("get_WASMBaseZoomRate");
+        ///** 编辑器页面缩放率 */
+        //var ZoomRate = rootElement.__DCWriterReference.invokeMethod("get_ZoomRate");
+        var _left = page.offsetLeft + options.Left;
+        var _top = page.offsetTop + options.Top;
+        var _width = options.Width;
+        var _height = options.Height;
+        //// 修改成自定义批注偏移量和宽度高度只留下两位小数
+        //var _left = page.offsetLeft + parseInt(parseFloat(options.Left) / baseZoomRate * 100) / 100,
+        //    _top = page.offsetTop + parseInt(parseFloat(options.Top) / baseZoomRate * 100) / 100,
+        //    _width = parseInt(parseFloat(options.Width) / baseZoomRate * 100) / 100,
+        //    _height = parseInt(parseFloat(options.Height) / baseZoomRate * 100) / 100;
+        //// var _left = page.offsetLeft + parseInt(parseFloat(options.Left) * 100) / 100,
+        ////     _top = page.offsetTop + parseInt(parseFloat(options.Top) * 100) / 100,
+        ////     _width = parseInt(parseFloat(options.Width) * 100) / 100,
+        ////     _height = parseInt(parseFloat(options.Height) * 100) / 100;
+        //// console.log("left,top,width,height", options.Left, options.Top, options.Width, options.Height);
+        // 设置批注的位置和大小
+        div.style.position = "absolute";
+        div.style.display = "block";
+        div.style.left = _left + "px";
+        div.style.top = _top + "px";
+        div.style.width = _width + "px";
+        div.style.height = _height + "px";
+        // div.style.height = _height + "px";
+        if (typeof (options.ZoomRate) == "number" && div.divContent != null) {
+            div.divContent.style.zoom = options.ZoomRate;
+        }
+        // if (options.IsSelected) {
+        //     // 批注是否被选择
+        //     div.style.border = "2px solid " + options.BorderColor;
+        // } else {
+        //     div.style.border = "1px solid " + options.BorderColor;
+        // }
+        // 自定义批注默认存在边框
+        div.style.border = "1px solid " + options.BorderColor;
+        // 自定义批注选中时显示更粗的边框，使用阴影来显示更粗的边框，避免影响高度
+        div.style.boxShadow = options.IsSelected ? ("0 0 0 1px " + options.BorderColor) : "";
+        div.style.borderRadius = "5px";
+        //div.style.backgroundColor = options.BackColor;
+        div.CommentValue = options;
+        div.CommentHashCode = options.HashCode;
+        div.WriterControl = rootElement;
+        options.TargetElement = div;
+        return true;
+    },
+    /**
+     * 修正所有自定义文档批注的位置
+     * @param {string | HTMLElement} rootElement 编辑器对象
+     * @param {} 
+     */
+    AdjustCustomDocumentCommentStyle: function (rootElement) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return false;
+        }
+        const DocumentCommentDivs = rootElement.querySelectorAll("div[dctype='DocumentComment']");
+        DocumentCommentDivs.forEach(function (DocumentCommentDiv) {
+            WriterControl_UI.ShowDocumentComment(DocumentCommentDiv, DocumentCommentDiv.CommentValue);
+        });
+        return true;
+    },
     /**
      * 用于存储防抖对象，防止连续按下Backspace键时，触发多次弹出对话框的删除操作。
     */
@@ -96,41 +356,114 @@ export let WriterControl_UI = {
         BuildElement(bd, rootHtmlElement);
         DCTools20221228.DisposeInstance(bd);
     },
+    /**
+     * 高亮度闪烁指定区域，当高亮度闪烁文档中的多个文档元素时，这个闪烁区域数组可能有多个区域信息。
+     * @param {string | HTMLElement} rootElement 编辑器控件对象
+     * @param {Array | string} areaList 闪烁区域数组
+     */
+    FlashArea: function (rootElement, areaList) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            // 未找到编辑器控件元素
+            return;
+        }
+        if (typeof (areaList) == "string") {
+            areaList = JSON.parse(areaList);
+        }
+        //rootElement.oldFlashArea = [];
+        var pageContainer = WriterControl_UI.GetPageContainer(rootElement);
+        //获取到当前页的canvas元素
+        if (areaList && areaList.length > 0) {
+            var allCanvas = rootElement.querySelectorAll('[dctype="page"]');
+            if (allCanvas && allCanvas.length > 0) {
+                for (var i = 0; i < areaList.length; i++) {
+                    var thisarea = areaList[i];
+                    thisarea.Index = 0;
+                    var hasArea = pageContainer.querySelector("[dctype=falshArea]");
+                    if (hasArea) {
+                        hasArea.remove();
+                    }
+                    //创建一个div做遮罩层
+                    var div = document.createElement("div");
+                    div.setAttribute("dctype", "falshArea");
+                    div.style.position = "absolute";
+                    var thisCanvas = allCanvas[thisarea.PageIndex];
+                    div.style.width = thisarea.Width + "px";
+                    div.style.height = thisarea.Height + "px";
+                    div.style.top = thisarea.Top + thisCanvas.offsetTop + 2 + "px";
+                    div.style.left = thisarea.Left + thisCanvas.offsetLeft + 2 + "px";
+                    pageContainer.appendChild(div);
+
+                    (function (thisarea, div) {
+                        thisarea.intervalTime = setInterval(function () {
+                            thisarea.Index++;
+                            if (thisarea.Index % 2 == 0) {
+                                div.style.backgroundColor = "";
+                            } else {
+                                div.style.backgroundColor = 'rgba(151,92,245,0.6)';
+                            }
+                            if (thisarea.Index >= 7) {
+                                clearInterval(thisarea.intervalTime);
+                                div.remove();
+                                thisarea = null;
+                            }
+                        }, 100);
+                    })(thisarea, div);
+                }
+            }
+        }
+    },
+
 
     /**
      * 下载API日志数据
      * @param {string | HTMLElement} rootElement 编辑器对象
-     * @param {function} callBack 回调函数
+     * @param {function} option.callBack 回调函数
+     * @param {boolean} option.getPaintData 是否获取绘制数据的MD5值
      * @returns {boolean} 操作是否完成
      */
-    DownloadAPIRecordData: function (rootElement, callBack = null) {
+    DownloadAPIRecordData: function (rootElement, option) {
         var rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
         if (rootElement == null) {
             return false;
         }
         var nativeRef = rootElement.__DCWriterReference;
         if (nativeRef != null && nativeRef.__Records != null) {
-            var strJson = JSON.stringify(nativeRef.__Records);
-            //20240328 lxy 适配获取API日志数据的接口（DUWRITER5_0-2164）
-            if (callBack) {
-                return callBack(strJson);
+            if (nativeRef.__Records.PaintDataMD5String == true) {
+                window.alert("不能重复获取绘制数据的MD5值。"); 
+                return false;
             }
-            //var obj2 = JSON.parse(strJson);
-            //console.log(obj2);
+            if (option != null && option.getPaintData === true) {
+                var strData = rootElement.__DCWriterReference.__BaseInstance.invokeMethod(
+                    "GetAllPaintDataMD5String");
+                if (strData != null && strData.length > 0) {
+                    WriterControl_UI.APILogRecordJSMethod(rootElement, "@GetAllPaintDataMD5String", strData);
+                    nativeRef.__Records.PaintDataMD5String = true;
+                }
+            }
+            var strJson = JSON.stringify(nativeRef.__Records , null, 2 );
+            //20240328 lxy 适配获取API日志数据的接口（DUWRITER5_0-2164）
+            if (option != null && typeof option.callBack == "function") {
+                return option.callBack.call(rootElement, strJson);
+            }
             var blob = new Blob([strJson]);
             let downloadElement = rootElement.ownerDocument.createElement("a");
             let href = window.URL.createObjectURL(blob); //创建下载的链接
             downloadElement.href = href;
             downloadElement.charset = "utf-8";
             downloadElement.type = "text/json";
-            downloadElement.download = "APIRecord_" + DCTools20221228.FormatDateTime(new Date(), "yyyy_MM_dd_HH_mm_ss") + ".json";
+            downloadElement.download = "APIRecord_" +
+                DCTools20221228.FormatDateTime(new Date(),"yyyy_MM_dd_HH_mm_ss") + ".json";
             rootElement.ownerDocument.body.appendChild(downloadElement);
             downloadElement.click(); //点击下载
-            rootElement.ownerDocument.body.removeChild(downloadElement); //下载完成移除元素
+            // 下载完成移除元素
+            if (downloadElement && downloadElement.remove && typeof downloadElement.remove === 'function') {
+                downloadElement.remove();
+            }
             window.URL.revokeObjectURL(href); //释放掉blob对象
             return true;
         }
-        DCTools20221228.ConsoleWarring("DCWriter控件[" + rootElement.id + "]未启用API日志记录功能。");
+        DCTools20221228.ConsoleWarring("DCWriter控件["+ rootElement.id + "]未启用API日志记录功能。");
         return false;
     },
     APILogRecordDebugPrint: function (rootElement, txt) {
@@ -204,10 +537,12 @@ export let WriterControl_UI = {
         }
         var item = new WriterControlExtPackage(rootElement, nativeRef);
         item.FromBuildControl = fromBuildControl;
+        item.__IsAPIRecorder = true;
         window.__CurrentDCWriterAPIRecorder = item;
         rootElement.__DCWriterReference = item;
         nativeRef.invokeMethod("SetHashCodeAsNativeHandle", true);
-        DCTools20221228.ConsoleWarring("DCWriter控件[" + rootElement.id + "]启用API日志记录功能，本功能会消耗很多内存,减慢运行速度，谨慎使用。");
+        DCTools20221228.ConsoleWarring("DCWriter控件[" + rootElement.id +
+            "]启用API日志记录功能，本功能会消耗很多内存,减慢运行速度，谨慎使用。");
         WriterControl_Paint.InvalidateAllView(rootElement);
         return true;
     },
@@ -253,154 +588,678 @@ export let WriterControl_UI = {
     },
     /**
      * 执行API日志
-     * @param {string | HTMLElement} rootElement 编辑器元素或者编号
+     * @param {String | HTMLElement} rootElement 编辑器元素或者编号
+     * @param {Array} options.records 要播放的记录数组，如果不指定则弹出文件选择对话框让用户选择
+     * @param {number} options.playSpeed 播放速度
+     * @param {function} options.finishedCallback 播放完成回调函数
+     * @param {boolean} options.fastMode 是否为快速模式
      */
-    PlayAPILogRecords: function (rootElement, playSpeed) {
+    PlayAPILogRecords: function (rootElement, options) {
         var rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
         if (rootElement == null) {
             return;
         }
-        let file = rootElement.ownerDocument.createElement('input');
-        file.setAttribute('id', 'dcAPILogJsonFile');
-        file.setAttribute('type', 'file');
-        file.setAttribute('accept', '.json');
-        file.style.display = 'none';
-        rootElement.appendChild(file);
-        //file文件选中事件
-        file.onchange = function () {
-            let fileList = this.files;
-            if (fileList.length > 0) {
-                let reader = new FileReader();
-                reader.readAsText(fileList[0], "UFT-8");
-                reader.onload = function (e) {
-                    //获取到文件内容
-                    let strFileContent = e.target.result;
-                    window.setTimeout(function () {
-                        if (file.parentNode == rootElement.ownerDocument.body) {
-                            rootElement.ownerDocument.body.removeChild(file);
+        // 确保 options 是对象
+        if (options == null || typeof options !== "object") {
+            options = {};
+        }
+        /**
+         * 执行API日志
+         * @param {Array} records 要播放的记录数组
+         */
+        function InnerPlayAPILogRecords(records) {
+            if (records == null || records.length <= 1) {
+                // 没有数据
+                return;
+            }
+            var playSpeed = options.playSpeed || 10;
+            var finishedCallback = options.finishedCallback;
+            var ignoreMethods = null;
+            if (options.fastMode === true) {
+                // 快速模式
+                console.log("开始模式播放API日志.");
+                ignoreMethods = [
+                    "Is_WaittingForDragStart",
+                    "IsReadOnlyOrReadViewMode",
+                    "CurrentInputField",
+                    "GetCurrentFontInfoJsonString",
+                    "IsNormalJumpPrintMode",
+                    "GetCurrentContentInfo",
+                    "get_PageIndex",
+                    "get_ExtViewMode",
+                    "get_Readonly",
+                    "get_ReadViewMode",
+                    //"SetTableCellTextExtByHandle",
+                    "GetCommandStatus"];
+            }
+            var headerRecord = records.shift(0);
+            if (headerRecord.Format != "20250908") {
+                console.log("文件头不对，不是可识别的API日志文件格式。");
+                return;
+            }
+            var nativeRef = rootElement.__DCWriterReference;
+            if (nativeRef.__Records != null) {
+                // 退出API日志模式。
+                nativeRef.__Records.splice(0, nativeRef.__Records.length);
+                rootElement.__DCWriterReference = nativeRef.__BaseInstance;
+                nativeRef = rootElement.__DCWriterReference;
+                console.log("DCWrter退出API录像模式。");
+            }
+            if (typeof (headerRecord.DevicePixelRatio) == "number") {
+                if (window.devicePixelRatio != headerRecord.DevicePixelRatio) {
+                    console.log("日志中的window.devicePixelRatio="
+                        + headerRecord.DevicePixelRatio + "，当前值为:" + window.devicePixelRatio
+                        + ",可能需要设置显示器缩放比率才能更准确的复刻动作。");
+                }
+            }
+            rootElement.__PlayingAPILogRecord = true; // 标记控件正在播放API日志，暂时禁止所有事件
+            nativeRef.invokeMethod("BeginPlayAPILogRecord");
+            var recordCount = 0;
+            var dtmPlay = new Date();
+            var allRecordCount = records.length;
+            var localPlaySpeed = 10;
+			//20251107 lxy 修改当“API日志绘制数据的MD5值”不匹配时，不中断进程并通过回调函数返回错误信息
+            var playbackError = null; // 记录播放过程中的错误
+            function PlayFirstRecord(records, nativeRef) {
+                if (records.length == 0) {
+                    return;
+                }
+                if (ignoreMethods != null) {
+                    // 快速模式，过滤掉一些记录
+                    while (records.length > 0) {
+                        var recordName = records[0].Name;
+                        if (ignoreMethods.indexOf(recordName) >= 0) {
+                            records.shift(0);
+                            allRecordCount--;
                         }
-                        var records = JSON.parse(strFileContent);
-                        if (records == null || records.length <= 1) {
-                            // 没有数据
-                            return;
+                        else {
+                            break;
                         }
-                        var headerRecord = records.shift(0);
-                        if (headerRecord.Format != "20231023") {
-                            console.log("文件头不对，不是可识别的API日志文件格式。");
-                            return;
-                        }
-                        var nativeRef = rootElement.__DCWriterReference;
-                        if (nativeRef.__Records != null) {
-                            // 退出API日志模式。
-                            nativeRef.__Records.splice(0, nativeRef.__Records.length);
-                            rootElement.__DCWriterReference = nativeRef.__BaseInstance;
-                            nativeRef = rootElement.__DCWriterReference;
-                            console.log("DCWrter退出API录像模式。");
-                        }
-                        if (typeof (headerRecord.DevicePixelRatio) == "number") {
-                            if (window.devicePixelRatio != headerRecord.DevicePixelRatio) {
-                                alert("日志中的window.devicePixelRatio=" + headerRecord.DevicePixelRatio + "，当前值为:" + window.devicePixelRatio + ",可能需要设置显示器缩放比率才能更准确的复刻动作。");
+                    }
+                }
+                if (records.length > 0) {
+                    var record = records.shift(0);
+                    if (new Date().valueOf() - dtmPlay.valueOf() > 1000) {
+                        dtmPlay = new Date();
+                        console.log("%cDCWriter正在播放第" + recordCount + "/"
+                            + allRecordCount + "条API记录(" + Math.round(recordCount * 100 / allRecordCount) + "%),Index:" + record.RecordIndex + " ...", "color:blue");
+                    }
+                    if (records.length > 0
+                        && typeof (record.Tick) == "number" && records[0] != null) {
+                        var nextTick = records[0].Tick;
+                        if (typeof (nextTick) == "number") {
+                            localPlaySpeed = nextTick - record.Tick;
+                            if (localPlaySpeed < 10) {
+                                localPlaySpeed = 10;
+                            }
+                            else if (localPlaySpeed > 100) {
+                                localPlaySpeed = 100;
                             }
                         }
-                        rootElement.__PlayingAPILogRecord = true; // 标记控件正在播放API日志，暂时禁止所有事件
-                        nativeRef.invokeMethod("BeginPlayAPILogRecord");
-                        var recordCount = 0;
-                        var dtmPlay = new Date();
-                        var allRecordCount = records.length;
-                        var lastTick = 0;
-                        var localPlaySpeed = 10;
-                        function PlayFirstRecord(records, nativeRef) {
-                            if (records.length == 0) {
-                                return;
+                    }
+                    if (record.Name == "@LoadDocumentFromString@") {
+                        var strXmlContent = record.Content;
+                        WriterControl_IO.LoadDocumentFromString({
+                            WriterControl: rootElement,
+                            Data: strXmlContent
+                        });
+                        if (record.CurrentContentPartyStyle) {
+                            rootElement.__DCWriterReference.invokeMethod(
+                                "InnerSetSelectionInfo",
+                                record.CurrentContentPartyStyle,
+                                record.SelectionStart,
+                                record.SelectionLength);
+                        }
+                    }
+                    else if (record.Name == "@JavaScript") {
+                        if (record.Method == "ShowCaret") {
+                            var args6 = record.Args;
+                            WriterControl_UI.ShowCaret(
+                                rootElement,
+                                args6.intPageIndex,
+                                args6.intDX,
+                                args6.intDY,
+                                args6.intWidth,
+                                args6.intHeight,
+                                args6.bolVisible,
+                                args6.bolReadonly,
+                                args6.bolScrollToView,
+                                "PlayAPILogRecord");
+                        }
+                        else if (record.Method == "@GetAllPaintDataMD5String") {
+                            var strData = rootElement.__DCWriterReference.invokeMethod("GetAllPaintDataMD5String");
+                            if (record.Args != strData) {
+                                // MD5不匹配，记录错误但继续执行
+                                playbackError = "API日志绘制数据的MD5值不匹配。";
+                                console.log("%cAPI日志绘制数据的MD5值不匹配，但继续播放剩余记录。", "color:orange");
                             }
-                            if (new Date().valueOf() - dtmPlay.valueOf() > 1000) {
-                                dtmPlay = new Date();
-                                console.log("%cDCWriter正在播放第" + recordCount + "/" + allRecordCount + "条API记录...", "color:blue");
+                            else {
+                                console.log("API日志绘制数据的MD5值匹配成功。");
                             }
-                            var record = records.shift(0);
-                            if (records.length > 0 && typeof (record.Tick) == "number" && records[0] != null) {
-                                var nextTick = records[0].Tick;
-                                if (typeof (nextTick) == "number") {
-                                    localPlaySpeed = nextTick - record.Tick;
-                                    if (localPlaySpeed < 10) {
-                                        localPlaySpeed = 10;
-                                    }
-                                    else if (localPlaySpeed > 100) {
-                                        localPlaySpeed = 100;
-                                    }
-                                }
+                        }
+                    }
+                    else if (record.Name == "#DebugPrint") {
+                        console.log("%cAPI调试信息:" + record.Message, "color:blue");
+                    }
+                    else if (record.Args == null) {
+                        try {
+                            if (record.IsStatic) {
+                                window.DCWriterStaticInvokeMethod(record.Name);
                             }
-                            if (record.Name == "@LoadDocumentFromString@") {
-                                var strXmlContent = record.Content;
-                                WriterControl_IO.LoadDocumentFromString({
-                                    WriterControl: rootElement,
-                                    Data: strXmlContent
-                                });
-                            }
-                            else if (record.Name == "@JavaScript") {
-                                if (record.Method == "ShowCaret") {
-                                    var args6 = record.Args;
-                                    WriterControl_UI.ShowCaret(
-                                        rootElement,
-                                        args6.intPageIndex,
-                                        args6.intDX,
-                                        args6.intDY,
-                                        args6.intWidth,
-                                        args6.intHeight,
-                                        args6.bolVisible,
-                                        args6.bolReadonly,
-                                        args6.bolScrollToView,
-                                        "PlayAPILogRecord");
-                                }
-                            }
-                            else if (record.Name == "#DebugPrint") {
-                                console.log("%cAPI调试信息:" + record.Message, "color:blue");
-                            }
-                            else if (record.Args == null) {
+                            else {
                                 nativeRef.invokeMethod(record.Name); // 无参数
                             }
-                            else {
-                                // 有参数
-                                var args = record.Args;
-                                for (var argCount = 0; argCount < args.length; argCount++) {
-                                    var item = args[argCount];
-                                    if (typeof (item) == "string" && item.startsWith("__Uint8Array:")) {
-                                        var strBase64 = item.substring(13);
-                                        var bsData = DCTools20221228.FromBase64String(strBase64);
-                                        args[argCount] = bsData;
-                                    }
+                        }
+                        catch (ext) {
+                            console.log("播放记录错误:" + record);
+                            console.log(ext);
+                        }
+                    }
+                    else {
+                        // 有参数
+                        var args = record.Args;
+                        try {
+                            for (var argCount = 0; argCount < args.length; argCount++) {
+                                var item = args[argCount];
+                                if (typeof (item) == "string" && item.startsWith("__Uint8Array:")) {
+                                    var strBase64 = item.substring(13);
+                                    var bsData = DCTools20221228.FromBase64String(strBase64);
+                                    args[argCount] = bsData;
                                 }
+                            }
+                            if (record.IsStatic) {
+                                window.DCWriterStaticInvokeMethod(record.Name, ...args);
+                            }
+                            else {
                                 nativeRef.invokeMethod(record.Name, ...args);
                             }
-                            recordCount++;
-                            if (records.length > 0) {
-                                if (typeof (playSpeed) == "number") {
-                                    window.setTimeout(PlayFirstRecord, playSpeed, records, nativeRef);
-                                }
-                                else {
-                                    window.setTimeout(PlayFirstRecord, localPlaySpeed, records, nativeRef);
-                                }
-                            }
-                            else {
-                                nativeRef.invokeMethod("SetHashCodeAsNativeHandle", false);
-                                console.log("%c结束###DCWriter共播放了" + recordCount + "条API记录。", "color:red");
-                                rootElement.__PlayingAPILogRecord = false; // 标记控件结束播放API日志，启用所有事件
-                            }
-                        };
-                        PlayFirstRecord(records, nativeRef);
-                    }, 100);
-                };
-            }
-        };
-        file.click();
-        //在编辑器的window重新获取焦点时,确保点击取消或X时能正确删除file
-        window.addEventListener('focus', function () {
-            setTimeout(function () {
-                if (file.parentNode == rootElement) {
-                    rootElement.removeChild(file);
+                        }
+                        catch (ext) {
+                            console.log("播放记录错误:" + record);
+                            console.log(ext);
+                        }
+                    }
+                    if (record.Name == "ApplyCurrentEditorCallBack") {
+                        WriterControl_UI.CloseDropdownControl();
+                    }
+                    recordCount++;
                 }
-            }, 100);
-        }, { once: true });
+                if (records.length > 0) {
+                    var runtTimePlaySpeed = localPlaySpeed;
+                    if (typeof (playSpeed) == "number") {
+                        runtTimePlaySpeed = playSpeed;
+                    }
+                    var nextRecord = records[0];
+                    if (nextRecord.Name == "@JavaScript"
+                        && nextRecord.Method == "@GetAllPaintDataMD5String") {
+                        runtTimePlaySpeed *= 2; // 加长等待时间，确保绘制状态就绪
+                    }
+                    window.setTimeout(PlayFirstRecord,
+                        runtTimePlaySpeed, records, nativeRef);
+                }
+                else {
+                    nativeRef.invokeMethod("SetHashCodeAsNativeHandle", false);
+                    console.log("%c结束###DCWriter共播放了"
+                        + recordCount + "条API记录。", "color:red");
+                    // 标记控件结束播放API日志，启用所有事件
+                    rootElement.__PlayingAPILogRecord = false; 
+                    if (finishedCallback
+                        && typeof (finishedCallback) == "function") {
+                        if (playbackError != null) {
+                            // 播放过程中有错误
+                            finishedCallback.call(rootElement, {
+                                status: "error",
+                                message: playbackError
+                            });
+                        }
+                        else {
+                            // 播放成功
+                            finishedCallback.call(rootElement, {
+                                status: "success",
+                                message: "调用成功"
+                            });
+                        }
+                    }
+                }
+            };
+            PlayFirstRecord(records, nativeRef);
+        }
+        if (options != null && options.records != null && options.records.length > 0) {
+            InnerPlayAPILogRecords(options.records);
+        }
+        else {
+            let file = rootElement.ownerDocument.createElement('input');
+            file.setAttribute('id', 'dcAPILogJsonFile');
+            file.setAttribute('type', 'file');
+            file.setAttribute('accept', '.json');
+            file.style.display = 'none';
+            rootElement.appendChild(file);
+            //file文件选中事件
+            file.onchange = function () {
+                let fileList = this.files;
+                if (fileList.length > 0) {
+                    let reader = new FileReader();
+                    reader.readAsText(fileList[0], "UFT-8");
+                    reader.onload = function (e) {
+                        //获取到文件内容
+                        let strFileContent = e.target.result;
+                        window.setTimeout(function () {
+                            if (file.parentNode == rootElement.ownerDocument.body) {
+                                rootElement.ownerDocument.body.removeChild(file);
+                            }
+                            var records = JSON.parse(strFileContent);
+                            if (records == null || records.length <= 1) {
+                                // 没有数据
+                                return;
+                            }
+                            InnerPlayAPILogRecords(records);
+                        }, 100);
+                    };
+                }
+            };
+            file.click();
+            //在编辑器的window重新获取焦点时,确保点击取消或X时能正确删除file
+            window.addEventListener('focus', function () {
+                setTimeout(function () {
+                    if (file.parentNode == rootElement) {
+                        rootElement.removeChild(file);
+                    }
+                }, 100);
+            }, { once: true });
+        }
+    },
+
+
+
+    /**
+     * 重新加载承载的控件
+     * @param {string} strContainerID 编辑器控件编号
+     */
+    ReloadHostControls: function (strContainerID) {
+        var rootElement = DCTools20221228.GetOwnerWriterControl(strContainerID);
+        if (rootElement == null) {
+            return;
+        }
+        //if (rootElement.getAttribute("dctype") != "WriterControlForWASM") {
+        //    // 不是编辑器控件，不处理
+        //    return;
+        //}
+        var pageContainer = null;
+        if (rootElement.getAttribute("dctype") == "WriterControlForWASM" || rootElement.getAttribute("dctype") == "WriterPrintPreviewControlForWASM") {
+            // 编辑器控件对象
+            if (WriterControl_Print.IsInPrintPreview(rootElement) == true) {
+                // 处于打印预览模式
+                pageContainer = WriterControl_Print.GetPrintPrewViewPageContainer(rootElement);
+            }
+            else {
+                pageContainer = WriterControl_UI.GetPageContainer(rootElement);
+            }
+        }
+        else {
+
+        }
+        if (pageContainer == null) {
+            // 未找到容器元素，退出
+        }
+        window.setTimeout(function () {
+            if (!rootElement.__DCWriterReference) {
+                return;
+            }
+            var infos = rootElement.__DCWriterReference.invokeMethod("GetHostControlInfos");
+            /** 所有的控件元素 */
+            var allElements = pageContainer.querySelectorAll("[dctype='HostControl']");
+            allElements = Array.prototype.slice.call(allElements);
+            if (infos != null && infos.length > 0) {
+                for (var info of infos) {
+                    // 首先找到对应的HTML元素
+                    var curElement = null;
+                    for (var index88 = 0; index88 < allElements.length; index88++) {
+                        var element = allElements[index88];
+                        if (element.ObjectElementInstanceIndex == info.ObjectElementInstanceIndex) {
+                            curElement = element;
+                            allElements.splice(index88, 1);
+                            break;
+                        }
+                    }
+                    var page = null;
+                    for (var curPage = pageContainer.firstChild; curPage != null; curPage = curPage.nextSibling) {
+                        if (curPage.nodeName == "CANVAS"
+                            && curPage.PageIndex == info.PageIndex) {
+                            page = curPage;
+                            break;
+                        }
+                    }
+                    //var page = WriterControl_Paint.GetCanvasElementByPageIndex(rootElement, info.PageIndex);
+                    if (page == null) {
+                        if (curElement != null) {
+                            allElements.push(curElement);
+                        }
+                        continue;
+                    }
+                    var strControlTypeName = info.TypeFullName;
+                    if (strControlTypeName != null) {
+                        strControlTypeName = strControlTypeName.trim().toLowerCase();
+                    }
+                    if (curElement == null) {
+                        // 没有找到元素则创建元素
+                        if (strControlTypeName == "dcsoft.writer.controls.mediaplayercontroler") {
+                            // 处理插入音视频使用FileSystemName时无法播放的问题【DUWRITER5_0-2420】
+                            var mediaEleProps = rootElement.GetElementProperties(info.ElementID);
+                            if (mediaEleProps && !info.Parameter) {
+                                info.Parameter = mediaEleProps.FileSystemName;
+                            }
+                            curElement = CreateVideoEle(rootElement, info);
+                        }
+                        else if (strControlTypeName == "iframe") {
+                            curElement = rootElement.ownerDocument.createElement("iframe");
+                            curElement.src = info.Text;
+                        }
+                        else if (strControlTypeName == "div") {
+                            curElement = rootElement.ownerDocument.createElement("div");
+                            curElement.innerHTML = info.Text;
+                        }
+                        else if (strControlTypeName == "svg") {
+                            curElement = rootElement.ownerDocument.createElement("svg");
+                            curElement.id = info.ElementID;
+                            curElement.innerHTML = info.Text;
+                        }
+                        // 触发事件，让用户自定义处理控件元素加载后的处理
+                        info.HtmlElement = curElement;
+                        info.WriterControl = rootElement;
+                        if (curElement != null) {
+                            if (info.ElementID != null) {
+                                curElement.id = info.ElementID;
+                            }
+                            curElement.style.width = info.Width + "px";
+                            curElement.style.height = info.Height + "px";
+                        }
+                        WriterControl_Event.RaiseControlEvent(rootElement, "EventCreateHostControl", info);
+                        // 用户可能会自己创建控件元素，则使用用户创建的元素
+                        curElement = info.HtmlElement;
+                        if (curElement != null) {
+                            pageContainer.insertBefore(curElement, pageContainer.firstChild);
+                        }
+                    }//if
+                    if (curElement == null) {
+                        // 未能创建元素，则下一个
+                        continue;
+                    }
+                    curElement.ObjectElementInstanceIndex = info.ObjectElementInstanceIndex;
+                    curElement.setAttribute("dctype", "HostControl");
+                    curElement.setAttribute("TypeFullName", info.TypeFullName);
+                    curElement.style.position = "absolute";
+                    curElement.style.zIndex = 1000;
+                    curElement.style.border = "1px solid black";
+                    curElement.style.left = (page.offsetLeft + info.Left + 1) + "px";
+                    curElement.style.top = (page.offsetTop + info.Top + 1) + "px";
+                    curElement.style.width = info.Width + "px";
+                    curElement.style.height = info.Height + "px";
+                }//for
+            }
+            // 删除剩下的所有无主的承载元素
+            allElements.forEach((item) => item.remove());
+        }, 10);
+
+        ////所有执行过播放的元素，通过里面的ObjectElementInstanceIndex判断
+        ////var infos = rootElement.__DCWriterReference.invokeMethod("GetHostControlInfos");
+        //setTimeout(function () {
+        //    //整理之前的视频元素
+        //    var pageContainer = WriterControl_UI.GetPageContainer(rootElement);
+        //    if (pageContainer == null) {
+        //        return;
+        //    }
+
+        //    //判断是否存在全局展示属性
+        //    var hasShowMediaAttr = rootElement.getAttribute("showmediaonmask");
+        //    if (typeof hasShowMediaAttr == "string" && hasShowMediaAttr.toLowerCase().trim() == "true") {
+        //        if (rootElement.closeScreenChange) {
+        //            return;
+        //        }
+
+        //        var hasMask = rootElement.querySelector("#dcHostContorlMask");
+        //        //判断是否当前选中为音视频
+        //        var mediaEle = rootElement.GetElementProperties(rootElement.CurrentElement());
+        //        if (mediaEle && mediaEle.TypeName == "XTextMediaElement") {
+        //            if (!hasMask) {
+        //                //创建遮罩层
+        //                hasMask = document.createElement("div");
+        //                rootElement.appendChild(hasMask);
+        //                hasMask.id = "dcHostContorlMask";
+        //                hasMask.style.width = "100%";
+        //                hasMask.style.height = "100%";
+        //                hasMask.style.position = "fixed";
+        //                hasMask.style.zIndex = 1000;
+        //                hasMask.style.top = "0";
+        //                hasMask.style.left = '0';
+        //                hasMask.style.overflow = "hidden";
+        //                hasMask.style.backgroundColor = "rgba(0,0,0,0.3)";
+
+        //            }
+        //            var hasCreate = false;
+        //            //找到对应的infos
+        //            for (var i = 0; i < infos.length; i++) {
+        //                var eleInfo = infos[i];
+        //                if (eleInfo.ElementID == mediaEle.ID) {
+        //                    eleInfo.Parameter = mediaEle.FileSystemName ? mediaEle.FileSystemName : eleInfo.Parameter;
+        //                    var htmlElement = CreateEle(eleInfo, true, mediaEle, hasMask);
+
+        //                    hasMask.appendChild(htmlElement);
+        //                    htmlElement.style.width = "800px";
+        //                    htmlElement.style.height = "600px";
+        //                    htmlElement.style.transform = "translate(-50%, -50%)";
+        //                    htmlElement.style.left = "50%";
+        //                    htmlElement.style.top = "50%";
+        //                    hasCreate = true;
+        //                    break;
+        //                }
+        //            }
+
+        //            if (!hasCreate) {
+        //                hasMask.remove();
+        //            }
+
+        //        }
+        //    } else {
+        //        //获取到所有的在播放视频
+        //        var allVideo = pageContainer.querySelectorAll('[dctype="HostControl"]');
+        //        allVideo = Array.prototype.slice.call(allVideo);
+
+        //        //循环所有的infos
+        //        for (var i = 0; i < infos.length; i++) {
+        //            var eleInfo = infos[i];
+
+        //            var hasVideo = null;
+        //            var thisIndex = null;
+        //            if (allVideo && allVideo.length != 0) {
+        //                hasVideo = allVideo.find((video, index) => {
+        //                    if (video.__ObjectElementInstanceIndex == eleInfo.ObjectElementInstanceIndex) {
+        //                        thisIndex = index;
+        //                        return true;
+        //                    }
+        //                });
+        //            }
+
+        //            if (hasVideo != null && thisIndex != null) {
+        //                //如果存在视频元素,只修改位置
+        //                //console.log(hasVideo);
+        //                UpdatePosition(eleInfo, hasVideo);
+        //                //从数组中移除
+        //                allVideo.splice(thisIndex, 1);
+        //            } else {
+        //                //插入新的视频元素
+        //                //获取到编辑器内的视频元素
+        //                var targetMediaEle = rootElement.CurrentElement('xtextmediaelement');
+        //                //获取到当前选中元素
+        //                var targetEleAttr = null;
+        //                if (targetMediaEle != null) {
+        //                    //判断是否存在StringTag
+        //                    targetEleAttr = rootElement.GetElementProperties(targetMediaEle);
+        //                } else {
+        //                    return;
+        //                }
+        //                eleInfo.Parameter = targetEleAttr.FileSystemName ? targetEleAttr.FileSystemName : eleInfo.Parameter;
+
+        //                var htmlElement = CreateEle(eleInfo);
+        //                pageContainer.insertBefore(htmlElement, pageContainer.firstChild);
+        //                //在此处写入监听事件
+        //                //htmlElement.onkeydown = function (e) {
+        //                //    //console.log(e);
+        //                //    if (e.keyCode == '8' || e.keyCode == '46') {
+        //                //        htmlElement.remove();
+        //                //    }
+        //                //};
+        //                if (htmlElement != null) {
+        //                    htmlElement.setAttribute("dctype", "HostControl");
+        //                    htmlElement.__ObjectElementInstanceIndex = eleInfo.ObjectElementInstanceIndex;
+        //                    UpdatePosition(eleInfo, htmlElement);
+        //                    var content = rootElement.CurrentElement("xtextcontainerelement");
+        //                    rootElement.FocusElement(content);
+        //                }
+
+        //            }
+
+        //        }
+        //        //删除不被使用的video
+        //        allVideo.forEach((item) => item.remove());
+        //    }
+        //}, 10);
+        ////更新定位
+        //function UpdatePosition(eleInfo, htmlElement) {
+        //    var page = WriterControl_Paint.GetCanvasElementByPageIndex(rootElement, eleInfo.PageIndex);
+        //    if (page == null) {
+        //        return;
+        //    }
+        //    var hasCanvasEle = rootElement.querySelector("[oeii='" + eleInfo.ObjectElementInstanceIndex + "']");// rootElement.GetElementById(eleInfo.ElementID);
+        //    //判断页面是否存在此元素
+        //    if (hasCanvasEle != null) {
+        //        htmlElement.style.left = (page.offsetLeft + eleInfo.Left + 1) + "px";
+        //        htmlElement.style.top = (page.offsetTop + eleInfo.Top + 1) + "px";
+        //        htmlElement.style.width = eleInfo.Width + "px";
+        //        htmlElement.style.height = eleInfo.Height + "px";
+        //    } else {
+        //        //不存在直接删除
+        //        htmlElement.remove();
+        //    }
+        //};
+        //创建元素的方法
+        function CreateVideoEle(rootElement, eleInfo, type, mediaEle, hasMask) {
+            //只需要在此处判断是音频文件还是视频文件
+            var allVideoType = ['mpg', 'mpeg', 'avi', 'rm', 'rmvb', 'mov', 'wmv', 'asf', 'dat', 'mp4'];
+            var allAudioType = ['mp3', 'wma', 'rm', 'wav', 'mid', 'ape', 'flac', 'ogg'];
+            //截取最后的后缀
+            var lastSuffix = eleInfo.Parameter ? eleInfo.Parameter.split('.') : [];
+            lastSuffix = lastSuffix[lastSuffix.length - 1];
+            var htmlElement = null;
+            if (allVideoType.includes(lastSuffix)) {
+                htmlElement = rootElement.ownerDocument.createElement("video");
+            } else if (allAudioType.includes(lastSuffix)) {
+                htmlElement = document.createElement("audio");
+            }
+            if (htmlElement == null) {
+                return;
+            }
+            htmlElement.id = eleInfo.ElementID;
+            htmlElement.setAttribute("dctype", "");
+            htmlElement.style.border = "1px solid black";
+            htmlElement.style.backgroundColor = "#FFFFFF";
+            htmlElement.style.position = "absolute";
+            htmlElement.zIndex = 1000;
+            htmlElement.src = eleInfo.Parameter;
+            htmlElement.controls = true;
+            htmlElement.autoplay = true;
+            htmlElement.loop = true;
+
+            if (type) {
+                //创建删除的按钮
+                var deleteButton = document.createElement("div");
+                hasMask.appendChild(deleteButton);
+                deleteButton.id = "dc_MediaCloseButton";
+                deleteButton.style.width = "30px";
+                deleteButton.style.height = "30px";
+                deleteButton.style.position = "absolute";
+                deleteButton.style.zIndex = 1001;
+                deleteButton.style.transform = "translate(360px, -290px)";
+                deleteButton.style.left = "50%";
+                deleteButton.style.top = "50%";
+                deleteButton.style.textAlign = "center";
+                deleteButton.style.lineHeight = "2";
+                deleteButton.style.display = "none";
+                //deleteButton.innerText = "X";
+                var style = document.createElement("style");
+                document.head.appendChild(style);
+                var sheet = style.sheet;
+                //支持非IE的现代浏览器
+                sheet.insertRule("#dc_MediaCloseButton::before{ position: absolute;content: '';width: 6px;height: 30px;background: #222;transform: rotate(45deg);top: calc(50% - 6px);left: 50 %;}");
+                sheet.insertRule("#dc_MediaCloseButton::after{ position: absolute;content: '';width: 6px;height: 30px;background: #222;transform: rotate(-45deg);top: calc(50% - 6px);left: 50 %;}");
+
+                //进入全屏关闭全屏
+                htmlElement.onfullscreenchange = function () {
+                    const isFullScreen = document.fullScreen || document.mozFullScreen || document.webkitIsFullScreen;
+                    if (!isFullScreen) {
+                        //htmlElement.onfullscreenchange = null;
+                        ////  退出全屏
+                        //console.log('退出全屏')
+                        //htmlElement.pause();
+                        //htmlElement.removeAttribute("src");
+                        //htmlElement.load();
+                        ////删除元素
+                        //htmlElement.remove();
+                        //hasMask.remove();
+                        //document.head.removeChild(style);
+                        //var content = rootElement.CurrentElement("xtextcontainerelement");
+                        //rootElement.FocusElement(content);
+                        //将光标移到音频元素之外
+                        rootElement.closeScreenChange = true;
+                        setTimeout(() => {
+                            rootElement.closeScreenChange = false;
+                        }, 1000);
+                    }
+                };
+                //移动显示样式
+                hasMask.addEventListener("mouseover", function (e) {
+                    var target = e.target;
+                    if (target.id == "dc_MediaCloseButton" || target.nodeName == "VIDEO" || target.nodeName == "AUDIO") {
+                        deleteButton.style.display = "block";
+                    } else {
+                        deleteButton.style.display = "none";
+                    }
+
+                });
+                //点击关闭按钮
+                deleteButton.addEventListener("click", function () {
+                    htmlElement.pause();
+                    htmlElement.removeAttribute("src");
+                    htmlElement.load();
+                    htmlElement.onfullscreenchange = null;
+                    //删除元素
+                    htmlElement.remove();
+                    hasMask.remove();
+                    style.remove();
+                    var content = rootElement.CurrentElement("xtextcontainerelement");
+                    rootElement.FocusElement(content);
+                });
+
+                //监听esc
+                document.body.addEventListener("keydown", keydownEvent);
+            }
+
+            function keydownEvent(e) {
+                if (e.key == "Escape") {
+                    document.body.removeEventListener("keydown", keydownEvent);
+                    htmlElement.pause();
+                    htmlElement.removeAttribute("src");
+                    htmlElement.load();
+                    htmlElement.onfullscreenchange = null;
+                    htmlElement.remove();
+                    hasMask.remove();
+                    style.remove();
+                    var content = rootElement.CurrentElement("xtextcontainerelement");
+                    rootElement.FocusElement(content);
+                }
+            }
+
+            return htmlElement;
+        }
     },
     /**
      * 获得所有的页码数组
@@ -409,6 +1268,19 @@ export let WriterControl_UI = {
      */
     GetAllPageIndexs: function (strContainerID) {
         var rootElement = DCTools20221228.GetOwnerWriterControl(strContainerID);
+        if (rootElement != null && rootElement.IsWriterPrintPreviewControlForWASM == true) {
+            // 打印预览控件
+            var pageContainer = DCTools20221228.GetChildNodeByDCType(rootElement, "page-printpreview");
+            var result2 = new Array();
+            if (pageContainer != null) {
+                for (var node = pageContainer.firstChild; node != null; node = node.nextSibling) {
+                    if (node.nodeName.toLowerCase() == "svg") {
+                        result2.push(node.PageIndex);
+                    }
+                }
+            }
+            return result2;
+        }
         var pages = WriterControl_UI.GetPageCanvasElements(strContainerID);
         if (pages != null) {
             var result = new Array(pages.length);
@@ -473,6 +1345,8 @@ export let WriterControl_UI = {
                 var element = elements[iCount];
                 WriterControl_Paint.SetPageElementSize(rootElement, element);
                 element._isRendered = false;
+                // 修复快速切换缩放后页面偶现字体重叠问题【DUWRITER5_0-4883】
+                element._NeedClear = true;
                 //var ctx = element.getContext("2d");
                 //ctx.clearRect(0, 0, element.width, element.height);
             }
@@ -480,7 +1354,9 @@ export let WriterControl_UI = {
             //rootElement.FunctionHandle_OnScroll = window.setTimeout(
             //    WriterControl_Paint.HandleScrollView, 50, rootElement);
             rootElement.__DCWriterReference.invokeMethod("UpdateTextCaretWithoutScroll");
+            WriterControl_Paint.UpdateViewForWaterMark(rootElement);
             WriterControl_Rule.InvalidateAllView(rootElement);
+            WriterControl_UI.ReloadHostControls(rootElement);
             WriterControl_Print.UpdateZoomRateForPrintPreview(rootElement);
             // 触发事件
             WriterControl_UI.__RaisingEventZoomChanged = true;
@@ -522,17 +1398,17 @@ export let WriterControl_UI = {
             return false;
         }
         // 获取canvas元素所有样式
-        var canvasStyles = GetNodeStyles(canvasNode);
+        var canvasStyles = DCTools20221228.GetNodeStyles(canvasNode);
         // canvas元素宽度
         var canvasWidth = canvasNode.clientWidth;
         // 防止页面开始就有缩放，所以获取原本的宽度
         if (canvasNode.hasAttribute("native-width")) {
-            canvasWidth = ChangeIntoNumber(canvasNode.getAttribute("native-width"));
+            canvasWidth = DCTools20221228.ChangeIntoNumber(canvasNode.getAttribute("native-width"));
         }
         // 添加边框左右宽度
-        canvasWidth += ChangeIntoNumber(canvasStyles.borderLeftWidth) + ChangeIntoNumber(canvasStyles.borderRightWidth);
+        canvasWidth += DCTools20221228.ChangeIntoNumber(canvasStyles.borderLeftWidth) + DCTools20221228.ChangeIntoNumber(canvasStyles.borderRightWidth);
         // 添加外边距左右宽度
-        canvasWidth += ChangeIntoNumber(canvasStyles.marginLeft) + ChangeIntoNumber(canvasStyles.marginRight);
+        canvasWidth += DCTools20221228.ChangeIntoNumber(canvasStyles.marginLeft) + DCTools20221228.ChangeIntoNumber(canvasStyles.marginRight);
         // 缩放的比例
         var zoomNumber = PageDiv.clientWidth / canvasWidth;
         // 是否需要处理缩放比例小数位
@@ -545,31 +1421,6 @@ export let WriterControl_UI = {
 
         // 返回缩放结构
         return SetZoomRateResult;
-
-        /** 获取元素所有的样式对象
-        * @param {node} node 元素
-        * @return {object} 元素样式对象
-        */
-        function GetNodeStyles(node) {
-            // 兼容IE和火狐谷歌等的写法
-            var computedStyle = window.getComputedStyle && window.getComputedStyle(node, null) || node.currentStyle;
-            return computedStyle || {};
-        }
-
-        /** 将内容变成数值类型
-        * @param {*} str 需要转化的内容
-        * @return {number} NUMBER 数值
-        */
-        function ChangeIntoNumber(str) {
-            var NUMBER = str;
-            if (typeof (str) != "number") {
-                NUMBER = parseFloat(str);
-            }
-            if (isNaN(NUMBER) == true) {
-                NUMBER = 0;
-            }
-            return NUMBER;
-        }
     },
 
 
@@ -580,74 +1431,97 @@ export let WriterControl_UI = {
         if (strMode == null || strMode.length == 0) {
             strMode = "MultiColumn";
         }
-        //if (rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode") == true) {
-        //    // 普通视图模式,强制设置为单栏模式
-        //    if (strMode.trim().toLowerCase() != "singlecolumn") {
-        //        console.warn("普通视图模式只支持单栏显示,不支持:" + strMode);
-        //    }
-        //    strMode = "SingleColumn";
-        //}
+        if (rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode") == true) {
+            // 普通视图模式,强制设置为单栏模式
+            if (strMode.trim().toLowerCase() != "singlecolumn") {
+                console.warn("普通视图模式只支持单栏显示,不支持:" + strMode);
+            }
+            strMode = "SingleColumn";
+        }
         rootElement.setAttribute("pagelayoutmode", strMode);
-        var pages = WriterControl_UI.GetPageContainer(rootElement);
-
+        // 正文元素
+        let PageDiv = WriterControl_UI.GetPageContainer(rootElement);
         //[DUWRITER5_0-3585] 20240918 lxy 兼容svg打印预览模式视图模式调整
-        var printPage = rootElement.querySelector("[dctype='page-printpreview']");
+        const printPage = rootElement.querySelector("[dctype='page-printpreview']");
         if (printPage && printPage.style.display != "none") {
-            pages = printPage;
+            PageDiv = printPage;
         }
-
-        if (pages != null) {
-            strMode = strMode.trim().toLocaleLowerCase();
-            if (strMode == "horizontal") {
-                pages.style.whiteSpace = "nowrap";
-                pages.style.textAlign = "";
-                var clientHeight = pages.clientHeight;
-                var maxHeight = 0;
-                for (var element = pages.firstChild;
-                    element != null;
-                    element = element.nextSibling) {
-                    if (element.nodeName == "CANVAS" || element.nodeName == "svg") {
-                        element.style.display = "inline-block";
-                        var nh = parseInt(element.getAttribute("native-height"));
-                        if (nh > maxHeight) {
-                            maxHeight = nh;
-                        }
-                    }
+        if (!PageDiv) {
+            return false;
+        }
+        strMode = strMode.trim().toLocaleLowerCase();
+        const pageNodes = PageDiv.querySelectorAll("canvas[dctype='page'],svg[dctype='page']");
+        if (strMode == "horizontal") {
+            // 设置页面布局模式为水平铺开
+            // 存储原来的overflow样式
+            const originalOverflow = PageDiv.style.overflow;
+            PageDiv.style.whiteSpace = "nowrap";
+            PageDiv.style.textAlign = "";
+            // 让滚动条显示
+            PageDiv.style.overflow = "scroll";
+            // 获取页面高度
+            const clientHeight = PageDiv.clientHeight;
+            let maxHeight = 0;
+            let maxHeightNode = null;
+            for (let i = 0; i < pageNodes.length; i++) {
+                const element = pageNodes[i];
+                element.style.display = "inline-block";
+                const nativeHeight = parseInt(element.getAttribute("native-height"));
+                if(nativeHeight > maxHeight) {
+                    maxHeight = nativeHeight;
+                    maxHeightNode = element;
                 }
-                var zoomRate = (pages.offsetHeight - 35) / (maxHeight + 4);
-                rootElement.SetZoomRate(zoomRate);
             }
-            else {
-                pages.style.whiteSpace = "";
-                pages.style.textAlign = "center";
-                for (var element = pages.firstChild;
-                    element != null;
-                    element = element.nextSibling) {
-                    if (element.nodeName == "CANVAS" || element.nodeName == "svg") {
-                        if (strMode == "singlecolumn") {
-                            element.style.display = "block";
-                            element.style.margin = "5px auto";
-                        }
-                        else {
-                            element.style.display = "inline-block";
-                            element.style.margin = "5px 5px";
-                        }
-                    }
-                }//for
+            if (maxHeightNode) {
+                // 获取element元素所有样式
+                const elementStyles = DCTools20221228.GetNodeStyles(maxHeightNode);
+                // element元素高度
+                let elementHeight = maxHeightNode.clientHeight;
+                // 防止页面开始就有缩放，所以获取原本的高度
+                if (maxHeightNode.hasAttribute("native-height")) {
+                    elementHeight = DCTools20221228.ChangeIntoNumber(maxHeightNode.getAttribute("native-height"));
+                }
+                // 添加边框上下高度
+                elementHeight += DCTools20221228.ChangeIntoNumber(elementStyles.borderTopWidth) + DCTools20221228.ChangeIntoNumber(elementStyles.borderBottomWidth);
+                // 添加外边距上下高度
+                elementHeight += DCTools20221228.ChangeIntoNumber(elementStyles.marginTop) + DCTools20221228.ChangeIntoNumber(elementStyles.marginBottom);
+                // 缩放的比例
+                let zoomNumber = clientHeight / elementHeight;
+                // 是否需要处理缩放比例小数位
+                // 取小数点后面n位
+                const n = 2;
+                const bl = Math.pow(10, n);
+                zoomNumber = parseInt(zoomNumber * bl) / bl;
+                rootElement.SetZoomRate(zoomNumber);
+                // 还原原来的overflow样式
+                PageDiv.style.overflow = originalOverflow;
             }
-            // 修正区域选择打印蒙版位置
-            if (rootElement.RectInfo && typeof (rootElement.RectInfo.AdjustBoundsSelectionStyle) == "function") {
-                rootElement.RectInfo.AdjustBoundsSelectionStyle();
+        } else {
+            PageDiv.style.whiteSpace = "";
+            PageDiv.style.textAlign = "center";
+            for (let i = 0; i < pageNodes.length; i++) {
+                const element = pageNodes[i];
+                if (strMode == "singlecolumn") {
+                    element.style.display = "block";
+                    element.style.margin = "5px auto";
+                } else {
+                    element.style.display = "inline-block";
+                    element.style.margin = "5px 5px";
+                }
             }
-            WriterControl_Task.AddTask(function () {
-                WriterControl_Paint.HandleScrollView(rootElement);
-                rootElement.__DCWriterReference.invokeMethod("UpdateTextCaretWithoutScroll");
-            });
-            //WriterControl_Paint.HandleScrollView(rootElement);
-            //window.setTimeout(function () {
-            //    rootElement.__DCWriterReference.invokeMethod("UpdateTextCaretWithoutScroll");
-            //}, 50);
         }
+        // 修正区域选择打印蒙版位置
+        if (rootElement.RectInfo && typeof (rootElement.RectInfo.AdjustBoundsSelectionStyle) == "function") {
+            rootElement.RectInfo.AdjustBoundsSelectionStyle();
+        }
+        WriterControl_Task.AddTask(function () {
+            WriterControl_Paint.HandleScrollView(rootElement);
+            rootElement.__DCWriterReference.invokeMethod("UpdateTextCaretWithoutScroll");
+        });
+        //WriterControl_Paint.HandleScrollView(rootElement);
+        //window.setTimeout(function () {
+        //    rootElement.__DCWriterReference.invokeMethod("UpdateTextCaretWithoutScroll");
+        //}, 50);
     },
 
 
@@ -698,6 +1572,8 @@ export let WriterControl_UI = {
             var result = new Array();
             while (node != null) {
                 if ((node.nodeName == "CANVAS" || node.nodeName == "svg") && node.getAttribute("dctype") == "page") {
+                    result.push(node);
+                } else if (rootElement.IsWriterPrintPreviewControlForWASM === true && node.nodeName == "svg" && node.getAttribute("dctype") == "page") {
                     result.push(node);
                 }
                 node = node.nextSibling;
@@ -781,6 +1657,13 @@ export let WriterControl_UI = {
         if (div != null && div.style.display != "none") {
             div.CloseDropdown();
         }
+        if (div != null) {
+            // 避免上一个时间选择界面未关闭
+            if (div.thisApi && div.thisApi.theTool && typeof (div.thisApi.theTool.hidePanel) == "function") {
+                div.thisApi.theTool.hidePanel();
+                div.thisApi = null;
+            }
+        }
     },
     /**
      * 获得下拉列表容器元素
@@ -836,6 +1719,7 @@ export let WriterControl_UI = {
             div.style.position = "absolute";
             div.style.display = "none";
             div.style.maxHeight = "250px";
+            div.style.maxWidth = "100%";
             div.style.overflowY = 'auto';
             div.style.userSelect = 'none';
             div.style.boxShadow = '0 2px 8px 2px rgba(68, 73, 77, 0.16)';
@@ -843,7 +1727,7 @@ export let WriterControl_UI = {
             //div.style.width = "200px";
             //div.style.height = "200px";
             //rootelement在tab页切换的时候可能出现不准确的问题，在此处重新再获取一遍rootElement
-            div.ShowDropdown = function () {
+            div.ShowDropdown = function (EventShowDropdownOnce) {
                 var div = this,
                     rootElement = div;
                 while (rootElement.getAttribute('dctype') != 'WriterControlForWASM') {
@@ -858,7 +1742,7 @@ export let WriterControl_UI = {
                     div.thisApi.theTool.hidePanel();
                     div.thisApi = null;
                 }
-                if ('ontouchstart' in rootElement.ownerDocument.documentElement) {
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                     rootElement.ownerDocument.activeElement.blur();
                 }
                 //找到最后一个子元素
@@ -880,6 +1764,10 @@ export let WriterControl_UI = {
                 //setTimeout(function () {
                 div.style.display = "block";
                 //})
+                // 下拉展示时在确定展示位置前面触发EventShowDropdownOnce方法
+                if (!!EventShowDropdownOnce && typeof EventShowDropdownOnce == "function") {
+                    EventShowDropdownOnce(rootElement, div);
+                }
                 //[DUWRITER5_0-3273]解决定位在输入域上方时，过高的问题。先清空一遍弹出在输入域上方的记录
                 div.removeAttribute('dc_up');
                 //目标位置
@@ -1056,7 +1944,7 @@ export let WriterControl_UI = {
                 if (currentInput) {
                     var newCurrentInput = rootElement.GetElementProperties(rootElement.CurrentInputField());
                     if (newCurrentInput && (currentInput.NativeHandle != newCurrentInput.NativeHandle)) {
-                        rootElement.FocusAdjacent("beforeEnd", currentInput);
+                        rootElement.FocusAdjacent("beforeEnd", currentInput.NativeHandle);
                     }
                 }
             };
@@ -1064,7 +1952,7 @@ export let WriterControl_UI = {
                 e.cancelBubble = true;
             };
             // 修复下拉弹框中滚动不了的问题【DUWRITER5_0-3644】
-            if (!('ontouchstart' in rootElement.ownerDocument.documentElement)) {
+            if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
                 div.addEventListener("mousewheel", function (e) {
                     try {
                         let scrollElement = e.srcElement || e.target;
@@ -1209,8 +2097,7 @@ export let WriterControl_UI = {
             // 辅助录入项的点击事件
             var AssistListCallBack = function (strNewText) {
                 WriterControl_UI.CloseDropdownControl();
-                rootElement.__DCWriterReference.invokeMethod(
-                    "ApplyAssistStringContent",
+                rootElement.__DCWriterReference.invokeMethod("ApplyAssistStringContent",
                     stateVersion,
                     strNewText);
             };
@@ -1311,6 +2198,14 @@ export let WriterControl_UI = {
             args.Items = listItems;
         }
         var isDropDownTableListData = false;
+        args.AddTableListData = function (tableData = null) {
+            if (tableData) {
+
+                WriterControl_QueryListTableControl.InitDropDownInputTableList(containerID, tableData, intPageIndex, intLeft, intTop, intHeight);
+                isDropDownTableListData = true;
+                return false;
+            }
+        };
 
         args.AddResultItem = function (item) {
             args.Items.push(item);
@@ -1388,13 +2283,7 @@ export let WriterControl_UI = {
             //在此处判断是否需要展示下拉元素
             if (divContainer.children.length == 0) {
                 divContainer.CloseDropdown();
-            } else {
-                // 需要特殊样式
-                divContainer.style.display = "flex";
-                divContainer.style.flexDirection = "column";
             }
-
-
         };
 
         if ((Boolean(hasListItem) === false || (hasListSourceName && Boolean(hasListItem) === false) || (hasListSourceName && Boolean(hasListItem) && ListSourceNameTriggerQueryListItems))) {
@@ -1797,11 +2686,11 @@ export let WriterControl_UI = {
                             // } else
                             if (selectCell.length > 2) {
                                 //[DUWRITER5_0-3982]20211216 lxy 存在多个选中单元格的情况,防止将元素元素粘贴为纯文本的情况，要先走PasteDataToSelectCells
-                                let regex = /<\?xml\s+[^\?]*\?>/;//用于匹配对应的xml内容
+                                let regex = /<\?xml\s+[^\?]*\?>|<xml\s+[^\?]*\?>|<\?XTextDocument|<XTextDocument/;//用于匹配对应的xml内容或以<?XTextDocument或<XTextDocument开头的内容
                                 let pasteXml = data.find(item => item.match(regex));
                                 if (pasteXml) {
                                     //如果返回值为true，则不再执行后续的粘贴逻辑
-                                    let IsPasteDataToSelectCells = rootElement.__DCWriterReference.invokeMethod("PasteDataToSelectCells", pasteXml);
+                                    let IsPasteDataToSelectCells = rootElement.__DCWriterReference.invokeMethod("PasteDataToSelectCells", pasteXml, true);
                                     if (IsPasteDataToSelectCells) {
                                         return false;
                                     }
@@ -1822,7 +2711,7 @@ export let WriterControl_UI = {
                                     var setColIndex = (setCell.ColIndex - thisCol) % dataArr[setRowIndex].length;
                                     //[DUWRITER5_0-3781] 20241105 lxy 优化选中多个单元格复制粘贴卡顿的问题
                                     // console.time("SetTableCellTextExt");
-                                    rootElement.SetTableCellTextExtByHandle(setCell.CellNativeHandle, dataArr[setRowIndex][setColIndex]);
+                                    rootElement.SetTableCellTextExtByHandle(setCell.CellNativeHandle, dataArr[setRowIndex][setColIndex], true);
                                     // console.timeEnd("SetTableCellTextExt");
                                     // rootElement.SetTableCellTextExt(CurrentTable, setCell.RowIndex, setCell.ColIndex, dataArr[setRowIndex][setColIndex]);
 
@@ -2042,6 +2931,12 @@ export let WriterControl_UI = {
             }
             //假设为纯文本
             if (datalist.length == 2 && datalist[0] == 'text/plain') {
+                var newTXT = '';
+                //对生僻字进行判断
+                for (var char = 0; char < datalist[1].length; char++) {
+                    newTXT += DCTools20221228.changeUseUTF16(datalist[1][char]);
+                }
+                datalist[1] = newTXT;
                 return datalist;
             } else {
                 //判断html是否能找到为word; schemas-microsoft-com:office:word
@@ -2056,8 +2951,13 @@ export let WriterControl_UI = {
                         //循环数据并重写datalist
                         for (var dataType = 0; dataType < datalist.length; dataType += 2) {
                             if (datalist[dataType] == 'text/plain') {
+                                var newTXT = '';
+                                //对生僻字进行判断
+                                for (var char = 0; char < datalist[dataType + 1].length; char++) {
+                                    newTXT += DCTools20221228.changeUseUTF16(datalist[dataType + 1][char]);
+                                }
                                 newdatalist.push('text/plain');
-                                newdatalist.push(datalist[dataType + 1]);
+                                newdatalist.push(newTXT);
                             } else if (datalist[dataType] == 'text/html') {
                                 //获取正确的字符串
                                 var startIndex = datalist[dataType + 1].indexOf('\x3C!--StartFragment-->');
@@ -2065,7 +2965,12 @@ export let WriterControl_UI = {
                                 if (startIndex >= 0 && lastIndex >= 0) {
                                     var needChangeString = datalist[dataType + 1].substring((startIndex + 20), lastIndex);
 
-                                    var newTXT = needChangeString;
+                                    var newTXT = '';
+                                    //对生僻字进行判断
+                                    for (var char = 0; char < needChangeString.length; char++) {
+                                        newTXT += DCTools20221228.changeUseUTF16(needChangeString[char]);
+                                    }
+
                                     // //替换p标签
                                     if (newTXT.indexOf("<p class=MsoNormal") >= 0) {
                                         //newTXT = newTXT.replace(/<p class=MsoNormal>|<p class=MsoNormal >/g, "");
@@ -2211,6 +3116,55 @@ export let WriterControl_UI = {
         return dataList;
     },
 
+    /**
+     * 解析 PasteImageOptions 属性
+     * 支持的格式：
+     * 1. 键值对格式：AutoFitImageSize=true,KeepWidthHeightRate=false
+     * 2. 键值对格式（冒号）：AutoFitImageSize:true,KeepWidthHeightRate:false
+     * 3. JSON格式：{"AutoFitImageSize":true,"KeepWidthHeightRate":false}
+     * @param {HTMLElement} rootElement - 根元素
+     * @param {Object} defaultOptions - 默认选项对象
+     * @returns {Object} 解析后的选项对象
+     */
+    ParsePasteImageOptions: function (rootElement, defaultOptions) {
+        const defaultOpts = defaultOptions || {
+            AutoFitImageSize: false,
+            KeepWidthHeightRate: true
+        };
+        const result = { ...defaultOpts };
+        const PasteImageOptionsAttribute = rootElement.getAttribute('PasteImageOptions') || '';
+        if (PasteImageOptionsAttribute) {
+            try {
+                let PasteImageOptionsAttributeObject = {};
+                // 尝试解析为JSON格式
+                if (PasteImageOptionsAttribute.trim().startsWith('{')) {
+                    PasteImageOptionsAttributeObject = JSON.parse(PasteImageOptionsAttribute);
+                } else {
+                    // 解析键值对格式（支持 = 和 : 两种分隔符）
+                    const pairs = PasteImageOptionsAttribute.split(',');
+                    for (let pair of pairs) {
+                        pair = pair.trim();
+                        if (!pair) continue;
+                        // 支持 key=value 或 key:value 格式
+                        const separator = pair.includes('=') ? '=' : ':';
+                        const [key, value] = pair.split(separator).map(s => s.trim());
+                        if (key) {
+                            PasteImageOptionsAttributeObject[key] = value;
+                        }
+                    }
+                }
+                for (const key in PasteImageOptionsAttributeObject) {
+                    if (Object.prototype.hasOwnProperty.call(PasteImageOptionsAttributeObject, key)) {
+                        result[key] = DCTools20221228.ParseBoolean(PasteImageOptionsAttributeObject[key], defaultOpts[key]);
+                    }
+                }
+            } catch (error) {
+                // 解析失败时使用默认值
+            }
+        }
+        return result;
+    },
+
     /**获得系统剪切板中所有的内容
      * @returns {Array} 内容组成的数组，偶数位为数据格式的名称，奇数位是数据内容
      * */
@@ -2261,12 +3215,171 @@ export let WriterControl_UI = {
                     continue;
                 }
                 if (type == 'text/html') {
-                    continue;
+                    //判断是否为word
+                    isOfficeWord = clipboardData.indexOf('schemas-microsoft-com:office:word') >= 0 ? true : false;
+                    isOfficeExecl = clipboardData.indexOf('schemas-microsoft-com:office:excel') >= 0 ? true : false;
+                    var DCAttrHTML = rootElement.ownerDocument.createElement('html');
+                    DCAttrHTML.innerHTML = clipboardData;
+                    var hasBody = DCAttrHTML.querySelector('body');
+                    if (hasBody) {
+                        var thisDiv = hasBody.querySelector('[DCAttrClipboardData]');
+                        if (thisDiv) {
+                            hasDCAttr = true;
+                            try {
+                                var DCAttrClipboardData = thisDiv.getAttribute('DCAttrClipboardData');
+                                thisDiv.remove();
+                                if (DCAttrClipboardData) {
+                                    dataList = JSON.parse(DCAttrClipboardData);
+                                } else {
+                                    throw new Error('');
+                                }
+                                // 修复粘贴的图片跟复制的图片宽高不一样的问题【DUWRITER5_0-4368】
+                                //在此处判断是否存在image元素
+                                // if (Array.isArray(dataList)) {
+                                //     for (var list = 0; list < dataList.length; list += 2) {
+                                //         if (dataList[list].indexOf('image/') == 0) {
+                                //             dataList = [dataList[list], dataList[list + 1]];
+                                //             break;
+                                //         }
+                                //     }
+                                // }
+                            } catch (err) {
+                                dataList.push(type);
+                                dataList.push(clipboardData);
+                                continue;
+                            }
+                            break;
+                        }
+
+                    }
+                    //在ie下复制内容会出现多余的head和table标签,此处格式化文档并重新写入数据
+                    //最先判断是否为ie下,暂时只对ie进行操作
+                    if (clipboardData.indexOf('<HTML>') == 0) {
+                        //查找字符串
+                        var startIndex = clipboardData.indexOf('\x3C!--StartFragment-->');
+                        var lastIndex = clipboardData.indexOf('\x3C!--EndFragment-->');
+                        clipboardData = '<html><body>' + clipboardData.substring((startIndex + 20), lastIndex) + '</body></html >';
+                    }
                 }
                 dataList.push(type);
                 dataList.push(clipboardData);
             }
-            
+            if (!rootElement.isPasteAsText) {
+                //存在文件信息
+                if (!hasDCAttr && e.clipboardData.files.length > 0) {
+                    // 修复复制Execl粘贴不到编辑器的问题【DUWRITER5_0-4630】
+                    // dataList = [];
+                    Promise.all(function* () {
+                        for (const file of e.clipboardData.files) {
+                            yield new Promise(resolve => {
+                                var reader = new FileReader();
+                                reader.readAsDataURL(file);
+                                reader.type = file.type;
+                                reader.onload = function (e) {
+                                    resolve(this);
+                                };
+                            });
+                        }
+                    }()).then(results => {
+                        var imageData = [];
+                        /** 临时存储剪切板files数据 */
+                        var new_dataList = [];
+                        results.forEach(data => {
+                            if (data.type.indexOf('image/') == 0) {
+                                imageData.push(data.type);
+                                imageData.push(data.result);
+                            } else {
+                                new_dataList.push(data.type);
+                                new_dataList.push(data.result);
+                            }
+                        });
+                        // 临时存储有数据时再覆盖之前获取的数据
+                        if (new_dataList.length > 0) {
+                            dataList = new_dataList;
+                        }
+                        if (triggerEventBeforePaste(rootElement, dataList) == false) {
+                            return false;
+                        }
+                        // 处理粘贴Execl内容使用isPasteAsText进行纯文本粘贴无效的问题【DUWRITER5_0-4630】
+                        // 在此处判断是否为纯文本粘贴
+                        if (rootElement.isPasteAsText) {
+                            //将datas重置为只有text/plain
+                            var textIndex = dataList.indexOf('text/plain');
+                            dataList = [dataList[textIndex], dataList[textIndex + 1]];
+                        }
+                        //此处不再使用粘贴接口使用插入图片的接口,因为粘贴出来的图片不保存
+                        if (imageData.length > 0 && !isOfficeExecl) {
+                            // 粘贴图片时解析PasteImageOptions属性 【DUWRITER5_0-5078】
+                            const PasteImageOptions = WriterControl_UI.ParsePasteImageOptions(rootElement);
+                            var imgArr = new Array();
+                            for (var i = 0; i < imageData.length; i += 2) {
+                                var options = {
+                                    SaveContentInFile: true,
+                                    Src: imageData[i + 1].split(',')[1],
+                                    AutoFitImageSize: PasteImageOptions.AutoFitImageSize,
+                                    KeepWidthHeightRate: PasteImageOptions.KeepWidthHeightRate
+                                };
+                                imgArr.push(options);
+                            }
+                            //修改DocumentOptions.BehaviorOptions.AcceptDataFormats="Text"
+                            var getAcceptDataFormats = rootElement.DocumentOptions.BehaviorOptions.AcceptDataFormats;
+                            if (getAcceptDataFormats) {
+                                //分割数据
+                                var allFormats = getAcceptDataFormats.split(',');
+                                allFormats.forEach((item, index) => {
+                                    allFormats[index] = item ? item.toLowerCase().trim() : item;
+                                });
+                                if (allFormats.indexOf("all") >= 0 || allFormats.indexOf("image") >= 0) {
+                                    rootElement.InsertImageByJSONText(imgArr);
+                                }
+                            }
+                        } else {
+                            var needPaste = WriterControl_UI.PasteDataFromTableToTable(dataList, rootElement);
+                            if (needPaste) {
+                                dataList = WriterControl_UI.PasteDateFromUTF16(dataList, rootElement);
+                                //暂时删除掉rtf
+                                if (Array.isArray(dataList)) {
+                                    var hasRft = dataList.indexOf('text/rtf');
+                                    if (hasRft >= 0) {
+                                        dataList.splice(hasRft, 2);
+                                    }
+                                }
+                                //调用后台数据
+                                var ref9 = rootElement.__DCWriterReference;
+                                if (ref9 != null) {
+                                    ref9.invokeMethod("DoPaste",
+                                        dataList);
+                                }
+                            }
+                        }
+                    });
+                    return;
+                }
+                //if (dataList.length > 0) {
+                //    ////暂时删除掉rtf
+                //    //if (Array.isArray(dataList)) {
+                //    //    var hasRft = dataList.indexOf('text/rtf');
+                //    //    if (hasRft >= 0) {
+                //    //        dataList.splice(hasRft, 2);
+                //    //    }
+                //    //}
+                //    dataList = WriterControl_UI.PasteDateFromUTF16(dataList, rootElement);
+                //    //调用后台数据
+                //    var ref9 = rootElement.__DCWriterReference;
+                //    if (ref9 != null) {
+                //        if (rootElement.getAttribute("IsUsePasteDiolog") === "true" && WriterControl_UI.PasteDiolog(rootElement, dataList) != false) {
+                //            // WriterControl_UI.PasteDiolog(rootElement, dataList);
+                //        } else {
+                //            ref9.invokeMethod("DoPaste", dataList);
+                //        }
+                //        if (oldFontName) {
+                //            rootElement.DCExecuteCommand('FontName', false, oldFontName);
+                //        }
+                //    }
+                //}
+            }
+
+
             if (triggerEventBeforePaste(rootElement, dataList) == false) {
                 return false;
             }
@@ -2307,6 +3420,13 @@ export let WriterControl_UI = {
                 }
             }
         } else if (navigator.clipboard) {
+            // 检查是否禁止读取剪切板权限
+            if (rootElement.getAttribute("DisableClipboardRead") === "true") {
+                console.log("已禁用读取剪切板权限，跳过剪贴板读取");
+                getloadStorage();
+                return false;
+            }
+            
             //先判断是否为firefox还是google
             var userAgent = window.navigator.userAgent;
             if (userAgent.indexOf("Chrome") > -1) {
@@ -2362,9 +3482,10 @@ export let WriterControl_UI = {
                         if (!blob) {
                             continue;
                         }
-                        if (dataList.length > 0 && triggerEventBeforePaste(rootElement, dataList, true) == false) {
-                            return false;
-                        }
+                        // 修复在使用navigator.clipboard粘贴时触发EventBeforePaste两次的问题【DUWRITER5_0-4532】
+                        // if (dataList.length > 0 && triggerEventBeforePaste(rootElement, dataList, true) == false) {
+                        //     return false;
+                        // }
                         if (!rootElement.isPasteAsText && clipboardItem.types.length == 1 && type.indexOf('image/') == 0) {
                             new Promise(resolve => {
                                 var reader = new FileReader();
@@ -2375,13 +3496,16 @@ export let WriterControl_UI = {
                             }).then(result => {
                                 dataList.push(type);
                                 dataList.push(result.result);
-
                                 //此处不再使用粘贴接口使用插入图片的接口,因为粘贴出来的图片不保存
                                 //如果clipboardData能读取到数据
                                 if (dataList.length > 0) {
+                                    // 粘贴图片时解析PasteImageOptions属性 【DUWRITER5_0-5078】
+                                    const PasteImageOptions = WriterControl_UI.ParsePasteImageOptions(rootElement);
                                     var options = {
                                         SaveContentInFile: true,
-                                        Src: dataList[1].split(',')[1]
+                                        Src: dataList[1].split(',')[1],
+                                        AutoFitImageSize: PasteImageOptions.AutoFitImageSize,
+                                        KeepWidthHeightRate: PasteImageOptions.KeepWidthHeightRate
                                     };
                                     rootElement.DCExecuteCommand("InsertImage", false, options);
                                     rootElement.RefreshDocument();
@@ -2390,8 +3514,74 @@ export let WriterControl_UI = {
                             });
                         } else {
                             clipboardData = await blob.text();
-                            dataList.push(type);
-                            dataList.push(clipboardData);
+                            if (type == 'text/html') {
+                                //判断是否为word
+                                isOfficeWord = clipboardData.indexOf('schemas-microsoft-com:office:word') >= 0 ? true : false;
+                                isOfficeExecl = clipboardData.indexOf('schemas-microsoft-com:office:excel') >= 0 ? true : false;
+                                //获取到保存的数据并解析再次赋值
+                                var DCAttrHTML = rootElement.ownerDocument.createElement('html');
+                                DCAttrHTML.innerHTML = clipboardData;
+                                //找到body
+                                var hasBody = DCAttrHTML.querySelector('body');
+                                if (hasBody) {
+                                    var thisDiv = hasBody.querySelector('[DCAttrClipboardData]');
+                                    if (thisDiv) {
+                                        hasDCAttr = true;
+                                        try {
+                                            var DCAttrClipboardData = thisDiv.getAttribute('DCAttrClipboardData');
+                                            thisDiv.remove();
+                                            if (DCAttrClipboardData) {
+                                                dataList = JSON.parse(DCAttrClipboardData);
+                                            } else {
+                                                throw new Error('');
+                                            }
+                                            //在此处判断是否存在image元素
+                                            // if (Array.isArray(dataList)) {
+                                            //     for (var list = 0; list < dataList.length; list += 2) {
+                                            //         if (dataList[list].indexOf('image/') == 0) {
+                                            //             dataList = [dataList[list], dataList[list + 1]];
+                                            //             break;
+                                            //         }
+                                            //     }
+                                            // }
+                                        } catch (err) {
+                                            dataList.push(type);
+                                            dataList.push(clipboardData);
+                                            continue;
+                                        }
+                                        break;
+                                    } else {
+                                        //判断是否存在图片并为本地地址
+                                        var allImg = hasBody.querySelectorAll('img');
+                                        //解析是否存在本地图片
+                                        var allLocalImg = [];
+                                        if (allImg && allImg.length > 0) {
+                                            for (var img = 0; img < allImg.length; img++) {
+                                                var thisImg = allImg[img];
+                                                if (thisImg.src) {
+                                                    thisImg.src = thisImg.src.trim();
+                                                    if (thisImg.src.indexOf('file:///') == 0) {
+                                                        allLocalImg.push(thisImg.src);
+                                                        thisImg.remove();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (allLocalImg.length > 0) {
+                                            clipboardData = DCAttrHTML.outerHTML;
+                                            WriterControl_Event.InnerRaiseEvent(rootElement, "EventErrorGetClipboard", allLocalImg);
+                                        }
+                                        dataList.push(type);
+                                        dataList.push(clipboardData);
+                                    }
+                                } else {
+                                    dataList.push(type);
+                                    dataList.push(clipboardData);
+                                }
+                            } else {
+                                dataList.push(type);
+                                dataList.push(clipboardData);
+                            }
                         }
                     }
                 }
@@ -2605,6 +3795,35 @@ export let WriterControl_UI = {
             var oldUTF16Symbol = [];
             var newUTF16Symbol = [];
 
+            //在此处判断是否存在属性用于控制复制只读图片时是否保留
+            var copyNoKeepReadOnlyImages = rootElement.getAttribute("CopyNoKeepReadOnlyImages");
+            if (typeof copyNoKeepReadOnlyImages == "string" && copyNoKeepReadOnlyImages.toLowerCase().trim() == "true") {
+                //为了html能正确使用需要保证xml在html之前被修改,在循环前先处理xml
+                var xmlIndex = datas.indexOf("DCWriterXML20240201");
+                if (xmlIndex >= 0) {
+                    var xmlString = datas[xmlIndex + 1];
+                    if (xmlString) {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlString, "text/xml").documentElement;
+                        //找到所有的contentreadonly
+                        var allReadOnly = xmlDoc.querySelectorAll("ContentReadonly");
+                        if (allReadOnly.length > 0) {
+                            allReadOnly = Array.prototype.slice.call(allReadOnly);
+                            allReadOnly.forEach(function (imageEle) {
+                                var deleteEle = imageEle.parentElement;
+                                var deleteType = deleteEle.getAttribute("xsi:type");
+                                if (deleteType == "XImage") {
+                                    deleteEle.remove();
+                                }
+                            });
+                        }
+                        xmlString = xmlDoc.outerHTML;
+                        datas[xmlIndex + 1] = xmlString;
+                    }
+                }
+            }
+
+
             // 2023-6-3 yyf 简单粗暴的将数据塞入剪切板
             for (var iCount = 0; iCount < datas.length; iCount += 2) {
                 //直接判断是否存在特殊字符,此处暂时笼统判断
@@ -2627,6 +3846,152 @@ export let WriterControl_UI = {
                         }
                     }
                 }
+
+                if (datas[iCount] == 'text/html') {
+                    //datas = JSON.stringify(datas);
+                    //找到body，写入到body的自定义属性中去
+                    var DCAttrHTML = rootElement.ownerDocument.createElement('html');
+                    //解析字符串并替换
+                    if (oldUTF16Symbol && oldUTF16Symbol.length > 0) {
+                        for (var oldText = 0; oldText < oldUTF16Symbol.length; oldText++) {
+                            var reg = new RegExp(oldUTF16Symbol[oldText], 'gi');
+                            datas[iCount + 1] = datas[iCount + 1].replace(reg, newUTF16Symbol[oldText]);
+                        }
+                    }
+                    DCAttrHTML.innerHTML = datas[iCount + 1];
+                    //查找是否存在护理记录单XTextNewMedicalExpressionElement
+                    var hasMedicalExpression = DCAttrHTML.querySelectorAll("[dctype=XTextNewMedicalExpressionElement],[dctype=XTextNewBarcodeElement],[dctype=XTextTDBarcodeElement]");
+                    if (hasMedicalExpression && hasMedicalExpression.length > 0) {
+                        //清掉src防止报错
+                        for (var i = 0; i < hasMedicalExpression.length; i++) {
+                            hasMedicalExpression[i].src = "";
+                        }
+                    }
+                    //找到body
+                    var hasBody = DCAttrHTML.querySelector('body');
+                    if (!hasBody) {
+                        hasBody = rootElement.ownerDocument.createElement('body');
+                        DCAttrHTML.appendChild(hasBody);
+                    }
+                    //if (hasBody.children.length == 0) {
+                    //    hasBody.innerHTML = '<div><div>'
+                    //}
+
+                    if (typeof copyNoKeepReadOnlyImages == "string" && copyNoKeepReadOnlyImages.toLowerCase().trim() == "true") {
+                        //开始处理html
+                        var allImage = hasBody.querySelectorAll("[dctype=XTextImageElement][dc_contentreadonly=True]");
+                        if (allImage != null) {
+                            allImage = Array.prototype.slice.call(allImage);
+                            allImage.forEach(function (imageEle) {
+                                imageEle.remove();
+                            });
+                        }
+                    }
+
+                    var DCAttrDiv = rootElement.ownerDocument.createElement('div');
+                    //判断hasbody去掉/r/n /n空格后是否为空白
+                    var hasTextLength = hasBody.innerText.replace(/\/r\/n|\r\n|\/r|\r|\/n|\n/g, '').trim();
+                    if (hasTextLength.length == 0) {
+                        hasBody.innerHTML = '';
+                        DCAttrDiv = rootElement.ownerDocument.createElement('span');
+                        //解析是否存在imagedatabase64string
+                        var hasBase64ImageFirstIndex = datas[iCount + 1].indexOf('&lt;ImageDataBase64String&gt;');
+                        if (hasBase64ImageFirstIndex >= 0) {
+                            var hasBase64ImageLastIndex = datas[iCount + 1].indexOf('&lt;/ImageDataBase64String&gt;');
+                            var base64Image = datas[iCount + 1].substring(hasBase64ImageFirstIndex + 29, hasBase64ImageLastIndex);
+                            DCAttrDiv.innerHTML = `<img src="data:image/png;base64,${base64Image.trim()}"/>`;
+                        } else if (datas.indexOf('image/png') >= 0) {
+                            DCAttrDiv.innerHTML = `<img src="${(datas[datas.indexOf('image/png') + 1])}"/>`;
+                        } else {
+                            //在元素中插入text/plain
+                            var hasPlain = datas.indexOf('text/plain');
+                            if (hasPlain >= 0) {
+                                var text = datas[hasPlain + 1];
+                                text = text.replace(/\/r\/n|\r\n|\/r|\r|\/n|\n/g, "<br/>");
+                                DCAttrDiv.innerHTML = text;
+                            }
+                        }
+                        hasBody.appendChild(DCAttrDiv);
+                    }
+                    //DCAttrDiv.style.display = 'none';
+                    //判断是否存在表格,表格外层存在p标签在html解析时会被分割成上下两个，此处删除
+                    var hasTables = hasBody.querySelectorAll('[dctype=XTextTableElement]');
+                    //如果存在table那此处的html结构可能存在问题,使用SelectionHtml修改
+                    var selectionhtml = rootElement.SelectionHtml();
+                    var SelectDiv = document.createElement("div");
+                    SelectDiv.innerHTML = selectionhtml;
+                    // 修复复制包括医学表达式时报错的问题【DUWRITER5_0-4596】
+                    //查找是否存在护理记录单XTextNewMedicalExpressionElement
+                    var hasMedicalExpression = SelectDiv.querySelectorAll("[dctype=XTextNewMedicalExpressionElement],[dctype=XTextNewBarcodeElement],[dctype=XTextTDBarcodeElement]");
+                    if (hasMedicalExpression && hasMedicalExpression.length > 0) {
+                        //清掉src防止报错
+                        for (var i = 0; i < hasMedicalExpression.length; i++) {
+                            hasMedicalExpression[i].src = "";
+                        }
+                    }
+                    var allSelectTable = SelectDiv.querySelectorAll('[dctype=XTextTableElement]');
+                    if (!hasTables || !allSelectTable || allSelectTable.length != hasTables.length) {
+                        allSelectTable = [];
+                    }
+                    for (var i = 0; i < hasTables.length; i++) {
+                        var thisTable = hasTables[i];
+                        //找到后一个元素
+                        var nextP = thisTable.nextElementSibling;
+                        if (nextP && nextP.nodeName == "P" && nextP.children && nextP.children.length == 0) {
+                            nextP.remove();
+                            var prevP = thisTable.previousElementSibling;
+                            if (prevP && prevP.nodeName == "P" && prevP.children && prevP.children.length == 0) {
+                                prevP.remove();
+                            }
+                        }
+                        if (allSelectTable[i]) {
+                            thisTable.outerHTML = allSelectTable[i].outerHTML;
+                        }
+
+                    }
+                    if (DCAttrDiv.nodeName == 'DIV') {
+                        hasBody.appendChild(DCAttrDiv);
+                    }
+
+                    var attrString = datas;
+                    if (typeof copyNoKeepReadOnlyImages == "string" && copyNoKeepReadOnlyImages.toLowerCase().trim() == "true") {
+                        attrString = [];
+
+                        //重新定义写法
+                        for (var i = 0; i < datas.length; i += 2) {
+                            if (datas[i] != "text/html") {
+                                attrString.push(datas[i]);
+                                attrString.push(datas[i + 1]);
+
+                            } else {
+                                attrString.push(datas[i]);
+                                var newString = hasBody.innerHTML;
+                                if (xmlIndex >= 0) {
+                                    //创建一个元素
+                                    var comentDiv = document.createElement("div");
+                                    var commentString = document.createComment(datas[xmlIndex + 1]);
+                                    comentDiv.appendChild(commentString);
+                                    newString = comentDiv.innerHTML + newString;
+                                    comentDiv = null;
+                                    commentString = null;
+                                }
+                                attrString.push(newString);
+                            }
+                        }
+                    }
+
+                    DCAttrDiv.setAttribute('DCAttrClipboardData', JSON.stringify(attrString));
+                    attrString = null;
+                    datas[iCount + 1] = hasBody.innerHTML;
+
+                    // if (DCAttrDiv.nodeName == 'DIV') {
+                    //     //替换html的数据
+                    //     datas[iCount + 1] = DCAttrHTML.outerHTML;
+                    // } else {
+                    //     datas[iCount + 1] = hasBody.innerHTML;
+                    // }
+                }
+
             }
 
             //直接保存到localstorage中
@@ -2649,7 +4014,82 @@ export let WriterControl_UI = {
         }
         rootElement.isCopyAsText = false;
     },
+    //
+    ///**
+    // * 获得根元素对象
+    // * @param {string} containerID 容器元素编号
+    // * @returns {HTMLElement} 获得的根元素对象
+    // */
+    //GetRootElement: function (containerID) {
+    //    if (containerID != null && containerID.nodeName) {
+    //        var pe = containerID;
+    //        while (pe != null) {
+    //            if (pe.getAttribute) {
+    //                if (pe.getAttribute("dctype") == "WriterPrintPreviewControlForWASM"
+    //                    || pe.getAttribute("dctype") == "WriterControlForWASM") {
+    //                    return pe;
+    //                }
+    //            }
+    //            pe = pe.parentNode;
+    //        }
+    //    }
+    //    else {
+    //        return document.getElementById(containerID);
+    //    }
+    //},
 
+    ///**
+    // * 获得指定名称的事件处理函数
+    // * @param {string} containerID 容器元素对象编号
+    // * @param {string} strEventName 事件名称
+    // * @returns {Function} 事件处理函数对象
+    // */
+    //GetControlEventHandler: function (containerID, strEventName) {
+    //    var rootElement = DCTools20221228.GetOwnerWriterControl(containerID);
+    //    var list = new Array();
+    //    var func = window["WriterControl_" + strEventName];
+    //    if (typeof (func) == "function") {
+    //        // 获得全局性事件函数
+    //        list.push(func);
+    //    }
+    //    func = rootElement[strEventName];
+    //    if (typeof (func) == "function") {
+    //        // 获得直接绑定的事件函数
+    //        list.push(func);
+    //    }
+    //    else {
+    //        // 按照属性名来获得事件函数
+    //        var name2 = rootElement.getAttribute(strEventName);
+    //        if (name2 != null && name2.length > 0 && typeof (window[name2]) == "function") {
+    //            list.push(window[name2]);
+    //        }
+    //    }
+    //    if (list.length == 0) {
+    //        return null;
+    //    }
+    //    else if (list.length == 1) {
+    //        return list[0];
+    //    }
+    //    else {
+    //        return list;
+    //    }
+
+    //    //var ctl = DCTools20221228.GetOwnerWriterControl(containerID);
+    //    //if (ctl != null) {
+    //    //    var handler = ctl[strEventName];
+    //    //    if (typeof (handler) == "function") {
+    //    //        return handler;
+    //    //    }
+    //    //    var attrName = ctl.getAttribute(strEventName);
+    //    //    if (attrName != null && attrName.length > 0) {
+    //    //        var h2 = window[attrName];
+    //    //        if (typeof (h2) == "function") {
+    //    //            return h2;
+    //    //        }
+    //    //    }
+    //    //}
+    //    //return null;
+    //},
     /**
      * 设置元素的鼠标光标信息
      * @param {string} containerID 容器元素编号
@@ -2989,8 +4429,11 @@ export let WriterControl_UI = {
             return;
         }
 
+        // 移动设备检测常量（在方法开始时统一检测，避免重复检测）
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
         containerID = typeof (containerID) == "string" ? containerID : rootElement.id;
-        if (rootElement.__DCDisposed == true || rootElement.__DCWriterReference.invokeMethod("IsReadOnly")) {
+        if (rootElement.__DCDisposed == true || rootElement.__DCWriterReference.invokeMethod("IsReadOnlyOrReadViewMode")) {// rootElement.Readonly || rootElement.ReadViewMode) {
             // 控件已经被销毁，或者是只读模式，或者是阅读模式
             rootElement.oldCaretOption = {
                 containerID,
@@ -3008,6 +4451,14 @@ export let WriterControl_UI = {
             return;
         }
 
+        //是否为续打模式
+        if (rootElement.__DCWriterReference.invokeMethod("IsNormalJumpPrintMode") === true) {
+            return;
+        }
+        //var isJumpPrint = rootElement.JumpPrint ? rootElement.JumpPrint.Mode : null;
+        //if (isJumpPrint && isJumpPrint == "Normal") {
+        //    return;
+        //}
         if (callSource != "PlayAPILogRecord") {
             // API记录
             WriterControl_UI.APILogRecordJSMethod(rootElement, "ShowCaret", {
@@ -3059,6 +4510,15 @@ export let WriterControl_UI = {
         // if (rootElement && rootElement.querySelector("#" + strDIVID)) {
         //     divCaret = rootElement.querySelector("#" + strDIVID);
         // }
+        // 移动端添加不可输入位置不弹出软键盘的功能【DUWRITER5_0-5050】
+        // 判断当前位置能否插入内容
+        if (txtEdit && isMobile) {
+            if (rootElement.CanInsertAtCurrentPosition()) {
+                txtEdit.removeAttribute("readonly");
+            } else {
+                txtEdit.setAttribute("readonly", true);
+            }
+        }
 
         if (rootElement.ClickCommentAreaFocusCaret == "true") {
             if (txtEdit) {
@@ -3092,7 +4552,7 @@ export let WriterControl_UI = {
             if (hasEditorNoObtainFocus == "clicktochangecursor" || hasEditorNoObtainFocus == "keydowntochangecursor" || hasEditorNoObtainFocus == "codetochangecursor") {
                 //当是移动端并存在MobileDisableAutoSoftKeyboard=true
                 var hasDisableSoftKeyboard = rootElement.getAttribute("mobiledisableautosoftkeyboard");
-                if (hasDisableSoftKeyboard == "true" && "ontouchstart" in rootElement.ownerDocument.documentElement) {
+                if (hasDisableSoftKeyboard == "true" && isMobile) {
                     WriterControl_Task.AddCallbackForCompletedAllTasks(function () {
                         rootElement.EditorNoObtainFocus = "MobileDisableAutoSoftKeyboard";
                     });
@@ -3101,7 +4561,7 @@ export let WriterControl_UI = {
         } else {
             //当是移动端并存在MobileDisableAutoSoftKeyboard=true
             var hasDisableSoftKeyboard = rootElement.getAttribute("mobiledisableautosoftkeyboard");
-            if (hasDisableSoftKeyboard == "true" && "ontouchstart" in rootElement.ownerDocument.documentElement) {
+            if (hasDisableSoftKeyboard == "true" && isMobile) {
                 rootElement.EditorNoObtainFocus = "MobileDisableAutoSoftKeyboard";
                 return;
             }
@@ -3110,7 +4570,65 @@ export let WriterControl_UI = {
         DCTools20221228.EnsureNativeReference(rootElement);
 
         //在移动端判断点击位置和当前的光标位置是否有大的区别，如果超出20且设置了为不自动获取焦点则退出
-        if ("ontouchstart" in rootElement.ownerDocument.documentElement) {
+        if (isMobile) {
+            //判断是否为表单模式
+            if (rootElement.DocumentOptions.BehaviorOptions.FormView == "Strict" || rootElement.FormView() == "Strict") {
+                var hasReadonlyAutoFocus = rootElement.getAttribute("readonlyautofocus");
+                if (rootElement.mobileMousePosition && typeof rootElement.mobileMousePosition == "object") {
+                    if (typeof hasReadonlyAutoFocus == "string") {
+                        hasReadonlyAutoFocus = hasReadonlyAutoFocus.toLowerCase().trim();
+                        var needReturnFocus = false;
+                        //判断是否存在不自动聚焦的设置 
+                        if (hasReadonlyAutoFocus == "false" || hasReadonlyAutoFocus == "xandyaxis") {
+                            if (Math.abs(rootElement.mobileMousePosition.y - intDY) > 20 || Math.abs(rootElement.mobileMousePosition.x - intDX) > 10) {
+                                needReturnFocus = true;
+                            }
+                            //} else if (hasReadonlyAutoFocus == "xaxis" && Math.abs(rootElement.mobileMousePosition.x - intDX) > 10) {
+                            //    needReturnFocus = true;
+                        } else if (hasReadonlyAutoFocus == "yaxis" && Math.abs(rootElement.mobileMousePosition.y - intDY) > 20) {
+                            needReturnFocus = true;
+                        }
+
+                        if (needReturnFocus) {
+                            rootElement.mobileMousePosition = "mobileMousePosition";
+                            rootElement.ownerDocument.defaultView.top.focus();
+                            //移动选中到输入的后面
+                            //rootElement.MoveEnd();
+                            if (divCaret) {
+                                WriterControl_UI.HideCaret(rootElement);
+                                //var activeEle = rootElement.ownerDocument.hasFocus();
+
+                                //在此处处理关闭下拉操作
+                                //if (!activeEle) {
+                                var dropdownDiv = rootElement.querySelector("#divDropdownContainer20230111");
+                                if (dropdownDiv) {
+                                    dropdownDiv.CloseDropdown();
+                                    // 关闭时间选择界面,添加判断避免错误
+                                    // if (dropdownDiv.thisApi && dropdownDiv.thisApi.theTool && typeof (dropdownDiv.thisApi.theTool.hidePanel) == "function") {
+                                    //     dropdownDiv.thisApi.theTool.hidePanel();
+                                    // }
+                                }
+                                //关闭表格下拉输入域
+                                var dropdownTable = rootElement.querySelector("#DCTableControl20240625151400");
+                                if (dropdownTable && dropdownTable.CloseDropdownTable) {
+                                    dropdownTable.CloseDropdownTable();
+                                }
+
+
+                                //}
+                                if (!rootElement.LoadRemoveChild && txtEdit) {
+                                    try {
+                                        txtEdit.remove();
+                                    } catch (err) { }
+                                }
+                            }
+                            return;
+                        }
+                    }
+                } else if (typeof rootElement.mobileMousePosition == "string") {
+                    return;
+                }
+            }
             rootElement.mobileMousePosition = null;
         }
 
@@ -3288,7 +4806,7 @@ export let WriterControl_UI = {
                                 rootElement.SetIntervalCaretFun = setTimeout(() => {
                                     rootElement.SetIntervalCaret = 0;
                                     rootElement.SetIntervalCaretFun = null;
-                                }, 1000)
+                                }, 1000);
                             }
                             if (rootElement.SetIntervalCaret == undefined) {
                                 rootElement.SetIntervalCaret = 0;
@@ -3358,7 +4876,7 @@ export let WriterControl_UI = {
             }
         }
 
-        if ("ontouchstart" in rootElement.ownerDocument.documentElement) {
+        if (isMobile) {
             var hasMobileDisableSoftKeyboard = rootElement.getAttribute("MobileDisableSoftKeyboard");
             if (typeof hasMobileDisableSoftKeyboard == "string" && hasMobileDisableSoftKeyboard.toLowerCase().trim() == "true") {
                 return;
@@ -3414,97 +4932,16 @@ export let WriterControl_UI = {
             // txtEdit.addEventListener("focus", WriterControl_UI.DebounceTextEditFocusFunc);
             txtEdit.addEventListener("focus", WriterControl_UI.TextEditFocusFunc);
             txtEdit.addEventListener("blur", WriterControl_UI.TextEditBlurFunc);
-
-            //txtEdit.addEventListener('focus', function () {
-            //    //当存在下拉框时，对光标定位进行只读操作，防止移动端软键盘的出现
-            //    if ("ontouchstart" in rootElement.ownerDocument.documentElement) {
-            //        var dropdown = rootElement.querySelector('#divDropdownContainer20230111');
-            //        console.log(rootElement.CloseDropdown)
-            //        if (dropdown != null && rootElement.CloseDropdown) {
-            //            this.setAttribute('readonly', true);
-            //            rootElement.CloseDropdown = false;
-            //            setTimeout(() => {
-            //                this.removeAttribute('readonly');
-            //            },100)
-            //        }
-            //    }
-            //})
-
-            //rootElement.ownerDocument.body.addEventListener('copy', divCaret.txtEditCopy);
-
             //粘贴不能必须选中再执行,需要未选中情况下也能执行
             txtEdit.addEventListener("paste", WriterControl_UI.TextEditPasteFunc);
         }
 
 
         if (bolVisible) {
-            // 显示光标
-            //if (divCaret.style.display == "none") {
-            //    //获取到所有的还在闪烁的showCaret添加上display:none
-            //    var allCaret = rootElement.ownerDocument.querySelectorAll('div[id=divCaret20221213]');
-            //    //循环判断是否是其他的光标
-            //    for (var caret = 0; caret < allCaret.length; caret++) {
-            //        var thisCaret = allCaret[caret];
-            //        if (thisCaret != divCaret) {
-            //            //判断是否显示
-            //            var hasDisplay = thisCaret.style.display
-            //            if (hasDisplay != null) {
-            //                thisCaret.style.display = 'none';
-            //                clearInterval(thisCaret.handleTimer)
-            //            }
-            //        }
-            //    }
-            //    divCaret.style.removeProperty('display');
-            //    //在每次做定时器时都先清除一下之前的设置,防止出现光标跳的过快情况
-            //    clearInterval(divCaret.handleTimer)
-            //    divCaret.func = function () {
-            //        var divCaret = rootElement.querySelector('#' + strDIVID);
-            //        if (divCaret == null) {
-            //            return;
-            //        }
-            //        if (divCaret.parentNode && divCaret.parentNode.style.display == "none") {
-            //            // 父节点不可见，则不后续处理。
-            //            return;
-            //        }
-            //        if (divCaret.style.display != "none") {
-            //            if (divCaret.style.visibility == "hidden") {
-            //                divCaret.style.visibility = "visible";
-            //            }
-            //            else {
-            //                divCaret.style.visibility = "hidden";
-            //            }
-            //        }
-            //        if (rootElement.ownerDocument.activeElement != txtEdit
-            //            && WriterControl_Paint.IsDrawingReversibleShape(rootElement) == false) {
-            //            txtEdit.focus();
-            //        }
-            //    };
-            //    divCaret.handleTimer = window.setInterval(divCaret.func, 530);
-
-            //}
-            //var pageElement = WriterControl_Paint.GetCanvasElementByPageIndex(containerID, intPageIndex);
-
             txtEdit.__DCWriterReference = null;
+            var ctlInfo = JSON.parse(rootElement.__DCWriterReference.invokeMethod("GetCurrentFontInfoJsonString"));
             if (pageElement != null) {
                 txtEdit.__DCWriterReference = pageElement.parentNode.parentNode.__DCWriterReference;
-
-                //var newLeft = (pageElement.offsetLeft + intDX + 1) + caretLeftNum + "px";
-                //var newTop = (pageElement.offsetTop + intDY + 2) + "px";
-                ////if (DCTools20221228.GetChildNodeByDCType(rootElement, "hrule") != null) {
-                ////    // 显示的标尺
-                ////    newLeft += pageElement.parentNode.offsetLeft;
-                ////    newTop += pageElement.parentNode.offsetTop;
-                ////}
-                //divCaret.style.width = intWidth + "px";
-                //divCaret.style.height = intHeight + "px";
-                ////有客户提出光标有宽度时过度靠右，计算left的时候会尽量让光标居中
-                //if (intWidth > 1) {
-                //    newLeft = parseFloat(newLeft) - (Math.floor(intWidth / 2) + 1) + 'px';
-                //}
-                //divCaret.style.left = newLeft;
-                //divCaret.style.top = newTop;
-                //divCaret.style.visibility = "visible";
-
                 var rs = (window.getComputedStyle && window.getComputedStyle(pageElement)) || null;
                 var BorderLeftWidth = 0;
                 var BorderTopWidth = 0;
@@ -3515,12 +4952,11 @@ export let WriterControl_UI = {
                 txtEdit.style.left = (pageElement.offsetLeft + intDX + BorderLeftWidth - (parseInt(parseFloat(intWidth) / 2))) + caretLeftNum + "px";
                 txtEdit.style.top = (pageElement.offsetTop + intDY + BorderTopWidth) + caretTopNum + "px";
                 //修改让文本能展示完全
-                var info88 = rootElement.__DCWriterReference.invokeMethod("GetCurrentContentInfo");
-                txtEdit.style.height = (info88.CurrentFontSize * 1.5) + "px";
+                txtEdit.style.height = (ctlInfo.FontSize * 1.5) + "px";
                 if (typeof divCaret.func == "function") {
                     divCaret.ShowCaretTimeoutFunc = window.setTimeout(function () {
-                        txtEdit.style.fontSize = info88.CurrentFontSize + "pt";
-                        txtEdit.style.fontFamily = info88.CurrentFontName;
+                        txtEdit.style.fontSize = ctlInfo.FontSize + "pt";
+                        txtEdit.style.fontFamily = ctlInfo.FontName;
                         divCaret.func();
                         clearTimeout(divCaret.ShowCaretTimeoutFunc);
                         divCaret.ShowCaretTimeoutFunc = null;
@@ -3581,7 +5017,7 @@ export let WriterControl_UI = {
                 }
             }
 
-            var isReadonly = rootElement.Readonly;
+            var isReadonly = ctlInfo.Readonly;
             if (isReadonly) {
                 divCaret.style.display = "none";
             }
@@ -3591,6 +5027,30 @@ export let WriterControl_UI = {
             divCaret.style.display = "none";
             //window.clearInterval(divCaret.handleTimer);
             //delete divCaret.handleTimer;
+        }
+
+        if (isMobile) {
+            //判断是否为移动端且存在MobileDisableAutoSoftKeyboard属性
+            var hasDisableSoftKeyboard = rootElement.getAttribute("mobiledisableautosoftkeyboard");
+            if (hasDisableSoftKeyboard == "true") {
+                //此处只做输入域下的情况，其他暂时不做处理获取获取元素不准确
+                // var typeName = rootElement.GetCurrentElementTypeName();
+                if (rootElement.DocumentOptions.BehaviorOptions.FormView == "Strict" || rootElement.FormView() == "Strict") {
+                    var currentElement2 = rootElement.CurrentInputField();
+                    if (currentElement2) {
+                        var eleAttr = rootElement.GetElementProperties(currentElement2);
+                        if ((eleAttr && eleAttr.InnerEditStyle != "Text") || rootElement.touchMove) {
+                            try {
+                                //在此处判断是否为输入域
+                                txtEdit.onblur = null;
+                                txtEdit.remove();
+                            } catch (err) { }
+
+                        }
+                        DCTools20221228.DisposeInstance(currentElement2);
+                    }
+                }
+            }
         }
     },
 
@@ -3888,12 +5348,9 @@ export let WriterControl_UI = {
         var hasList = WriterControl_ListBoxControl.ChangeListBoxCheck(rootElement, e);
 
         if (hasList && e.key != "Tab") {
-
             //DCDorpDownAllowKeyBoardEntry判断是否允许键盘输入,默认值为false，不允许键盘输入
             var DCDorpDownAllowKeyBoardEntry = rootElement.getAttribute('DCDorpDownAllowKeyBoardEntry') || 'false';
             DCDorpDownAllowKeyBoardEntry = DCDorpDownAllowKeyBoardEntry.toLowerCase().trim() === 'true' || DCDorpDownAllowKeyBoardEntry === true;
-
-
             if (DCDorpDownAllowKeyBoardEntry === false || DCDorpDownAllowKeyBoardEntry === "false") {
                 e.preventDefault();
                 e.stopPropagation();
@@ -3987,8 +5444,7 @@ export let WriterControl_UI = {
         if (e.keyCode != 229) {
             var ref9 = this.__DCWriterReference;
             rootElement.EditorNoObtainFocus = 'keydownochangecursor';
-            if (ref9 != null && ref9.invokeMethod(
-                "EditorHandleKeyEvent",
+            if (ref9 != null && ref9.invokeMethod("EditorHandleKeyEvent",
                 "keydown",
                 e.altKey,
                 e.shiftKey,
@@ -4054,33 +5510,33 @@ export let WriterControl_UI = {
         } else if (e.keyCode == "12303") { // && e.key == "}"
             newText = "』";
         } else if (e.keyCode == "8216") { // && e.key == "'"
-            newText = "‘"
+            newText = "‘";
         } else if (e.keyCode == "8217") { // && e.key == "'"
-            newText = "’"
+            newText = "’";
         } else if (e.keyCode == "8220") {
-            newText = "“"
+            newText = "“";
         } else if (e.keyCode == "8221") {
-            newText = "”"
+            newText = "”";
         } else if (e.keyCode == "65307") {
-            newText = "；"
+            newText = "；";
         } else if (e.keyCode == "65306") {
-            newText = "："
+            newText = "：";
         } else if (e.keyCode == "65311") {
-            newText = "？"
+            newText = "？";
         } else if (e.keyCode == "65292") {
-            newText = "，"
+            newText = "，";
         } else if (e.keyCode == "65288") {
-            newText = "（"
+            newText = "（";
         } else if (e.keyCode == "65289") {
-            newText = "）"
+            newText = "）";
         } else if (e.keyCode == "12298") {
-            newText = "《"
+            newText = "《";
         } else if (e.keyCode == "12299") {
-            newText = "》"
+            newText = "》";
         } else if (e.keyCode == "65281") {
-            newText = "！"
+            newText = "！";
         } else if (e.keyCode == "65509") {
-            newText = "￥"
+            newText = "￥";
         }
 
         if (e.keyCode != 229) {
@@ -4091,8 +5547,7 @@ export let WriterControl_UI = {
             //    oldFontName = rootElement.CurrentFontName;
             //    rootElement.DCExecuteCommand('FontName', false, 'Microsoft Himalaya');
             //}
-            if (ref9 != null && ref9.invokeMethod(
-                "EditorHandleKeyPress",
+            if (ref9 != null && ref9.invokeMethod("EditorHandleKeyPress",
                 newText) == true) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -4212,8 +5667,7 @@ export let WriterControl_UI = {
         }
         updateWidthCalc.setAttribute('id', 'dc_updateWidthCalc');
         //确保字体和文档显示一样
-        var info99 = rootElement.__DCWriterReference.invokeMethod("GetCurrentContentInfo");
-        updateWidthCalc.style.cssText = 'position:absolute; word-wrap: normal;left:-10000px;top:-10000px;font-family:' + info99.CurrentFontName + ';font-size:' + info99.CurrentFontSize + 'pt;';
+        updateWidthCalc.style.cssText = 'position:absolute; word-wrap: normal;left:-10000px;top:-10000px;font-family:' + rootElement.CurrentFontName + ';font-size:' + rootElement.CurrentFontSize + 'pt;';
         let pageContainer = WriterControl_UI.GetPageContainer(rootElement);
         pageContainer.appendChild(updateWidthCalc);
         //判断currentTextline中的文本长度              
@@ -4286,13 +5740,16 @@ export let WriterControl_UI = {
         }
         //将中文插入到当前选中行中
         var txt = this.value;
-        var newTXT = txt;
+        var newTXT = '';
+        //对生僻字进行判断
+        for (var char = 0; char < txt.length; char++) {
+            newTXT += DCTools20221228.changeUseUTF16(txt[char]);
+        }
         rootElement.EditorNoObtainFocus = 'keydownochangecursor';
         //console.log(txt)
         var ref9 = this.__DCWriterReference;
         if (ref9 != null) {
-            ref9.invokeMethod(
-                "EditorInsertStringFromUI",
+            ref9.invokeMethod("EditorInsertStringFromUI",
                 newTXT);
         }
         //清空输入域的文本
@@ -4330,13 +5787,16 @@ export let WriterControl_UI = {
         if (!isReadonly && e.inputType != 'insertFromDrop' && DropdownControlVisibleEnter == false) {
             if (!this.hasCompositionstart) {
                 let txt = this.value;
-                let newTXT = txt;
+                let newTXT = '';
+                //对生僻字进行判断
+                for (var char = 0; char < txt.length; char++) {
+                    newTXT += DCTools20221228.changeUseUTF16(txt[char]);
+                }
                 rootElement.EditorNoObtainFocus = 'keydownochangecursor';
                 //console.log(txt)
                 let ref9 = this.__DCWriterReference;
                 if (ref9 != null) {
-                    ref9.invokeMethod(
-                        "EditorInsertStringFromUI",
+                    ref9.invokeMethod("EditorInsertStringFromUI",
                         newTXT);
                 }
                 //清空输入域的文本
@@ -4463,7 +5923,7 @@ export let WriterControl_UI = {
         //let rootElement = window.DCTools20221228.GetOwnerWriterControl(e.currentTarget.parentElement)
         let innerDiv = e.currentTarget;
         //在pc端如果存在下拉框则禁止页面滚动
-        if (!('ontouchstart' in rootElement.ownerDocument.documentElement)) {
+        if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
             let dropdown = rootElement.querySelector('#divDropdownContainer20230111');
             let srcElement = e.srcElement || e.target;
             if (dropdown != null && dropdown.style.display != 'none' && !(dropdown == srcElement || dropdown.contains(srcElement))) {
@@ -4490,7 +5950,37 @@ export let WriterControl_UI = {
         if (!rootElement) {
             return;
         }
-        {
+        if (rootElement.IsWriterPrintPreviewControlForWASM === true) {
+            //如果是打印预览则只需要处理懒加载
+            // console.log("如果是打印预览则需要处理懒加载");
+            var DivRect;
+            // 此处修改nextSibling为nextElementSibling处理nextSibling为text的情况
+            for (var element = this.firstChild; element != null; element = element.nextElementSibling) {
+                var lowNodeName = element.nodeName.toLowerCase();
+                if (lowNodeName == "svg" && element.getAttribute("dctype") == "page") {
+                    // 已经渲染完成的无需重新渲染
+                    // console.log(element._isRendered, '=============element._isRendered == true');                 
+                    if (element._isRendered == true) {
+                        continue;
+                    }
+                    // 获取打印预览盒子的DOMRect对象
+                    if (DivRect == null) {
+                        DivRect = this.getBoundingClientRect();
+                    }
+                    // 获取元素的DOMRect对象
+                    var PageRect = element.getBoundingClientRect();
+                    if (DivRect.top > PageRect.bottom || DivRect.bottom < PageRect.top) {
+                        // 不在可视区域中
+                        continue;
+                    }
+                    // 【?】目前会被渲染卡一下
+                    WriterControl_Print.InnerDrawOnePage(element, true);
+
+                    element._isRendered = true;
+                }
+            }
+            // WriterControl_Rule.HandleViewScroll(this);
+        } else {
             //let rootElement = window.DCTools20221228.GetOwnerWriterControl(e.currentTarget.parentElement)
             let div = e.currentTarget;
             WriterControl_UI.TableHeaderFixed(rootElement);
@@ -4503,7 +5993,7 @@ export let WriterControl_UI = {
 
             //当rootElement尺寸发生改变时.关闭下拉
             if (dropdown != null && dropdown.style.display != 'none') {
-                if ('ontouchstart' in rootElement.ownerDocument.documentElement) {
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                     dropdown.CloseDropdown();
                 }
             }
@@ -4531,7 +6021,12 @@ export let WriterControl_UI = {
                 var scrollTop = div.scrollTop;
                 //可视区域高度
                 var visibleAreaHeight = div.clientHeight;
-                var allCanvas = div.querySelectorAll('canvas');
+                var allCanvas = null;
+                if (rootElement.IsWriterPrintPreviewControlForWASM) {
+                    allCanvas = div.querySelectorAll('svg');
+                } else {
+                    allCanvas = div.querySelectorAll('canvas');
+                }
                 var maxIndex = 0;
                 var maxHeight = 0;
                 var maxCanvas = allCanvas[0];
@@ -4734,7 +6229,97 @@ export class WriterControlExtPackage {
         this._Logging = false;
         this.__Records = new Array();
     }
+    EnsureRecords() {
+        if (this.__Records == null) {
+            this.__Records = [];
+        }
+        if (this.__Records.length == 0) {
+            // 第一个记录，记下一些状态信息
+            var info = new Object();
+            info.Format = "20250908";
+            info.DCWriterVersion = this.__RootElement.getAttribute("dcversion");
+            info.ControlID = this.__RootElement.id;
+            info.DevicePixelRatio = window.devicePixelRatio;
+            info.FullScreen = window.fullScreen;
+            info.WindowSize = window.innerWidth + "*" + window.innerHeight;
+            info.IsInFrame = window.frameElement != null;
+            info.Location = window.location;
+            info.Name = window.name;
+            info.Navigator = window.navigator.userAgent;
+            info.Screen = window.screen.width + "*" + window.screen.height;
+            info.Title = document.title;
+            info.StartTime = new Date();
+            this.__Records.push(info);
+            this._StartLogTick = new Date().valueOf();
+            if (this.FromBuildControl != true) {
+                // 不是从创建控件的时候开始调用的，则记录编辑器属性
+                var attrs = this.__RootElement.attributes;
+                for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
+                    var attrItem = attrs[attrIndex];
+                    var record2 = new Object();
+                    record2.Tick = 0;
+                    record2.Name = "LoadConfigByHtmlAttribute";
+                    record2.TickSpan = 0;
+                    record2.Args = [attrItem.localName, attrItem.nodeValue];
+                    this.__Records.push(record2);
+                }//for
+                var opts = this.__BaseInstance.invokeMethod("GetDocumentOptions");
+                this.__Records.push(
+                    {
+                        Tick: 0,
+                        Name: "ApplyDocumentOptions",
+                        TickSpan: 0,
+                        Args: [opts]
+                    }
+                );
+                var strXmlContent = DCTools20221228.GetResultUTF8String(this.__BaseInstance.invokeMethod("SaveDocumentToString", "xml"));
+                if (strXmlContent != null && strXmlContent.length > 0) {
+                    var sel = this.__BaseInstance.invokeMethod("InnerGetSelectionInfo");
+                    this.__Records.push({
+                        Tick: 0,
+                        Name: "@LoadDocumentFromString@",
+                        TickSpan: 0,
+                        Content: strXmlContent,
+                        CurrentContentPartyStyle: sel.CurrentContentPartyStyle,
+                        SelectionStart: sel.SelectionStart,
+                        SelectionLength: sel.SelectionLength
+                    });
+                }
+            }
+        }
+    }
     LogStaticMethod(e, ...t) {
+        this._Logging = true;
+        try {
+            this.EnsureRecords();
+            var record = new Object();
+            record.RecordIndex = this.__Records.length;
+            record.Tick = new Date().valueOf() - this._StartLogTick; // 执行的时刻
+            record.IsStatic = true;
+            record.Name = e;
+            if (t != null && t.length > 0) {
+                var pArgs = new Array();
+                // 以下记录参数值
+                for (var iCount = 0; iCount < t.length; iCount++) {
+                    var item = t[iCount];
+                    if (DCTools20221228.IsDotnetReferenceElement(item)) {
+                        // 参数是一个DOTNET对象引用，本API不记录。
+                        return objResult;
+                    }
+                    if (item instanceof Uint8Array) {
+                        pArgs.push("__Uint8Array:" + DCTools20221228.ToBase64String(item));
+                    }
+                    else {
+                        pArgs.push(t[iCount]);
+                    }
+                }
+                record.Args = pArgs;
+            }
+            this.__Records.push(record);
+        }
+        finally {
+            this._Logging = false;
+        }
     }
     /**
      * 输出调试文本信息
@@ -4760,64 +6345,14 @@ export class WriterControlExtPackage {
                 var tick = new Date().valueOf();
                 this.__BaseInstance.invokeMethod("ClearLastErrorMessage");
                 objResult = this.__BaseInstance.invokeMethod(e, ...t);
-                var strErrorMessage = this.__BaseInstance.invokeMethod("GetLastErrorMessage");
+                var strErrorMessage =
+                    this.__BaseInstance.invokeMethod("GetLastErrorMessage");
                 tick = new Date().valueOf() - tick;
-                if (this.__Records == null) {
-                    this.__Records = [];
-                }
-                if (this.__Records.length == 0) {
-                    // 第一个记录，记下一些状态信息
-                    var info = new Object();
-                    info.Format = "20231023";
-                    info.DCWriterVersion = this.__RootElement.getAttribute("dcversion");
-                    info.ControlID = this.__RootElement.id;
-                    info.DevicePixelRatio = window.devicePixelRatio;
-                    info.FullScreen = window.fullScreen;
-                    info.WindowSize = window.innerWidth + "*" + window.innerHeight;
-                    info.IsInFrame = window.frameElement != null;
-                    info.Location = window.location;
-                    info.Name = window.name;
-                    info.Navigator = window.navigator.userAgent;
-                    info.Screen = window.screen.width + "*" + window.screen.height;
-                    info.Title = document.title;
-                    info.StartTime = new Date();
-                    this.__Records.push(info);
-                    this._StartLogTick = new Date().valueOf();
-                    if (this.FromBuildControl != true) {
-                        // 不是从创建控件的时候开始调用的，则记录编辑器属性
-                        var attrs = this.__RootElement.attributes;
-                        for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
-                            var attrItem = attrs[attrIndex];
-                            var record2 = new Object();
-                            record2.Tick = 0;
-                            record2.Name = "LoadConfigByHtmlAttribute";
-                            record2.TickSpan = 0;
-                            record2.Args = [attrItem.localName, attrItem.nodeValue];
-                            this.__Records.push(record2);
-                        }//for
-                        var opts = this.__BaseInstance.invokeMethod("GetDocumentOptions");
-                        this.__Records.push(
-                            {
-                                Tick: 0,
-                                Name: "ApplyDocumentOptions",
-                                TickSpan: 0,
-                                Args: [opts]
-                            }
-                        );
-                        var strXmlContent = this.__BaseInstance.invokeMethod("SaveDocumentToString", "xml");
-                        if (strXmlContent != null && strXmlContent.length > 0) {
-                            this.__Records.push({
-                                Tick: 0,
-                                Name: "@LoadDocumentFromString@",
-                                TickSpan: 0,
-                                Content: strXmlContent
-                            });
-                        }
-                    }
-                }
+                this.EnsureRecords();
                 var record = new Object();
                 record.RecordIndex = this.__Records.length;
-                record.Tick = new Date().valueOf() - this._StartLogTick; // 执行的时刻
+                // 执行的时刻
+                record.Tick = new Date().valueOf() - this._StartLogTick; 
                 record.Name = e; // 接口名称
                 record.TickSpan = tick; // 接口耗时
                 if (strErrorMessage != null && strErrorMessage.length > 0) {
@@ -4833,7 +6368,8 @@ export class WriterControlExtPackage {
                             return objResult;
                         }
                         if (item instanceof Uint8Array) {
-                            pArgs.push("__Uint8Array:" + DCTools20221228.ToBase64String(item));
+                            pArgs.push("__Uint8Array:"
+                                + DCTools20221228.ToBase64String(item));
                         }
                         else {
                             pArgs.push(t[iCount]);
@@ -4850,11 +6386,24 @@ export class WriterControlExtPackage {
                     else if (strResultType == "string") {
                         var len4 = objResult.length;
                         if (len4 > 30) {
-                            record.Result = "[" + objResult.length + "]" + objResult.substring(0, 30);
+                            record.Result = "[" + objResult.length + "]"
+                                + objResult.substring(0, 30);
                         }
                         else {
                             record.Result = objResult;
                         }
+                    }
+                    else if (objResult instanceof Uint8Array)
+                    {
+                        record.Result = "Uint8Array:" + objResult.length;
+                    }
+                    else if (objResult instanceof Array)
+                    {
+                        record.Result = "Array:" + objResult.length;
+                    }
+                    else if (objResult == null)
+                    {
+                        record.Result = null;
                     }
                     else {
                         record.ResultType = strResultType;
@@ -4868,35 +6417,6 @@ export class WriterControlExtPackage {
             return objResult;
         }
     }
-    ///** 清空API日志数据 */
-    //ClearAPIRecordData() {
-    //    if (this.__Records != null) {
-    //        this.__Records.splice(0, this.__Records.length);
-    //    }
-    //}
-    ///**
-    // * 下载API记录的数据到本地文件
-    // */
-    //DownloadAPIRecordData() {
-    //    if (this.__Records == null) {
-    //        return;
-    //    }
-    //    //console.log(this.__Records);
-    //    var strJson = JSON.stringify(this.__Records);
-    //    var obj2 = JSON.parse(strJson);
-    //    //console.log(obj2);
-    //    var blob = new Blob([strJson]);
-    //    let downloadElement = document.createElement("a");
-    //    let href = window.URL.createObjectURL(blob); //创建下载的链接
-    //    downloadElement.href = href;
-    //    downloadElement.charset = "utf-8";
-    //    downloadElement.type = "text/json";
-    //    downloadElement.download = "APIRecord" + (new Date().valueOf()) + ".json";
-    //    document.body.appendChild(downloadElement);
-    //    downloadElement.click(); //点击下载
-    //    document.body.removeChild(downloadElement); //下载完成移除元素
-    //    window.URL.revokeObjectURL(href); //释放掉blob对象
-    //}
     invokeMethodAsync(e, ...t) {
         // 异步方法不记录
         return this.__BaseInstance.invokeMethodAsync(e, ...t);

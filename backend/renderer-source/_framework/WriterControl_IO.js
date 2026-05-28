@@ -19,78 +19,295 @@ import { DCBinaryReader } from "./DCTools20221228.js";
 import { WriterControl_Event } from "./WriterControl_Event.js";
 import { WriterControl_UI } from "./WriterControl_UI.js";
 
-const INPUT_FIELD_BACKGROUND_TEXT_PATTERN = /<BackgroundText>([\s\S]*?)<\/BackgroundText>/;
-const INPUT_FIELD_INNER_VALUE_PATTERN = /<InnerValue>([\s\S]*?)<\/InnerValue>/;
-const INPUT_FIELD_MEASURABLE_PLACEHOLDER = "&#12288;";
-
-function InsertInputFieldXmlBeforeKnownTail(elementBody, markup) {
-    if (elementBody.indexOf("<BackgroundText>") >= 0) {
-        return elementBody.replace("<BackgroundText>", markup + "<BackgroundText>");
-    }
-
-    if (elementBody.indexOf("<EnableHighlight>") >= 0) {
-        return elementBody.replace("<EnableHighlight>", markup + "<EnableHighlight>");
-    }
-
-    return elementBody + markup;
-}
-
-function NormalizeInputFieldXmlBodyForCanvas(elementBody) {
-    if (elementBody.indexOf("<SpecifyWidth>50</SpecifyWidth>") < 0) {
-        return elementBody;
-    }
-
-    var hasBlankBackgroundText = false;
-    var hasBackgroundText = INPUT_FIELD_BACKGROUND_TEXT_PATTERN.test(elementBody);
-    if (hasBackgroundText) {
-        elementBody = elementBody.replace(INPUT_FIELD_BACKGROUND_TEXT_PATTERN, function (backgroundMatch, value) {
-            hasBlankBackgroundText = value.trim().length == 0;
-            return hasBlankBackgroundText
-                ? "<BackgroundText>" + INPUT_FIELD_MEASURABLE_PLACEHOLDER + "</BackgroundText>"
-                : backgroundMatch;
-        });
-    }
-
-    if (hasBackgroundText == false || hasBlankBackgroundText) {
-        if (INPUT_FIELD_INNER_VALUE_PATTERN.test(elementBody)) {
-            elementBody = elementBody.replace(INPUT_FIELD_INNER_VALUE_PATTERN, function (innerValueMatch, value) {
-                return value.trim().length == 0
-                    ? "<InnerValue>" + INPUT_FIELD_MEASURABLE_PLACEHOLDER + "</InnerValue>"
-                    : innerValueMatch;
-            });
-        }
-        else {
-            elementBody = InsertInputFieldXmlBeforeKnownTail(elementBody, "<InnerValue>" + INPUT_FIELD_MEASURABLE_PLACEHOLDER + "</InnerValue>");
-        }
-    }
-
-    return hasBackgroundText
-        ? elementBody
-        : InsertInputFieldXmlBeforeKnownTail(elementBody, "<BackgroundText>" + INPUT_FIELD_MEASURABLE_PLACEHOLDER + "</BackgroundText>");
-}
-
-export function NormalizeInputFieldXmlForCanvas(xml) {
-    if (typeof xml !== "string"
-        || xml.indexOf("<XTextDocument") < 0
-        || xml.indexOf('xsi:type="XInputField"') < 0
-        || xml.indexOf("<SpecifyWidth>50</SpecifyWidth>") < 0) {
-        return xml;
-    }
-
-    return xml.replace(/(<Element\b[^>]*\bxsi:type="XInputField"[^>]*>)([\s\S]*?)(<\/Element>)/g, function (match, startTag, elementBody, endTag) {
-        if (elementBody.indexOf("<SpecifyWidth>50</SpecifyWidth>") < 0) {
-            return match;
-        }
-
-        return startTag + NormalizeInputFieldXmlBodyForCanvas(elementBody) + endTag;
-    });
-}
-
 export let WriterControl_IO = {
     DownloadFontFileContent: function (strKeys, strFiles) {
 
     },
+    ///**
+    // * 解析HTML文档
+    // * @param {HTMLElement} rootElement 编辑器容器对象
+    // * @param {string} strReason 理由
+    // * @param {string} strHtml HTML字符串
+    // * @returns {boolean} 操作是否成功
+    // */
+    //ParseHtmlToDocument: function (rootElement, strReason, strHtml) {
+    //    if (strHtml == null || strHtml.length == 0) {
+    //        return;
+    //    }
+    //    rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+    //    if (rootElement == null) {
+    //        return;
+    //    }
+    //    var iframe = rootElement.ownerDocument.createElement("iframe");
+    //    iframe.style = "width:1px;height:1px";
+    //    rootElement.ownerDocument.body.appendChild(iframe);
+    //    var localWin = iframe.contentWindow;
+    //    try {
+    //        localWin.document.write(strHtml);
+    //    }
+    //    catch (ext) {
+    //        console.error(ext);
+    //    }
+    //    localWin.document.close();
+    //    var supportStyleNames = WriterControl_IO.__SupportStyleNames;
+    //    if (supportStyleNames == null) {
+    //        // 支持的样式名称,这个数值必须和DCSoft.WASM.WASMDocumentBuilder.CSSStyleIndexs枚举类型保持
+    //        // 数量和顺序的完全一致
+    //        WriterControl_IO.__SupportStyleNames = supportStyleNames =
+    //            ["width", "visibility", "position", "padding-top", "padding-right",
+    //                "padding-left", "padding-bottom", "list-style-type", "line-height",
+    //                "height", "font-weight", "font-style", "font-size", "font-family", "display",
+    //                "color", "border-top-width", "border-top-style", "border-top-color",
+    //                "border-right-width", "border-right-style", "border-right-color",
+    //                "border-left-width", "border-left-style", "border-left-color",
+    //                "background-color",
+    //                "border-bottom-width", "border-bottom-style", "border-bottom-color",
+    //                "border-style", "border-width", "border-color", "border"
+    //            ];
+    //    }
+    //    var strCssValues = new Array();
+    //    for (var iCount = 0; iCount < supportStyleNames.length; iCount++) {
+    //        strCssValues.push(null);
+    //    }
+    //    var b2 = rootElement.__DCWriterReference.invokeMethod("CreateDocumentBuilder", strReason);
+    //    function BuildElement(builder, rootHtmlElement) {
+    //        for (var node = rootHtmlElement.firstChild; node != null; node = node.nextSibling) {
+    //            if (node.nodeType == 3) {
+    //                // 纯文本节点
+    //                builder.invokeMethod("AddTextNode", node.nodeValue);
+    //            }
+    //            else if (node.getAttribute) {
+    //                var strNodeName = node.nodeName;
+    //                if (strNodeName == "OPTION") {
+    //                    builder.invokeMethod("AddOption", node.innerText, node.value);
+    //                    continue;
+    //                }
+    //                var strAttributeNames = null;
+    //                var strAttributeValues = null;
+    //                var attrLen = node.attributes.length;
+    //                if (attrLen > 0) {
+    //                    strAttributeNames = new Array();
+    //                    strAttributeValues = new Array();
+    //                    for (var iCount = 0; iCount < attrLen; iCount++) {
+    //                        var attr = node.attributes[iCount];
+    //                        strAttributeNames.push(attr.localName);
+    //                        strAttributeValues.push(attr.nodeValue);
+    //                    }
+    //                }
+    //                var cssStyles = (localWin.getComputedStyle && localWin.getComputedStyle(node)) || null;
+
+    //                var bolHasCssValue = false;
+    //                if (cssStyles && cssStyles.length > 0) {
+    //                    for (var iCount = 0; iCount < strCssValues.length; iCount++) {
+    //                        strCssValues[iCount] = null;
+    //                    }
+    //                    for (var iCount = cssStyles.length - 1; iCount >= 0; iCount--) {
+    //                        var item = cssStyles.item(iCount);
+    //                        //console.log(item + "=" + cssStyles.getPropertyValue(item));
+    //                        var index2 = supportStyleNames.indexOf(item.toLowerCase());
+    //                        if (index2 >= 0) {
+    //                            // 支持的CSS样式
+    //                            strCssValues[index2] = cssStyles.getPropertyValue && cssStyles.getPropertyValue(item) || null;
+    //                            bolHasCssValue = true;
+    //                        }
+    //                    }
+    //                }
+    //                var strInnerText = null;
+    //                if (strNodeName == "TEXTAREA" || strNodeName == "BUTTON") {
+    //                    strInnerText = node.innerText;
+    //                }
+    //                if (builder.invokeMethod(
+    //                    "StartElement",
+    //                    strNodeName,
+    //                    strAttributeNames,
+    //                    strAttributeValues,
+    //                    bolHasCssValue ? strCssValues : null,
+    //                    strInnerText) == true) {
+    //                    BuildElement(builder, node);
+    //                    builder.invokeMethod("EndElement");
+    //                }
+    //            }
+    //        }
+    //    };
+    //    if (localWin.document.body != null) {
+    //        BuildElement(b2, iframe.contentWindow.document.body);
+    //    }
+    //    var bolResult = b2.invokeMethod("EndBuildDocument");
+    //    DCTools20221228.DisposeInstance(b2);
+    //    iframe.remove();
+    //    return bolResult;
+    //},
+    /**
+     * 执行HTTP发送数据的操作
+     * @param {string} strContainerID 编辑器容器元素编号
+     * @param {string} strUrl 下载地址
+     * @param {string} strTaskID 任务编号
+     * @param {Uint8Array} bsData 要发送的数据
+     */
+    HttpPostData: function (strContainerID, strUrl, strTaskID, bsData) {
+        var rootElement = DCTools20221228.GetOwnerWriterControl(strContainerID);
+        var args = {
+            WriterControl: rootElement,
+            Url: strUrl,
+            Data: bsData,
+            Handled: false, // 是否处理过的标记
+            Result: null,  // 下载结果，必须是UInt8Array类型
+            ErrorMessage: null // 出错信息
+        };
+        WriterControl_Event.InnerRaiseEvent(rootElement, "EventHttpPostData", args);
+        if (args.Handled == true) {
+            // 在用户事件中已经处理了，无需后续操作
+            rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                strTaskID,
+                strUrl,
+                args.ErrorMessage,
+                args.Result);
+        }
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", strUrl, true);
+            xhr.responseType = "blob";
+            xhr.onload = function () {
+                if (rootElement.__DCDisposed == true) {
+                    // 控件已经被销毁了
+                    return;
+                }
+                if (this.status == 200) {
+                    // 操作成功
+                    var blob = this.response;
+                    DCTools20221228.blobToArrayBuffer(blob, (buffer => rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                        strTaskID,
+                        strUrl,
+                        null,
+                        new Uint8Array(buffer))))
+                }
+                else {
+                    // 操作失败
+                    rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                        strTaskID,
+                        strUrl,
+                        xhr.status + "|" + xhr.statusText + "|" + strUrl,
+                        null);
+                }
+            };
+            xhr.onerror = function (err) {
+                if (rootElement.__DCDisposed == true) {
+                    // 控件已经被销毁了
+                    return;
+                }
+                rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                    strTaskID,
+                    strUrl,
+                    "加载错误:" + strUrl,
+                    null);
+            };
+            xhr.send(bsData);
+        }
+        catch (err) {
+            // 操作失败
+            if (rootElement.__DCDisposed == true) {
+                // 控件已经被销毁了
+                return;
+            }
+            rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                strTaskID,
+                strUrl,
+                err,
+                null);
+        }
+    },
     HttpDownloadFontFile: function (strFontName, bolBold, bolItalic) {
+    },
+    /**
+     * 执行HTTP下载文件的操作
+     * @param {string} strContainerID 编辑器容器元素编号
+     * @param {string} strUrl 下载地址
+     * @param {string} strTaskID 任务编号
+     */
+    HttpDownloadFile: function (strContainerID, strUrl) {
+        var rootElement = DCTools20221228.GetOwnerWriterControl(strContainerID);
+        if (rootElement == null || rootElement.__DCDisposed == true) {
+            return;
+        }
+        var args = {
+            WriterControl: rootElement,
+            Url: strUrl,
+            Handled: false, // 是否处理过的标记
+            Result: null,  // 下载结果，必须是UInt8Array类型
+            ErrorMessage: null, // 出错信息
+            HttpDownloadCompletedFunc: function () {
+                // EventHttpDownloadFile事件为了避免获取图片数据是异步的，添加HttpDownloadCompletedFunc完成后的事件
+                if (!this.WriterControl || this.WriterControl.__DCDisposed == true) {
+                    // 控件已经被销毁了
+                    return;
+                }
+                if (this.Handled == false) {
+                    return;
+                }
+                this.WriterControl.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                    this.Url,
+                    this.ErrorMessage,
+                    this.Result);
+            }
+        };
+        WriterControl_Event.InnerRaiseEvent(rootElement, "EventHttpDownloadFile", args);
+        if (args.Handled == true) {
+            // 在用户事件中已经处理了，无需后续操作
+            // rootElement.__DCWriterReference.invokeMethod(
+            //     "HttpDownloadCompleted",
+            //     strUrl,
+            //     args.ErrorMessage,
+            //     args.Result);
+            return;
+        }
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", strUrl, true);
+            xhr.responseType = "blob";
+            xhr.onload = function () {
+                if (rootElement.__DCDisposed == true) {
+                    // 控件已经被销毁了
+                    return;
+                }
+                if (this.status == 200) {
+                    // 操作成功
+                    var blob = this.response;
+                    DCTools20221228.blobToArrayBuffer(blob, (buffer => rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                        strUrl,
+                        null,
+                        new Uint8Array(buffer))))
+                }
+                else {
+                    // 操作失败
+                    rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                        strUrl,
+                        xhr.status + "|" + xhr.statusText + "|" + strUrl,
+                        null);
+                }
+            };
+            xhr.onerror = function (err) {
+                if (rootElement.__DCDisposed == true) {
+                    // 控件已经被销毁了
+                    return;
+                }
+                rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                    strUrl,
+                    "加载错误:" + strUrl,
+                    null);
+            };
+            xhr.send();
+        }
+        catch (err) {
+            // 操作失败
+            if (rootElement.__DCDisposed == true) {
+                // 控件已经被销毁了
+                return;
+            }
+            rootElement.__DCWriterReference.invokeMethod("HttpDownloadCompleted",
+                strUrl,
+                err,
+                null);
+        }
     },
     /**
      * 从一个GZIP压缩生成的BASE64字符串加载内容
@@ -166,9 +383,7 @@ export let WriterControl_IO = {
             if (isBase64String == true) {
                 bsContent = DCTools20221228.FromBase64String(data);
             }
-            var strXml = DotNet.invokeMethod(
-                window.DCWriterEntryPointAssemblyName,
-                "GetXMLStringFromOFD",
+            var strXml = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName, "GetXMLStringFromOFD",
                 bsContent);
             if (WriterControl_IO.HasXmlHeader(strXml)) {
                 return strXml;
@@ -196,9 +411,6 @@ export let WriterControl_IO = {
         var rootElement = DCTools20221228.GetOwnerWriterControl(args.WriterControl);
         if (rootElement == null) {
             throw "未指定编辑器控件";
-        }
-        if (args.IsBase64String != true && typeof (args.Data) == "string") {
-            args.Data = NormalizeInputFieldXmlForCanvas(args.Data);
         }
         //在此处清除掉光标的事件
         WriterControl_UI.HideCaret(rootElement);
@@ -302,7 +514,11 @@ export let WriterControl_IO = {
         //}
         WriterControl_Paint.InvalidateAllView(rootElement);
         tick = new Date().valueOf() - tick;
-        console.log(window.__DCSR.MillisecondsForLoadDocument + tick);
+        WriterControl_Paint.UpdateViewForWaterMark(rootElement);
+        if (rootElement.getAttribute("manualgccollect") == "true") {
+            rootElement.__DCWriterReference.invokeMethod("GCCollect");
+        }
+        // console.log("加载文档花费毫秒:" + tick);
 
         try {
             //存储加载文档花费毫秒，用于提供给性能页面
@@ -314,7 +530,7 @@ export let WriterControl_IO = {
             }
             indexPerformanceTiming['documentTiming'] = [...(indexPerformanceTiming.documentTiming || [])];
             indexPerformanceTiming['documentTiming'].push({
-                title: window.__DCSR.MillisecondsForLoadDocument,
+                title: "加载文档花费毫秒",
                 useTime: tick,
                 id: rootElement.id
             });
@@ -394,7 +610,8 @@ export let WriterControl_IO = {
         // WriterControl_Rule.InvalidateView(rootElement, "vrule");
         //WriterControl_Paint.InvalidateAllView(rootElement);
         tick = new Date().valueOf() - tick;
-        console.log(window.__DCSR.MillisecondsForLoadDocument + tick);
+        //WriterControl_Paint.UpdateViewForWaterMark(rootElement);
+        console.log("加载文档花费毫秒:" + tick);
         return result;
     },
 
@@ -410,7 +627,7 @@ export let WriterControl_IO = {
         var result = rootElement.__DCWriterReference.invokeMethod("AddDocumentsByMixedFilesForPrintPreview", parameters);;
         rootElement.TempElementForDoubleBuffer = null;
         tick = new Date().valueOf() - tick;
-        console.log(window.__DCSR.MillisecondsForLoadDocument + tick);
+        console.log("加载文档花费毫秒:" + tick);
         return result;
     },
 
@@ -431,9 +648,50 @@ export let WriterControl_IO = {
         }
         rootElement.CheckDisposed();
         strFileName = rootElement.__DCWriterReference.invokeMethod("GetRuntimeFileName", strFileName);
-        if (strFormat == "xml") {
+        if (strFormat == "xml"
+            || strFormat == "htm"
+            || strFormat == "html"
+            || strFormat == "json"
+            || strFormat == "text"
+            || strFormat == "rtf") {
             // 这些文件格式可以在本地生成
-            var strResult = DCTools20221228.UnPackageStringValue(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", strFormat));
+            var strResult = DCTools20221228.GetResultUTF8String(rootElement.__DCWriterReference.invokeMethod("SaveDocumentToString", strFormat));
+            if (strFileName == null || strFileName.length == 0) {
+                strFileName = new Date().getTime();//文件名
+            }
+            var strBlobType = "text/xml";
+            if (strFormat == "xml") {
+                strFileName = strFileName + ".xml";
+                strBlobType = "text/xml";
+            }
+            else if (strFormat == "rtf") {
+                strFileName = strFileName + ".rtf";
+                strBlobType = "application/rtf";
+            }
+            else if (strFormat == "text") {
+                strFileName = strFileName + ".txt";
+                strBlobType = "text/plain";
+            }
+            else if (strFormat == "json") {
+                strFileName = strFileName + ".json";
+                strBlobType = "application/json";
+            }
+            else if (strFormat == "html" || strFormat == "htm") {
+                strFileName = strFileName + ".html";
+                strBlobType = "text/html";
+                // 20240327 lixinyu 解决下载html内容靠左偏移问题(DUWRITER5_0-2092)
+                // 获取页面宽度和页边距
+                var pageStyle = rootElement.GetDocumentPageSettings();
+                const regex = /<head>([\s\S]*?)<\/head>/;
+                var headerInner = strResult.match(regex);//head标签中原有的字符串
+                //拼接出一个新的header内容给strResult
+                var headerStyle = (headerInner[1] || '') + `<style>body{margin-left:auto;margin-right:auto;width:${pageStyle.PaperWidthInCM + 'cm' || 'auto'};padding-left:${pageStyle.LeftMarginInCM || 0}cm;padding-right:${pageStyle.RightMarginInCM || 0}cm;box-sizing:border-box;}</style>`;
+                strResult = strResult.replace(regex, headerStyle);
+            }
+            else if (strFormat == "rtf") {
+                strFileName = strFileName + ".html";
+                strBlobType = "text/rtf";
+            }
             if (typeof (callBack) == "function") {
                 callBack(strResult);
             } else {
@@ -445,15 +703,199 @@ export let WriterControl_IO = {
                 downloadElement.download = strFileName;// file.name; //下载后文件名
                 rootElement.ownerDocument.body.appendChild(downloadElement);
                 downloadElement.click(); //点击下载
-                rootElement.ownerDocument.body.removeChild(downloadElement); //下载完成移除元素
+                // rootElement.ownerDocument.body.removeChild(downloadElement); //下载完成移除元素
+                // 下载完成移除元素
+                if (downloadElement && downloadElement.remove && typeof downloadElement.remove === 'function') {
+                    downloadElement.remove();
+                }
                 window.URL.revokeObjectURL(href); //释放掉blob对象
             }
             return true;
         }
+        else if (strFormat == "longimg") {
+            // 保存为长图片,也是在本地生成
+            var bsData = rootElement.__DCWriterReference.invokeMethod("WASMCreateLongBmp", true, 1, false);
+            if (bsData == null || bsData.length == 0) {
+                return false;
+            }
+            var tempElement = rootElement.ownerDocument.createElement("CANVAS");
+            var reader = new DCBinaryReader(bsData);
+            if (reader.ReadByte() != 133) {
+                // 文件头不对
+                return false;
+            }
+            tempElement.width = reader.ReadInt16();
+            tempElement.height = reader.ReadInt16();
+            var drawer = new PageContentDrawer(tempElement, reader);
+            drawer.EventSource = "DownLoadFile";
+            drawer.EventAfterDraw = function () {
+                var strUrl = tempElement.toDataURL("image/png", 1);
+                if (typeof (callBack) == "function") {
+                    callBack(strUrl);
+                }
+                else {
+                    let downloadElement = rootElement.ownerDocument.createElement("a");
+                    downloadElement.href = strUrl;
+                    //console.log(file.name, "文件名");
+                    downloadElement.download = strFileName;// file.name; //下载后文件名
+                    rootElement.ownerDocument.body.appendChild(downloadElement);
+                    downloadElement.click(); //点击下载
+                    // rootElement.ownerDocument.body.removeChild(downloadElement); //下载完成移除元素
+                    // 下载完成移除元素
+                    if (downloadElement && downloadElement.remove && typeof downloadElement.remove === 'function') {
+                        downloadElement.remove();
+                    }
+                }
+            };
+            drawer.AddToTask();
+            return true;
+        }
+        else if (strFormat == "local.pdf") {
+            if (strFileName == null || strFileName.length == 0) {
+                strFileName = new Date().getTime();//文件名
+            }
+            WriterControl_Print.SaveLocalPDF(
+                {
+                    RootElement: rootElement,
+                    FileName: strFileName + ".pdf",
+                    CallBack: callBack
+                }
+            );
+            return true;
+        }
+        else if (strFormat == "ofd") {
+            if (strFileName == null || strFileName.length == 0) {
+                strFileName = new Date().getTime();//文件名
+            }
+            WriterControl_Print.SaveLocalPDF(
+                {
+                    RootElement: rootElement,
+                    FileName: strFileName + ".ofd",
+                    CallBack: callBack,
+                    ForOFD: true
+                }
+            );
+            return true;
+        }
+        else if (strFormat == "svg") {
+            if (strFileName == null || strFileName.length == 0) {
+                strFileName = new Date().getTime();//文件名
+            }
+            var strHtml = DCTools20221228.GetResultUTF8String(
+                rootElement.__DCWriterReference.invokeMethod("GetSVGHtmlForPrint", true));
+            if (typeof (callBack) == "function") {
+                callBack(strHtml);
+            }
+            else {
+                DCTools20221228.DownloadAsFile(strHtml, "text/html", strFileName + ".html");
+            }
+            return true;
+        }
+        else if (strFormat == "pdf") {
+            // PDF格式无法本地生成，必须要依赖服务器
+            console.log("本功能已经不推荐使用了。");
+            var strServicePageUrl = DCTools20221228.GetServicePageUrl(rootElement);
+            if (strServicePageUrl == null || strServicePageUrl.length == 0) {
+                console.log("DCWriter:未配置ServicePageUrl,无法生成文件" + strFormat);
+                return false;
+            }
+            // 此处对应的服务器代码在 DCWriterForASPNET\Writer\Controls\Web\WC_WASM.cs
+            var strUrl = strServicePageUrl + "?wasm=downloadfile&format=" + strFormat + "&dcbid2022=" + DCTools20221228.GetClientID();
+            if (strFileName != null && strFileName.length > 0) {
+                strUrl = strUrl + "&filename=" + decodeURI(strFileName);
+            }
+            var strPageIndexString = WriterControl_Print.GetRuntimePageIndexString(rootElement, {});
+            if (strPageIndexString != null && strPageIndexString.length > 0) {
+                strUrl = strUrl + "&pages=" + strPageIndexString;
+            }
+            //var postData = rootElement.__DCWriterReference.invokeMethod("InnerForDownloadFile");
+            var postData = rootElement.__DCWriterReference.invokeMethod("InnerForDownloadFile");
+            var strDataType = null;
+            if (strFormat == "pdf") {
+                strDataType = "application/pdf";
+                strFileName = strFileName + ".pdf";
+            }
+            //wyc20250107:解决DUWRITER5_0-4096
+            if (rootElement.IsPrintPreview && rootElement.IsPrintPreview() === false) {
+                rootElement.__DCWriterReference.invokeMethod("RefreshViewAfterPrint", true);
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", strUrl, true);
+            xhr.responseType = "blob";
+            xhr.onload = function () {
+                if (this.status == 200) {
+                    var blob = this.response;
+                    if (typeof (callBack) == "function") {
+                        //执行把blob转base64
+                        var reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onload = function (e) {
+                            var result = e.target.result.substring(28);
+                            callBack.call(rootElement, result);
+                        };
+                        //callBack(blob);
+                    }
+                    else {
+                        let downloadElement = rootElement.ownerDocument.createElement("a");
+                        let href = window.URL.createObjectURL(blob); //创建下载的链接
+                        downloadElement.href = href;
+                        downloadElement.download = strFileName;// file.name; //下载后文件名
+                        rootElement.ownerDocument.body.appendChild(downloadElement);
+                        downloadElement.click(); //点击下载
+                        // rootElement.ownerDocument.body.removeChild(downloadElement); //下载完成移除元素
+                        // 下载完成移除元素
+                        if (downloadElement && downloadElement.remove && typeof downloadElement.remove === 'function') {
+                            downloadElement.remove();
+                        }
+                        window.URL.revokeObjectURL(href); //释放掉blob对象
+                    }
+                }
+            };
+            xhr.send(postData);
+            return true;
+        }
         else {
-            console.log(window.__DCSR.NotSupportedFileFormat + strFormat);
+            console.log("DCWriter:不支持的文件格式:" + strFormat);
         }
         return false;
+    },
+    /**
+     * 获得文档的长图片数据
+     * @param {string | HTMLDivElement} rootElement 编辑器对象
+     * @param {Function} callBack 回调函数,预计的参数是Blob类型。
+     * @returns {boolean} 操作是否成功
+     */
+    GetLongImageData: function (rootElement, callBack) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return false;
+        }
+        if (typeof (callBack) != "function") {
+            throw "必须指定一个回调函数";
+        }
+        // 保存为长图片,也是在本地生成
+        var bsData = rootElement.__DCWriterReference.invokeMethod("WASMCreateLongBmp", true, 1, false);
+        if (bsData == null || bsData.length == 0) {
+            return false;
+        }
+        var tempElement = rootElement.ownerDocument.createElement("CANVAS");
+        var reader = new DCBinaryReader(bsData);
+        if (reader.ReadByte() != 133) {
+            // 文件头不对
+            return false;
+        }
+        tempElement.width = reader.ReadInt16();
+        tempElement.height = reader.ReadInt16();
+        var drawer = new PageContentDrawer(tempElement, reader);
+        drawer.EventSource = "GetLongImageData";
+        drawer.EventAfterDraw = function () {
+            var strUrl = tempElement.toDataURL("image/png", 1);
+            // console.log(strUrl)
+            callBack(strUrl);
+        };
+        drawer.AddToTask();
+        return true;
     },
     HasXmlHeader: function (strData) {
         if (typeof (strData) == "string" && strData.length > 20) {
@@ -470,6 +912,8 @@ export let WriterControl_IO = {
         }
         return false;
     },
+
+
     /**
      * 准备以XMLReader的方式加载文档XML内容
      * @param {string| HTMLElement} 编辑器对象
@@ -545,6 +989,29 @@ export let WriterControl_IO = {
                             return false;
                         }
                     }
+                } else if (strXML.indexOf("&#x") > 0) {
+                    var strXML2 = strXML;
+                    //循环解析
+                    while (strXML2.indexOf("&#x") > 0) {
+                        var startIndex = strXML2.indexOf("&#x");
+                        //找到结束的;
+                        var endIndex = strXML2.indexOf(";", startIndex);
+                        strXML2 = strXML2.substring(0, startIndex) + strXML2.substring(endIndex);
+                    }
+                    xmldoc = pr.parseFromString(strXML2, "text/xml");
+                    if (xmldoc.documentElement.nodeName == "html") {
+                        WriterControl_IO.__LastXmlParserError = xmldoc.documentElement.innerText;
+                        // 解析错误
+                        return false;
+                    }
+                    for (var node5 = xmldoc.documentElement.firstChild; node5 != null; node5 = node5.nextSibling) {
+                        if (node5.nodeName == "parsererror") {
+                            // 无法修复的解析错误
+                            WriterControl_IO.__LastXmlParserError = node5.innerText;
+                            console.error("XML解析错误:" + node5.innerText);
+                            return false;
+                        }
+                    }
                 } else {
                     if (node4.textContent.indexOf('\nBelow') >= 0) {
                         //通过前端修复常见的问题来获取到正确的xmldoc
@@ -577,11 +1044,6 @@ export let WriterControl_IO = {
             if (txt == null || txt.length == 0) {
                 return 0;
             }
-            //var index = strTable.indexOf( txt );//[ txt ];
-            //if(index <0){
-            //    strTable.push( txt );
-            //    index = strTable.length - 1;
-            //}
             var index = strTable[txt];
             if (typeof (index) == "undefined") {
                 index = strTableValues.length;
@@ -591,10 +1053,6 @@ export let WriterControl_IO = {
             if (isName == true) {
                 idNames.add(index);
             }
-            //if (strTableValues[ index ] != txt )
-            //{
-            //    var len4 = txt;
-            //}
             return index;
         };
         var funcOutputAttributes = function (attributes, array) {
@@ -607,15 +1065,12 @@ export let WriterControl_IO = {
             }
         };
         var funcOutputNodes = function (firstNode, array, stackLevel) {
-            //var nodeLen = nodes.length;
             array.push(0);
             var lenIndex = array.length - 1;
             array.push(0);
             var outputLength = 0;
-            //for (var iCount = 0; iCount < nodeLen; iCount++) {
             var preNode = null;
             for (var node = firstNode; node != null; node = node.nextSibling) {
-                //var node = nodes[iCount];
                 var nodeType = node.nodeType;
                 if (nodeType == 1) {
                     // 元素
@@ -634,25 +1089,6 @@ export let WriterControl_IO = {
                         // 夹杂在XML元素中间的纯文本节点，则忽略掉。
                         continue;
                     }
-                    //var strText = node.nodeValue;
-                    //if (strText.charCodeAt(0) == 13 || strText.charCodeAt(0) == 10) {
-                    //    if (preNode == null || preNode.nodeType == 1) {
-                    //        var nextNode = node.nextSibling;
-                    //        if (nextNode == null || nextNode.nodeType == 1) {
-                    //            if (strText.trim().length == 0) {
-                    //                // 为一个无意义的空行
-                    //                continue;
-                    //            }
-                    //        }
-                    //    }
-                    //}
-                    //else if (node.nextSibling != null
-                    //    && strText.charCodeAt(0) == 32
-                    //    && node.nextSibling.nodeType != 3
-                    //    && strText.trim().length == 0) {
-                    //    // 为第一个元素间空白,忽略
-                    //    continue;
-                    //}
                     array.push(0);
                     array.push(GetStringIndex(node.nodeValue, false));
                     outputLength++;
@@ -665,14 +1101,6 @@ export let WriterControl_IO = {
         /**@param { HTMLElement} rootNode
          @param {Array} array*/
         var funcOutputOneNode = function (rootNode, array, stackLevel) {
-            //if (stackLevel > 30)
-            //{
-            //    var str44 = "";
-            //    for (var i2 = 0; i2 < stackLevel; i2++) {
-            //        str44 = str44 + " ";
-            //    }
-            //    console.log(stackLevel + " " + str44 + " " + rootNode.nodeName);
-            //}
             var attrLen = 0;
             if (rootNode.hasAttributes()) {
                 attrLen = rootNode.attributes.length;
@@ -694,8 +1122,30 @@ export let WriterControl_IO = {
                         && rootNode.nodeName == "ImageDataBase64String") {
                         // 这是一个比较大的BASE64字符串,提前进行转换
                         var bsData = DCTools20221228.FromBase64String(strNodeValue);
-                        array.push(GetStringIndex("$BINARY_" + binaryDataArray.length));
-                        binaryDataArray.push(bsData);
+                        // 检查重复项目
+                        var matchIndex = -1;
+                        for (var index12 = binaryDataArray.length - 1; index12 >= 0; index12--) {
+                            var arr12 = binaryDataArray[index12];
+                            if (arr12.length == bsData.length) {
+                                matchIndex = index12;
+                                for (var index33 = bsData.length - 1; index33 >= 0; index33--) {
+                                    if (arr12[index33] != bsData[index33]) {
+                                        matchIndex = -1;
+                                        break;
+                                    }
+                                }
+                                if (matchIndex >= 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        if (matchIndex >= 0) {
+                            array.push(GetStringIndex("$BINARY_" + matchIndex));
+                        }
+                        else {
+                            array.push(GetStringIndex("$BINARY_" + binaryDataArray.length));
+                            binaryDataArray.push(bsData);
+                        }
                     }
                     else {
                         array.push(GetStringIndex(firstChild.nodeValue, false));
@@ -724,24 +1174,67 @@ export let WriterControl_IO = {
         funcOutputOneNode(xmldoc.documentElement, list, 0);
         var tickSpan = new Date().valueOf() - starTick;
         //strTable.push( list.toString());
-        var byteIndexs = new Uint8Array(new Int32Array(list).buffer);
-        var byteIndexNames = new Uint8Array(new Int32Array(idNames).buffer);
-        //alert("处理XML毫秒:" + tick2 + "/" + tick + "   " + byteIndexs.length );
-        strTable = null;
+        var apiRecorder = null;
+        if (rootElement != null) {
+            var refItem = rootElement.__DCWriterReference;
+            if (refItem.LogStaticMethod != null) {
+                apiRecorder = refItem;
+            }
+        }
+        window.DCWriterStaticInvokeMethod("ClearInnerXmlReader");
+        if (apiRecorder != null) { apiRecorder.LogStaticMethod("ClearInnerXmlReader"); }
+        var firstData = null;
+        const maxArrayLength = 51200;
+        if (list.length > maxArrayLength) {
+            var arr2 = new Int32Array(list.slice(0, maxArrayLength));
+            firstData = new Uint8Array(arr2.buffer);
+            arr2 = null;
+            window.__DCXmlReaderInt32Indexs = list;
+        }
+        else {
+            firstData = new Uint8Array(new Int32Array(list).buffer);
+            window.__DCXmlReaderInt32Indexs = null;
+        }
+        window.DCWriterStaticInvokeMethod("BeginCreateArrayXmlReader", firstData);
+        if (apiRecorder != null) { apiRecorder.LogStaticMethod("BeginCreateArrayXmlReader", new Uint8Array(new Int32Array( list ).buffer)); }
+        window.DCWriterStaticInvokeMethod("SetArrayXmlReaderData1", list.length);
+        if (apiRecorder != null) { apiRecorder.LogStaticMethod("SetArrayXmlReaderData1", list.length); }
+        window.DCWriterStaticInvokeMethod("SetArrayXmlReaderData2", new Uint8Array(new Int32Array(idNames).buffer));
+        if (apiRecorder != null) { apiRecorder.LogStaticMethod("SetArrayXmlReaderData2", new Uint8Array(new Int32Array(idNames).buffer)); }
+        window.DCWriterStaticInvokeMethod("SetStringTableForXmlReader", strTableValues);
+        if (apiRecorder != null) { apiRecorder.LogStaticMethod("SetStringTableForXmlReader", strTableValues); }
         list = null;
+        firstData = null;
         idNames = null;
-        // 传递二进制的参数
-        rootElement.__DCWriterReference.invokeMethod("ClearInnerXmlReader");
-        rootElement.__DCWriterReference.invokeMethod("AddBianryDataForXmlReader", byteIndexs);
-        rootElement.__DCWriterReference.invokeMethod("AddBianryDataForXmlReader", byteIndexNames);
+        strTableValues = null;
         if (binaryDataArray.length > 0) {
             // 设置预先解析出的二进制数据
             for (var iCount = 0; iCount < binaryDataArray.length; iCount++) {
-                rootElement.__DCWriterReference.invokeMethod("AddBianryDataForXmlReader", binaryDataArray[iCount]);
+                window.DCWriterStaticInvokeMethod("AddBianryDataForXmlReader", binaryDataArray[iCount]);
+                if (apiRecorder != null) { apiRecorder.LogStaticMethod("AddBianryDataForXmlReader", binaryDataArray[iCount]); }
+                binaryDataArray[iCount] = null;
             }
+            binaryDataArray = null;
         }
-        rootElement.__DCWriterReference.invokeMethod("SetStringTableForXmlReader", strTableValues);
-        strTableValues = null;
         return true;
+    },
+    ReadDCXmlReaderInt32Indexs: function (startIndex) {
+        var vLength = 51200;
+        var list = window.__DCXmlReaderInt32Indexs;
+        if (list == null) {
+            return null;
+        }
+        if (vLength > list.length - startIndex) {
+            vLength = list.length - startIndex;
+        };
+        if (vLength == 0) {
+            return null;
+        }
+        var bs = new Uint8Array(
+            new Int32Array(list.slice(startIndex, startIndex + vLength)).buffer);
+        return bs;
+    },
+    CloseDCXmlReader: function () {
+        window.__DCXmlReaderInt32Indexs = null;
     }
 };

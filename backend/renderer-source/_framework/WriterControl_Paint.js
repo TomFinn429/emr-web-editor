@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 // 这里定义编辑器内容绘制代码 
 // 南京都昌信息科技有限公司 2023-3-22
@@ -77,6 +77,7 @@ export let WriterControl_Paint = {
         temp.width = imgWidth;
         temp.height = imgHeight;
         var drawer = new PageContentDrawer(temp, reader);
+        drawer.EventSource = "BuildBitmapSrc";
         drawer.DoubleBuffer = false;
         drawer.TaskID = strTaskID;
         drawer.EventAfterDraw = function () {
@@ -223,9 +224,7 @@ export let WriterControl_Paint = {
                     for (var iCount = 0; iCount < fontList.length; iCount++) {
                         // 注册TTF字体文件信息
                         var fontItem = fontList[iCount];
-                        DotNet.invokeMethod(
-                            window.DCWriterEntryPointAssemblyName,
-                            "RegisterTTF",
+                        DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName,"RegisterTTF",
                             fontItem.FontName,
                             strBaseUrl + fontItem.FileName);
                     }
@@ -363,8 +362,90 @@ export let WriterControl_Paint = {
             element.height = bmpHeight;
         }
         var drawer = new PageContentDrawer(element, bsData);
+        drawer.EventSource = "DrawBitmapContent";
         drawer.AddToTask();
         return strCanvasElementID;
+    },
+    /**
+     * 获得文档的背景图片数据
+     * @param {string | HTMLElement} rootElement 编辑器对象
+     * @param {Function} callBack 获得背景图片数据的回调函数
+     * @returns { boolean} 操作是否成功
+     */
+    GetDocumentBackgroundImageData: function (rootElement, callBack) {
+        rootElement = DCTools20221228.GetOwnerWriterControl(rootElement);
+        if (rootElement == null) {
+            return false;
+        }
+        var data2 = rootElement.__DCWriterReference.invokeMethod("GetDefaultBackgroundGraphicsData");
+        if (data2 != null && data2.length > 0) {
+            var reader = new DCBinaryReader(data2);
+            var pageWidth = reader.ReadInt32();
+            var pageHeight = reader.ReadInt32();
+            var tempElement = rootElement.ownerDocument.createElement("canvas");
+            tempElement.width = pageWidth;
+            tempElement.height = pageHeight;
+            var drawer = new PageContentDrawer(tempElement, reader);
+            drawer.EventSource = "GetDocumentBackgroundImageData";
+            drawer.TypeName = "UpdateViewForWaterMark";
+            drawer.EventAfterDraw = function () {
+                var strImageData = tempElement.toDataURL("image/png");
+                tempElement.remove();
+                callBack(strImageData);
+            };
+            drawer.AddToTask();
+            return true;
+        }
+        return false;
+    },
+    /**
+    * 为水印而更新显示
+    * @param {HTMLElement} rootElement 根对象
+    */
+    UpdateViewForWaterMark: function (rootElement) {
+        rootElement.__BackgroundImageElement = null;
+        if (rootElement.getAttribute("dctype") == "WriterPrintPreviewControlForWASM") {
+            // 打印预览控件不处理
+            return;
+        }
+        //rootElement.__BackgroundDrawer = null;
+        if (rootElement.__BackgroundImageElement != null) {
+
+        }
+        var styleElement = DCTools20221228.GetChildNodeByDCType(rootElement, "style_bkimg");
+        var data2 = rootElement.__DCWriterReference.invokeMethod("GetDefaultBackgroundGraphicsData");
+        if (data2 != null && data2.length > 0) {
+            var reader = new DCBinaryReader(data2);
+            var pageWidth = reader.ReadInt32();
+            var pageHeight = reader.ReadInt32();
+            var tempElement = rootElement.ownerDocument.createElement("canvas");
+            tempElement.width = pageWidth;
+            tempElement.height = pageHeight;
+            var drawer = new PageContentDrawer(tempElement, reader);
+            drawer.EventSource = "UpdateViewForWaterMark";
+            drawer.TypeName = "UpdateViewForWaterMark";
+            drawer.EventAfterDraw = function () {
+                rootElement.__BackgroundImageElement = tempElement;
+                var styleElement2 = DCTools20221228.GetChildNodeByDCType(rootElement, "style_bkimg");
+                if (styleElement2 == null) {
+                    styleElement2 = rootElement.ownerDocument.createElement("style");
+                    styleElement2.setAttribute("dctype", "style_bkimg");
+                    rootElement.insertBefore(styleElement2, rootElement.firstChild);
+                }
+                if (rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode") == true) {
+                    // 对于普通视图模式，则背景图片重复平铺
+                    styleElement2.innerText = "." + rootElement.__BKImgStyleName + "{background-repeat:repeat;background-image:url(" + tempElement.toDataURL("image/png") + ")}";
+                }
+                else {
+                    styleElement2.innerText = "." + rootElement.__BKImgStyleName + "{background-repeat:no-repeat;background-image:url(" + tempElement.toDataURL("image/png") + ")}";
+                }
+                tempElement.remove();
+            };
+            drawer.AddToTask();
+        }
+        else if (styleElement != null) {
+            rootElement.removeChild(styleElement);
+        }
     },
 
 
@@ -477,8 +558,7 @@ export let WriterControl_Paint = {
             var funcMouseEvent = function (e) {
                 var page = this.__PageElement;
                 if (page != null && page.parentNode.parentNode.__DCWriterReference != null) {
-                    page.parentNode.parentNode.__DCWriterReference.invokeMethod(
-                        "EditorHandleMouseEvent",
+                    page.parentNode.parentNode.__DCWriterReference.invokeMethod("EditorHandleMouseEvent",
                         page.PageIndex,
                         e.type,
                         e.altKey,
@@ -540,14 +620,21 @@ export let WriterControl_Paint = {
             // 处于打印或者打印预览，不处理
             return;
         }
+        /*var isWriterPrintPreviewControlForWASM = rootElement.getAttribute("dctype") == */"WriterPrintPreviewControlForWASM";
         var canvas = WriterControl_UI.GetPageCanvasElements(rootElement);
         if (canvas != null && canvas.length > 0) {
             for (var pageIndex = 0; pageIndex < canvas.length; pageIndex++) {
                 var element = canvas[pageIndex];
                 if (DCTools20221228.IsInVisibleArea(element) == true) {
                     if (element._isRendered != true) {
+                        //var tickLoad = new Date().valueOf();
+                        //tickLoad = new Date().valueOf() - tickLoad;
+                        //var tickRender = new Date().valueOf();
+                        //预览控件走自己的滚动逻辑ui.js=>PageContainerOnscrollFunc
+                        //if (isWriterPrintPreviewControlForWASM !== true)
                         {
                             var drawer = new PageContentDrawer(element);
+                            drawer.EventSource = "HandleScrollView";
                             //drawer.TypeName = "DrawPageForHandleScrollView";
                             drawer.PageIndex = pageIndex;
                             drawer.AllowClip = true;
@@ -571,8 +658,7 @@ export let WriterControl_Paint = {
                                 }
                                 while (e9 != null) {
                                     if (e9.__DCWriterReference != null) {
-                                        var strData = e9.__DCWriterReference.invokeMethod(
-                                            "RenderPageContent",
+                                        var strData = e9.__DCWriterReference.invokeMethod("RenderPageContent",
                                             this.PageIndex);
                                         return strData;
                                     }
@@ -596,7 +682,10 @@ export let WriterControl_Paint = {
                 }
             }
         }
+        //if (isWriterPrintPreviewControlForWASM == false) {
         WriterControl_Paint.NeedUpdateView(rootElement, allowDrawAll);
+        //}
+
         var hasNotScrollWithCaret = rootElement.getAttribute('notscrollwithcaret');
         if (typeof hasNotScrollWithCaret == 'string' && hasNotScrollWithCaret.toLowerCase() == 'true') {
             WriterControl_UI.CaretWithinVisibleArea(rootElement);
@@ -647,9 +736,7 @@ export let WriterControl_Paint = {
     /** 刷新标准图标列表 */
     RefreshStandardImageList: function () {
         window.__DCStandardImageList = null;
-        var imgDatas = DotNet.invokeMethod(
-            window.DCWriterEntryPointAssemblyName,
-            "GetStandardImageData");
+        var imgDatas = DotNet.invokeMethod(window.DCWriterEntryPointAssemblyName,"GetStandardImageData");
         if (imgDatas != null && imgDatas.length > 0) {
             var imgList = new Array();
             for (var iCount = 0; iCount < imgDatas.length; iCount++) {
@@ -764,6 +851,7 @@ export let WriterControl_Paint = {
         //     // 处于打印预览模式，则重新绘制所有打印预览的内容
         //     WriterControl_Print.PrintPreviewInvalidateAllView(rootElement);
         // }
+
         var task = {
             OwnerWriterControl: DCTools20221228.GetOwnerWriterControl(strContainerID),
             TypeName: "NeedUpdateView",
@@ -785,6 +873,7 @@ export let WriterControl_Paint = {
                     return;
                 }
                 var drawer = new PageContentDrawer();
+                drawer.EventSource = "NeedUpdateView";
                 drawer.OwnerWriterControl = this.OwnerWriterControl;
                 drawer.AllowDrawAll = this.AllowDrawAll;
                 drawer.OnDeleted = function (src) {
@@ -805,6 +894,7 @@ export let WriterControl_Paint = {
                     if (codes == null || codes.length == 0) {
                         return null;
                     }
+
                     if (codes[0] == 0xfe) {
                         if (this.AllowDrawAll != false) {
                             // 判断出需要重新绘制所有的内容，不在这里进行绘制
@@ -1056,6 +1146,7 @@ export let WriterControl_Paint = {
         if (pageContainer == null) {
             throw "页面容器元素未找到";
         }
+        WriterControl_UI.RemoveAllDocumentCommentDivElement(rootElement);
         var backScrollLeft = pageContainer.scrollLeft;
         var backScrollTop = pageContainer.scrollTop;
         var pageLayoutChanged = false;
@@ -1100,18 +1191,24 @@ export let WriterControl_Paint = {
         }
         var baseZoomRate = window.devicePixelRatio;
         rootElement.__DCWriterReference.invokeMethod("set_WASMBaseZoomRate", baseZoomRate);
+        var bolNormalViewMode = rootElement.__DCWriterReference.invokeMethod("GetNormalViewMode");
         for (var iCount = 0; iCount < codes.length; iCount++) {
             var pageInfo = codes[iCount];
             if (iCount < elements.length) {
                 // 遇到已有的元素
                 var element = elements[iCount];
+                if (bolNormalViewMode) {
+                    element.style.marginTop = iCount == 0 ? "" : "1px";
+                    element.style.marginBottom = iCount == codes.length - 1 ? "" : "0px";
+                    element.style.borderTop = iCount == 0 ? "" : "1px dotted black";
+                    element.style.borderBottom = iCount == codes.length - 1 ? "" : "none";
+                }
                 element.__PageInfo = pageInfo;
                 element.PageIndex = pageInfo.PageIndex;
-                if (pageInfo.Background == true) {
-                    jQuery(element).addClass(rootElement.__BKImgStyleName);
-                }
-                else {
-                    jQuery(element).removeClass(rootElement.__BKImgStyleName);
+                // 处理背景图片样式
+                const className = rootElement.__BKImgStyleName;
+                if (className) {
+                    element.classList.toggle(className, pageInfo.Background === true);
                 }
                 // 修复修改已有的页面元素的盒子模型导致页面模糊的问题【DUWRITER5_0-3431】
                 // element.style.boxSizing = "content-box";
@@ -1123,6 +1220,10 @@ export let WriterControl_Paint = {
                     element.setAttribute("native-width", pageInfo.Width);
                     element.setAttribute("native-height", pageInfo.Height);
                     var imgBack = null;
+                    if (bolNormalViewMode == true && element._isRendered == true) {
+                        var ctx = element.getContext("2d");
+                        imgBack = ctx.getImageData(0, 0, element.width, element.height);
+                    }
                     WriterControl_Paint.SetPageElementSize(rootElement, element);
                     if (imgBack != null) {
                         var ctx2 = element.getContext("2d");
@@ -1141,18 +1242,25 @@ export let WriterControl_Paint = {
                 // 需要新增元素
                 pageLayoutChanged = true;
                 var element = null;
+                //[DUWRITER5_0-3321]20240808 lxy 预览控件下，直接创建为svg
+                if (rootElement.IsWriterPrintPreviewControlForWASM === true) {
+                    element = rootElement.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+                } else {
                     element = rootElement.ownerDocument.createElement("CANVAS");
                     element.style.imageRendering = "-moz-crisp-edges";
                     element.style.imageRendering = "pixelated";
                     element.style.setProperty("-ms-interpolation-mode", "nearest-neighbor");
+                }
                 element.draggable = DCTools20221228.ParseBoolean(rootElement.getAttribute("AllowDragContent"), false);
                 element.RootElement = rootElement;
                 element.__PageInfo = pageInfo;
                 element._isRendered = false;
                 element._NeedClear = false;
+                element.style.pageBreakAfter = "always";
+                element.style.pageBreakInside = "avoid";
                 element.setAttribute("width", pageInfo.Width + "px");
                 element.setAttribute("height", pageInfo.Height + "px");
-                //class类改成自定义属性添加类名，防止svg报错（scg无法修改className ）
+                // class类改成自定义属性添加类名，防止svg报错（svg无法修改className）
                 if (pageInfo.Background == true) {
                     element.setAttribute("class", "pagecss" + rootElement.id + " " + rootElement.__BKImgStyleName);
                 } else {
@@ -1165,7 +1273,21 @@ export let WriterControl_Paint = {
                 element.setAttribute("UNSELECTABLE", "on");
                 element.setAttribute("native-width", pageInfo.Width);
                 element.setAttribute("native-height", pageInfo.Height);
+
+                if (bolNormalViewMode == true) {
+                    // 压缩页面视图模式
+                    element.style.marginTop = iCount == 0 ? "" : "0px";
+                    element.style.marginBottom = iCount == codes.length - 1 ? "" : "0px";
+                    element.style.borderTop = iCount == 0 ? "" : "1px dotted black";
+                    element.style.borderBottom = iCount == codes.length - 1 ? "" : "none";
+                }
                 element.style.boxSizing = "content-box";
+                // var resizeObserver = new ResizeObserver(entries => {
+                //     let rootElement=entries[0].target.RootElement
+                //     if (rootElement&&rootElement.CollectrResizeCanvas) {
+                //         rootElement.CollectrResizeCanvas(entries[0].target);
+                //     }
+                // });
                 var resizeObserver = new ResizeObserver(WriterControl_Paint.OnResizeCallback);
                 resizeObserver.disconnect(element);
                 //确保该元素身上只有一个事件监听
@@ -1174,8 +1296,41 @@ export let WriterControl_Paint = {
                 if (pageCSSString != null && pageCSSString.length > 0) {
                     element.setAttribute("style", pageCSSString);
                 }
+                //if (iCount == codes.length - 1) {
                 WriterControl_Paint.SetPageElementSize(rootElement, element, true, codes.length);
-                {
+                //}
+                if (rootElement.IsWriterPrintPreviewControlForWASM == true) {
+                    element.onclick = function () {
+                        var ctl = DCTools20221228.GetOwnerWriterControl(this);
+                        if (this != ctl.CurrentPageElement) {
+                            ctl.__DCWriterReference.invokeMethod("set_PageIndex", this.PageIndex);
+                            WriterControl_Rule.InvalidateView(ctl, "hrule");
+                            WriterControl_Rule.InvalidateView(ctl, "vrule");
+                            if (ctl.CurrentPageElement != null) {
+                                ctl.CurrentPageElement.style.borderColor = "";
+                            }
+                            ctl.CurrentPageElement = this;
+                            this.style.borderColor = "blue";
+                        }
+                    };
+                    element.oncontextmenu = function (e) {
+                        // 处理快捷菜单事件
+                        var re2 = DCTools20221228.GetOwnerWriterControl(this);
+                        re2.RaiseEvent(
+                            "EventShowContextMenu",
+                            {
+                                TypeName: "WriterPrintPreviewControlForWASM",
+                                PageElement: this,
+                                X: e.offsetX,
+                                Y: e.offsetY
+                            });
+                        e.stopPropagation();
+                        e.preventDefault();
+                        e.returnValue = false;
+                        return false;
+                    };
+                }
+                else {
                     //设置放大的比例
                     var funcMouseEvent = function (e) {
                         let rootElement = e.target.RootElement;
@@ -1226,7 +1381,7 @@ export let WriterControl_Paint = {
                             }
                             //鼠标续打模式下单击关掉右键菜单,适配枚举：Normal开发环境，0生产环境。
                             //20240326 lixinyu 增加判断条件：只读模式下单击关闭右键菜单（DUWRITER5_0-2123）
-                            if (rootElement.Readonly) {
+                            if (['Normal', 0].indexOf(rootElement.ExtViewMode) == -1 || rootElement.Readonly) {
                                 var hasContextMenu = rootElement.querySelector('#dcContextMenu');
                                 if (hasContextMenu) {
                                     hasContextMenu.remove();
@@ -1257,36 +1412,6 @@ export let WriterControl_Paint = {
                                 if (result === false || result === 'false' || result === 'False') {
                                     return;
                                 }
-                            }
-                            // 元素双击事件
-                            var typename = rootElement.GetCurrentElementTypeName();//当前选择的元素类型名称
-                            if (typename == "xtextnewmedicalexpressionelement") {
-                                let ele = rootElement.CurrentElement('xtextnewmedicalexpressionelement');
-                                let options = rootElement.GetElementProperties(ele);
-                                //判断视图是否为只读模式
-                                if (rootElement.Readonly === false) {
-                                    if (options.ContentReadonly != true && options.ContentReadonly != "True" && options.ContentReadonly != "true") {
-                                        //[DUWRITER5_0-4278] 20250327 修改双击医学表达式时，打开对应的医学表达式编辑对话框
-                                        rootElement.DCDispatchMedicalExpressionExecuteCommand(options, false, ele);
-                                        return;
-                                    }
-                                }
-
-                            } else if (typename == "xtextimageelement") {
-                                let ele = rootElement.CurrentElement('xtextimageelement');
-                                let options = rootElement.GetElementProperties(ele);
-                                //判断视图是否为只读模式
-                                if (rootElement.Readonly === false) {
-                                    if (options.ContentReadonly != true && options.ContentReadonly != "True" && options.ContentReadonly != "true") {
-                                        if (options.EnableEditImageAdditionShape) { //判断图片是否允许编辑
-                                            rootElement.imgEditDialog(options, rootElement);
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
-                            else {
-
                             }
                         } else if (e.type == 'mousedown') {
                             // 修改document.WriterControl编辑器为当前编辑器
@@ -1469,8 +1594,7 @@ export let WriterControl_Paint = {
                                             button = 1;
                                         }
                                     }
-                                    rootElement.__DCWriterReference.invokeMethod(
-                                        "EditorHandleMouseEvent",
+                                    rootElement.__DCWriterReference.invokeMethod("EditorHandleMouseEvent",
                                         pageIndex,
                                         e.type,
                                         e.altKey,
@@ -1481,10 +1605,15 @@ export let WriterControl_Paint = {
                                         button,
                                         e.detail);
                                 }
+
+                                // 修改成只有阅读模式或者只读模式调用mousedown时不阻止默认事件，修复iframe中阅读模式无法复制的问题【DUWRITER5_0-4609】
                                 if (rootElement.__DCWriterReference.invokeMethod("Is_WaittingForDragStart") == false) {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    e.returnValue = false;
+                                    if (rootElement.__DCWriterReference.invokeMethod("IsReadOnlyOrReadViewMode") == false
+                                        || e.type != "mousedown") {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        e.returnValue = false;
+                                    }
                                 }
                                 else if (e.type == "mousedown") {
                                     // 准备鼠标拖拽使用的图片
@@ -1560,12 +1689,14 @@ export let WriterControl_Paint = {
                     element.onclick = funcMouseEvent;
                     element.ondblclick = funcMouseEvent;
 
-                    //再次此处新增处理
-                    if ('ontouchstart' in rootElement.ownerDocument.documentElement) {
+                    // 移动端触摸事件处理优化
+                    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        // 移动设备使用触摸事件
                         element.ontouchstart = touchstart;
                         element.ontouchmove = touchmove;
                         element.ontouchend = touchend;
                     } else {
+                        // 桌面设备使用指针事件
                         element.style.touchAction = "pan-y";
                         element.onpointerdown = function (e) {
                             if (e.pointerType == "touch") {
@@ -1583,155 +1714,201 @@ export let WriterControl_Paint = {
                             }
                         };
                     }
+                    // 触摸开始事件处理
                     function touchstart(e, type) {
                         // let rootElement=e.target.RootElement
-                        //如果已经存在选中,清掉
-                        if (rootElement.__DCWriterReference.invokeMethod("HasSelection") == true) {
-                            // element.oncontextmenu(e);
-                            rootElement.FocusElement(rootElement.CurrentElement("xtextcontainerelement"));
-                        }
+                        // 如果已经存在选中,清掉
+                        // if (rootElement.__DCWriterReference.invokeMethod("HasSelection") == true) {
+                        //     // element.oncontextmenu(e);
+                        //     rootElement.FocusElement(rootElement.CurrentElement("xtextcontainerelement"));
+                        // }
                         rootElement.touchMove = false;
-                        clearTimeout(element.touchStartTime);
+                        if (element) {
+                            clearTimeout(element.touchStartTime);
+                        }
                         document.body.style.userSelect = "none";
                         rootElement.mobileMousePosition = null;
-                        //开始记时，超过一秒没有移动才开始滚动
-                        element.touchStartTime = setTimeout(() => {
-                            var es2 = WriterControl_UI.GetPageCanvasElements(e.target.parentNode);
-                            for (var pageIndex = 0; pageIndex < es2.length; pageIndex++) {
-                                if (es2[pageIndex] == e.target) {
-                                    if (rootElement.__DCWriterReference != null) {
-                                        rootElement.touchMove = true;
-                                        if (navigator.userAgent.indexOf("Mac OS X") >= 0) {
-                                            document.body.style.pointerEvents = "none";
-                                            document.body.style.webkitUserSelect = "none";
-                                        }
-                                        //进行点击判断，是否为主动获取焦点
-                                        rootElement.EditorNoObtainFocus = 'clicktochangecursor';
-                                        rootElement.mobileMousePosition = {
-                                            x: type ? parseInt(e.offsetX) : parseInt(e.touches[0].clientX - e.target.getBoundingClientRect().x),
-                                            y: type ? parseInt(e.offsetY) : parseInt(e.touches[0].clientY - e.target.getBoundingClientRect().y)
-                                        };
-                                        rootElement.__DCWriterReference.invokeMethod(
-                                            "EditorHandleMouseEvent",
-                                            pageIndex,
-                                            "mousedown",
-                                            e.altKey,
-                                            e.shiftKey,
-                                            e.ctrlKey,
-                                            rootElement.mobileMousePosition.x,
-                                            rootElement.mobileMousePosition.y,
-                                            1,
-                                            1);
+
+                        // 延迟处理触摸事件，避免误触
+                        if (element) {
+                            element.touchStartTime = setTimeout(() => {
+                                const pageElements = WriterControl_UI.GetPageCanvasElements(e.target.parentNode);
+                                const pageIndex = pageElements.indexOf(e.target);
+
+                                if (pageIndex !== -1 && rootElement.__DCWriterReference) {
+                                    rootElement.touchMove = true;
+
+                                    // macOS 特殊处理
+                                    if (navigator.userAgent.includes("Mac OS X")) {
+                                        document.body.style.pointerEvents = "none";
+                                        document.body.style.webkitUserSelect = "none";
                                     }
+
+                                    // 设置编辑器状态
+                                    rootElement.EditorNoObtainFocus = 'clicktochangecursor';
+
+                                    // 计算触摸位置
+                                    const rect = e.target.getBoundingClientRect();
+                                    const touchX = type ? parseInt(e.offsetX) : parseInt(e.touches[0].clientX - rect.x);
+                                    const touchY = type ? parseInt(e.offsetY) : parseInt(e.touches[0].clientY - rect.y);
+
+                                    rootElement.mobileMousePosition = { x: touchX, y: touchY };
+
+                                    // 调用编辑器鼠标事件处理
+                                    rootElement.__DCWriterReference.invokeMethod("EditorHandleMouseEvent",
+                                        pageIndex,
+                                        "mousedown",
+                                        e.altKey,
+                                        e.shiftKey,
+                                        e.ctrlKey,
+                                        touchX,
+                                        touchY,
+                                        1,
+                                        1
+                                    );
+
                                     e.stopPropagation();
                                     e.preventDefault();
-                                    //e.returnValue = false;
-                                    break;
                                 }
-                            }
-                        }, 1000);
-
-                    };
-                    function touchmove(e, type) {
-                        if (!type) {
-                            clearTimeout(element.touchStartTime);
-                            document.body.style.removeProperty('user-select');
-                            if (navigator.userAgent.indexOf("Mac OS X") >= 0) {
-                                document.body.style.removeProperty("pointer-events");
-                                document.body.style.removeProperty("-webkit-user-select");
-                            }
+                            }, 300); // 减少延迟时间，提高响应性
                         }
-                        //允许移动
+                        
+                    }
+                    // 触摸移动事件处理
+                    function touchmove(e, type) {
+                        // 非指针事件时清除定时器
+                        if (!type) {
+                            if (element) {
+                                clearTimeout(element.touchStartTime);
+                            }
+                            resetBodyStyles();
+                        }
+
+                        // 允许移动时处理
                         if (rootElement.touchMove) {
                             if (type) {
-                                clearTimeout(element.touchStartTime);
-                                document.body.style.removeProperty('user-select');
-                                if (navigator.userAgent.indexOf("Mac OS X") >= 0) {
-                                    document.body.style.removeProperty("pointer-events");
-                                    document.body.style.removeProperty("-webkit-user-select");
+                                if (element) {
+                                    clearTimeout(element.touchStartTime);
                                 }
+                                resetBodyStyles();
                             }
-                            var es2 = WriterControl_UI.GetPageCanvasElements(e.target.parentNode);
-                            for (var pageIndex = 0; pageIndex < es2.length; pageIndex++) {
-                                if (es2[pageIndex] == e.target) {
-                                    if (rootElement.__DCWriterReference != null) {
-                                        rootElement.__DCWriterReference.invokeMethod(
-                                            "EditorHandleMouseEvent",
-                                            pageIndex,
-                                            "mousemove",
-                                            e.altKey,
-                                            e.shiftKey,
-                                            e.ctrlKey,
-                                            type ? parseInt(e.offsetX) : parseInt(e.touches[0].clientX - e.target.getBoundingClientRect().x),
-                                            type ? parseInt(e.offsetY) : parseInt(e.touches[0].clientY - e.target.getBoundingClientRect().y),
-                                            1,
-                                            e.detail);
-                                    }
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    //e.returnValue = false;
-                                    break;
-                                }
+
+                            const pageElements = WriterControl_UI.GetPageCanvasElements(e.target.parentNode);
+                            const pageIndex = pageElements.indexOf(e.target);
+
+                            if (pageIndex !== -1 && rootElement.__DCWriterReference) {
+                                const rect = e.target.getBoundingClientRect();
+                                const touchX = type ? parseInt(e.offsetX) : parseInt(e.touches[0].clientX - rect.x);
+                                const touchY = type ? parseInt(e.offsetY) : parseInt(e.touches[0].clientY - rect.y);
+
+                                rootElement.__DCWriterReference.invokeMethod("EditorHandleMouseEvent",
+                                    pageIndex,
+                                    "mousemove",
+                                    e.altKey,
+                                    e.shiftKey,
+                                    e.ctrlKey,
+                                    touchX,
+                                    touchY,
+                                    1,
+                                    e.detail
+                                );
+
+                                e.stopPropagation();
+                                e.preventDefault();
                             }
                         }
-                    };
-                    function touchend(e) {
-                        clearTimeout(element.touchStartTime);
+                    }
+                    // 触摸结束事件处理
+                    function touchend(e, type) {
+                        if (element && element.touchStartTime) {
+                            clearTimeout(element.touchStartTime);
+                            element.touchStartTime = null;
+                        }
+                        resetBodyStyles();
+
+                        if (rootElement.touchMove) {
+                            const pageElements = WriterControl_UI.GetPageCanvasElements(e.target.parentNode);
+                            const pageIndex = pageElements.indexOf(e.target);
+
+                            if (pageIndex !== -1 && rootElement.__DCWriterReference) {
+                                const rect = e.target.getBoundingClientRect();
+                                const touchX = type ? parseInt(e.offsetX) : parseInt(e.changedTouches[0].clientX - rect.x);
+                                const touchY = type ? parseInt(e.offsetY) : parseInt(e.changedTouches[0].clientY - rect.y);
+
+                                rootElement.__DCWriterReference.invokeMethod("EditorHandleMouseEvent",
+                                    pageIndex,
+                                    "mouseup",
+                                    e.altKey,
+                                    e.shiftKey,
+                                    e.ctrlKey,
+                                    touchX,
+                                    touchY,
+                                    1,
+                                    e.detail
+                                );
+
+                                e.stopPropagation();
+                                e.preventDefault();
+                            }
+                        }
+
+                        // 如果有选择，显示上下文菜单
+                        if (rootElement.__DCWriterReference.invokeMethod("HasSelection")) {
+                            element.oncontextmenu(e);
+                        }
+                    }
+
+                    // 重置文档样式辅助函数
+                    function resetBodyStyles() {
                         document.body.style.removeProperty('user-select');
-                        if (navigator.userAgent.indexOf("Mac OS X") >= 0) {
+                        if (navigator.userAgent.includes("Mac OS X")) {
                             document.body.style.removeProperty("pointer-events");
                             document.body.style.removeProperty("-webkit-user-select");
                         }
-                        if (rootElement.__DCWriterReference.invokeMethod("HasSelection") == true) {
-                            element.oncontextmenu(e);
-                        }
-                        //获取模拟输入域,此处设为清除只读是为了软键盘的弹出
-                        //var textEle = rootElement.querySelector('[dctype=dcinput]');
-                        //if (textEle) {
-                        //    textEle.removeAttribute('readonly');
-                        //}
-                        //if (rootElement.touchMove && rootElement.__DCWriterReference.invokeMethod("HasSelection") == true) {
-                        //if (rootElement.__DCWriterReference.invokeMethod("HasSelection") == true) {
-                        //rootElement.touchMove = false;
-                        //textEle.blur();
-                        //WriterControl_UI.ShowCaret(
-                        //    rootElement.oldCaretOption.containerID,
-                        //    rootElement.oldCaretOption.intPageIndex,
-                        //    rootElement.oldCaretOption.intDX,
-                        //    rootElement.oldCaretOption.intDY,
-                        //    rootElement.oldCaretOption.intWidth,
-                        //    rootElement.oldCaretOption.intHeight,
-                        //    rootElement.oldCaretOption.bolVisible,
-                        //    rootElement.oldCaretOption.bolReadonly
-                        //)
-                        //textEle.focus();
-                        //}
-                        //rootElement.touchMove = false;
-                    };
+                    }
+
                     element.oncontextmenu = function (e) {
-                        // 处理快捷菜单事件
-                        var re2 = DCTools20221228.GetOwnerWriterControl(e.currentTarget);
-                        var typeName = re2.__DCWriterReference.invokeMethod("GetContextMenuTypeName");
-                        if (typeName != null && typeName.length > 0) {
-                            re2.RaiseEvent(
-                                "EventShowContextMenu",
-                                {
-                                    TypeName: "快捷菜单信息",
-                                    PageElement: e.currentTarget,
-                                    ElementType: typeName,
-                                    X: e.offsetX,
-                                    Y: e.offsetY
-                                });
-                            e.stopPropagation();
-                            e.preventDefault();
-                            e.returnValue = false;
+                        // 判断是否为移动端
+                        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        var showContextMenu = function () {
+                            // 处理快捷菜单事件
+                            var re2 = DCTools20221228.GetOwnerWriterControl(e.srcElement);
+                            var typeName = re2.__DCWriterReference.invokeMethod("GetContextMenuTypeName");
+                            if (typeName != null && typeName.length > 0) {
+                                re2.RaiseEvent(
+                                    "EventShowContextMenu",
+                                    {
+                                        TypeName: "快捷菜单信息",
+                                        PageElement: e.srcElement,
+                                        ElementType: typeName,
+                                        X: e.offsetX,
+                                        Y: e.offsetY
+                                    });
+                                e.stopPropagation();
+                                e.preventDefault();
+                            }
+                        };
+                        if (isMobile) {
+                            // 移动端延迟触发
+                            if (element._contextMenuTimeout) {
+                                clearTimeout(element._contextMenuTimeout);
+                                element._contextMenuTimeout = null;
+                            }
+                            element._contextMenuTimeout = setTimeout(function () {
+                                showContextMenu();
+                                element._contextMenuTimeout = null;
+                            }, 100);
+                        } else {
+                            // PC端直接触发
+                            showContextMenu();
                         }
                         return false;
                     };
                     element.ondragstart = function (e5) {
                         // 处理鼠标开始拖拽内容事件
                         var datas = rootElement.__DCWriterReference.invokeMethod("EditorStartDragSelection", this.PageIndex, e5.offsetX, e5.offsetY);
-                        if (datas == null || datas.length == 0) {
+                        // 当鼠标拖拽使用的图片不存在时，取消鼠标拖拽操作【DUWRITER5_0-4758】
+                        if (datas == null || datas.length == 0 || this.__DragImage == null) {
                             // 取消鼠标拖拽操作
                             e5.stopPropagation();
                             e5.preventDefault();
@@ -1780,8 +1957,6 @@ export let WriterControl_Paint = {
                     // 
 
                     var funcDrag = function (e) {
-
-
                         // 处理鼠标拖拽事件
                         if (WriterControl_UI.IsDropdownControlVisible() == true) {
                             return;
@@ -1824,8 +1999,7 @@ export let WriterControl_Paint = {
                             if (strDataType.substring(0, 5) == "dcid_") {
                                 if (rootElement.__DCWriterReference.invokeMethod("IsCachedDragData", strDataType) == true) {
                                     // 已经有内置缓存的数据，则立即执行
-                                    var strResult = rootElement.__DCWriterReference.invokeMethod(
-                                        "EditorHandleDragEvent",
+                                    var strResult = rootElement.__DCWriterReference.invokeMethod("EditorHandleDragEvent",
                                         [strDataType, "1"],
                                         this.PageIndex,
                                         e.type,
@@ -1869,15 +2043,13 @@ export let WriterControl_Paint = {
                                 });
                                 if (listData.length > 0) {
                                     if (strCachedDragDataID != null) {
-                                        if (rootElement.__DCWriterReference.invokeMethod(
-                                            "SetCachedDragData",
+                                        if (rootElement.__DCWriterReference.invokeMethod("SetCachedDragData",
                                             strCachedDragDataID,
                                             listData) == true) {
                                             listData = [strCachedDragDataID, "1"];
                                         }
                                     }
-                                    var strResult = rootElement.__DCWriterReference.invokeMethod(
-                                        "EditorHandleDragEvent",
+                                    var strResult = rootElement.__DCWriterReference.invokeMethod("EditorHandleDragEvent",
                                         listData,
                                         this.PageIndex,
                                         e.type,
@@ -1901,15 +2073,13 @@ export let WriterControl_Paint = {
                                 listData.push(clipboardData);
                             }
                             if (strCachedDragDataID != null) {
-                                if (rootElement.__DCWriterReference.invokeMethod(
-                                    "SetCachedDragData",
+                                if (rootElement.__DCWriterReference.invokeMethod("SetCachedDragData",
                                     strCachedDragDataID,
                                     listData) == true) {
                                     listData = [strCachedDragDataID, "1"];
                                 }
                             }
-                            var strResult = rootElement.__DCWriterReference.invokeMethod(
-                                "EditorHandleDragEvent",
+                            var strResult = rootElement.__DCWriterReference.invokeMethod("EditorHandleDragEvent",
                                 listData,
                                 this.PageIndex,
                                 e.type,
@@ -1938,10 +2108,12 @@ export let WriterControl_Paint = {
                         var rootElement2 = DCTools20221228.GetOwnerWriterControl(this);
                         if (rootElement2 != null) {
                             rootElement2.__DCWriterReference.invokeMethod("ClearCachedDragData");
-                            if (e6.dataTransfer.dropEffect == "move") {
-                                // 移动数据，则将选中的内容删掉
-                                rootElement2.__DCWriterReference.invokeMethod("EditorDeleteSelectionForDragingSelection");
-                            }
+                            // 拖拽后台代码中已有将选中的内容删掉，无需再次进行删除
+                            // 修复拖拽内容到编辑器外部时选中的内容被删除的问题【国产操作系统编辑器问题】【DUWRITER5_0-4675】
+                            // if (e6.dataTransfer.dropEffect == "move") {
+                            //     // 移动数据，则将选中的内容删掉
+                            //     rootElement2.__DCWriterReference.invokeMethod("EditorDeleteSelectionForDragingSelection");
+                            // }
                         }
                     };
                 }
@@ -2013,6 +2185,17 @@ export let WriterControl_Paint = {
         if (pageLayoutChanged == true) {
             pageContainer.scrollLeft = backScrollLeft;
             pageContainer.scrollTop = backScrollTop;
+        }
+
+        //打印控件时，默认加载一下可视区域的svg内容
+        if (rootElement.IsWriterPrintPreviewControlForWASM == true) {
+            // 创建一个新的scroll事件
+            var scrollEvent = new Event('scroll', {
+                bubbles: true,
+                cancelable: true
+            });
+            // 手动触发scroll事件
+            pageContainer.dispatchEvent(scrollEvent);
         }
 
         // 元素发生改变，则需要绘制可见元素

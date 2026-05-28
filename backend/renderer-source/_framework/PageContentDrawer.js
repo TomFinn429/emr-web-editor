@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 // 文档内容绘图器 
 
 import { DCTools20221228 } from "./DCTools20221228.js";
@@ -111,7 +111,7 @@ export class PageContentDrawer {
         this.RectangleForClear = null;
         this.CanvasElement = vCanvasElement;
         if (vCodes != null) {
-            if (vCodes.TypeName = "DCBinaryReader") {
+            if (vCodes.TypeName == "DCBinaryReader") {
                 this._Reader = vCodes;
             }
             else if (vCodes.length > 0) {
@@ -407,9 +407,6 @@ export class PageContentDrawer {
         this.Functions[5] = function (reader) {
             var pIndex = reader.ReadInt16();
             var p4 = this.PenTable[pIndex];
-            if (p4 == null) {
-                console.log("zzzz");
-            }
             DrawLine.call(
                 this,
                 p4,
@@ -572,16 +569,18 @@ export class PageContentDrawer {
             //if (img.naturalHeight == 0) {
             //    console.log("sssssssssssss");
             //}
-            this.ctx.drawImage(
-                img,
-                p1,
-                p2,
-                p3,
-                p4,
-                p5,
-                p6,
-                p7,
-                p8);
+            if (img.isError != true) {
+                this.ctx.drawImage(
+                    img,
+                    p1,
+                    p2,
+                    p3,
+                    p4,
+                    p5,
+                    p6,
+                    p7,
+                    p8);
+            }
         };
 
         //16 Save
@@ -636,21 +635,26 @@ export class PageContentDrawer {
         };
         //21 DrawImageXY
         this.Functions[21] = function (reader) {
-            this.ctx.drawImage(
-                this.ImageTable.GetValue(reader.ReadInt16()),
-                reader.ReadInt32(),
-                reader.ReadInt32());
+            var img = this.ImageTable.GetValue(reader.ReadInt16());
+            if (img.isError != true) {
+                this.ctx.drawImage(
+                    img,
+                    reader.ReadInt32(),
+                    reader.ReadInt32());
+            }
         };
         //22 DrawImage
         this.Functions[22] = function (reader) {
             var imgIndex = reader.ReadInt16();
             var img = this.ImageTable.GetValue(imgIndex);
-            this.ctx.drawImage(
-                img,
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32());
+            if (img.isError != true) {
+                this.ctx.drawImage(
+                    img,
+                    reader.ReadInt32(),
+                    reader.ReadInt32(),
+                    reader.ReadInt32(),
+                    reader.ReadInt32());
+            }
         };
         //23 SetPageUnit
         this.Functions[23] = function (reader) {
@@ -703,28 +707,21 @@ export class PageContentDrawer {
             };
             this.ImageTable.loaded = false;
             for (var iCount = 0; iCount < len; iCount++) {
-                var imgElemnent = document.createElement("IMG");// new Image();
-                imgElemnent.loading = "eager";
-                this.ImageTable.push(imgElemnent);
-                var strImageHeader = null;
+                var strMimeType = null;
                 switch (reader.ReadByte()) {
-                    case 0: strImageHeader = "data:image/jpeg;base64,"; break;
-                    case 1: strImageHeader = "data:image/png;base64,"; break;
-                    case 2: strImageHeader = "data:image/gif;base64,"; break;
-                    case 3: strImageHeader = "data:image/bmp;base64,"; break;
-                    case 4: strImageHeader = "data:image;base64,"; break;
+                    case 0: strMimeType = "image/jpeg"; break;
+                    case 1: strMimeType = "image/png"; break;
+                    case 2: strMimeType = "image/gif"; break;
+                    case 3: strMimeType = "image/bmp"; break;
+                    case 4: strMimeType = "image/*"; break;
                 }
                 var bsData = reader.ReadByteArray();
-                var txt2 = '';
-                var chunk = 8 * 1024;
-                for (var i = 0; i < bsData.length / chunk; i++) {
-                    txt2 += String.fromCharCode.apply(null, bsData.slice(i * chunk, (i + 1) * chunk));
-                }
-                txt2 += String.fromCharCode.apply(null, bsData.slice(i * chunk));
-                var strImageUrl = strImageHeader + window.btoa(txt2);
-                imgElemnent.decoding = "sync";
-                imgElemnent.src = strImageUrl;
-                imgElemnent.decode();
+                var blob2 = new Blob([bsData], { type: strMimeType });
+                var url2 = URL.createObjectURL(blob2);
+                var imgElemnent = document.createElement("IMG");// new Image();
+                this.ImageTable.push(imgElemnent);
+                imgElemnent.src = url2;
+                imgElemnent.srcTemp2 = url2;
             }
         };
         //30 BrushTable
@@ -793,18 +790,213 @@ export class PageContentDrawer {
             this.ctx.fill();
             this.ctx.fillStyle = brushBack;
         };
+        //34 FillPie
         this.Functions[34] = function (reader) {
-            
+            var bIndex = reader.ReadInt16();
+            var brushBack = this.ctx.fillStyle;
+            this.ctx.fillStyle = this.BrushTable[bIndex] ;
+            var x = reader.ReadInt32();
+            var y = reader.ReadInt32();
+            var w = reader.ReadInt32();
+            var h = reader.ReadInt32();
+            var startAngle = reader.ReadSingle();
+            var endAngle = reader.ReadSingle();
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + w / 2, y + h / 2);
+            this.ctx.ellipse(
+                x + w / 2,
+                y + h / 2,
+                w / 2,
+                h / 2,
+                0,
+                startAngle,
+                endAngle);
+            this.ctx.fill();
+            this.ctx.fillStyle = brushBack;
         };
         //35 DrawPie
         this.Functions[35] = function (reader) {
-            
+            var pIndex = reader.ReadInt16();
+            _InnerSelectPen.call(this, this.PenTable[pIndex]);
+            var x = reader.ReadInt32();
+            var y = reader.ReadInt32();
+            var w = reader.ReadInt32();
+            var h = reader.ReadInt32();
+            var startAngle = reader.ReadSingle();
+            var endAngle = reader.ReadSingle();
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + w / 2, y + h / 2);
+            this.ctx.ellipse(
+                x + w / 2,
+                y + h / 2,
+                w / 2,
+                h / 2,
+                0,
+                startAngle,
+                endAngle);
+            this.ctx.stroke();
+        };
+        function ParseGraphicsPath(strPathCode, zoomRate, offsetX, offsetY) {
+            var pathCode = JSON.parse(strPathCode);
+            var result = new Path2D();
+            for (var itemIndex = 1; itemIndex < pathCode.length;) {
+                var itemType = pathCode[itemIndex++];
+                switch (itemType) {
+                    case 0://AddArc
+                        {
+                            var x = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var w = pathCode[itemIndex++] * zoomRate;
+                            var h = pathCode[itemIndex++] * zoomRate;
+                            var startAngle = pathCode[itemIndex++];
+                            var endAngle = pathCode[itemIndex++];
+                            if (startAngle > endAngle) {
+                                result.ellipse(
+                                    x + w / 2,
+                                    y + h / 2,
+                                    w / 2,
+                                    h / 2,
+                                    0,
+                                    startAngle,
+                                    endAngle,
+                                    true);
+                            }
+                            else {
+                                result.ellipse(
+                                    x + w / 2,
+                                    y + h / 2,
+                                    w / 2,
+                                    h / 2,
+                                    0,
+                                    startAngle,
+                                    endAngle);
+                            }
+                        }
+                        break;
+                    case 1://AddBezier
+                        {
+                            var x1 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y1 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var x2 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y2 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var x3 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y3 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var x4 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y4 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            result.lineTo(x1, y1);
+                            result.bezierCurveTo(x2, y2, x3, y3, x4, y4);
+                        }
+                        break;
+                    case 3:// AddEllipse
+                        {
+                            var x = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var w = pathCode[itemIndex++] * zoomRate;
+                            var h = pathCode[itemIndex++] * zoomRate;
+                            result.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+                        }
+                        break;
+                    case 4:// AddLine
+                        {
+                            var x1 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y1 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var x2 = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y2 = pathCode[itemIndex++] * zoomRate + offsetY;
+                            result.lineTo(x1, y1);
+                            result.lineTo(x2, y2);
+                        }
+                        break;
+                    case 5:// AddLines
+                        {
+                            var ps = pathCode[itemIndex++];
+                            result.lineTo(
+                                ps[0] * zoomRate + offsetX,
+                                ps[1] * zoomRate + offsetY);
+                            for (var pIndex = 2; pIndex < ps.length; pIndex += 2) {
+                                var x = ps[pIndex] * zoomRate + offsetX;
+                                var y = ps[pIndex + 1] * zoomRate + offsetY;
+                                result.lineTo(x, y);
+                            }
+                        }
+                        break;
+                    case 6://AddPie
+                        {
+                            var x = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var w = pathCode[itemIndex++] * zoomRate;
+                            var h = pathCode[itemIndex++] * zoomRate;
+                            var startAngle = pathCode[itemIndex++];
+                            var endAngle = pathCode[itemIndex++];
+                            if (startAngle > endAngle) {
+                                var temp2 = startAngle;
+                                startAngle = endAngle;
+                                endAngle = temp2;
+                            }
+                            result.lineTo(x + w / 2, y + h / 2);
+                            result.ellipse(
+                                x + w / 2,
+                                y + h / 2,
+                                w / 2,
+                                h / 2,
+                                0,
+                                startAngle,
+                                endAngle);
+                        }
+                        break;
+                    case 7://AddRectangle
+                        {
+                            var x = pathCode[itemIndex++] * zoomRate + offsetX;
+                            var y = pathCode[itemIndex++] * zoomRate + offsetY;
+                            var w = pathCode[itemIndex++] * zoomRate;
+                            var h = pathCode[itemIndex++] * zoomRate;
+                            result.rect(x, y, w, h);
+                        }
+                        break;
+                    case 11://AddPolygon
+                        {
+                            var ps = pathCode[itemIndex++];
+                            result.lineTo(
+                                ps[0] * zoomRate + offsetX,
+                                ps[1] * zoomRate + offsetY);
+                            for (var pIndex = 2; pIndex < ps.length; pIndex += 2) {
+                                var x = ps[pIndex] * zoomRate + offsetX;
+                                var y = ps[pIndex + 1] * zoomRate + offsetY;
+                                result.lineTo(x, y);
+                            }
+                            result.lineTo(
+                                ps[0] * zoomRate + offsetX,
+                                ps[1] * zoomRate + offsetY);
+                        }
+                        break;
+                    default:
+                        throw "不支持的GraphPath：" + itemType;
+                }
+            }
+            return result;
         };
         //36 DrawPath
         this.Functions[36] = function (reader) {
+            var pIndex = reader.ReadInt16();
+            _InnerSelectPen.call(this, this.PenTable[pIndex]);
+            var zoomRate3 = reader.ReadSingle();
+            var offsetX3 = reader.ReadSingle();
+            var offsetY3 = reader.ReadSingle();
+            var strPathCode = reader.ReadString();
+            var pathData = ParseGraphicsPath(strPathCode, zoomRate3, offsetX3, offsetY3);
+            this.ctx.stroke(pathData);
         };
         //37 FillPath
         this.Functions[37] = function (reader) {
+            var bIndex = reader.ReadInt16();
+            var fillStyleBack = this.ctx.fillStyle;
+            this.ctx.fillStyle = this.BrushTable[bIndex];
+            var zoomRate3 = reader.ReadSingle();
+            var offsetX3 = reader.ReadSingle();
+            var offsetY3 = reader.ReadSingle();
+            var strPathCode = reader.ReadString();
+            var pathData = ParseGraphicsPath(strPathCode, zoomRate3, offsetX3, offsetY3);
+            this.ctx.fill(pathData);
+            this.ctx.fillStyle = fillStyleBack;
         };
         function GetStandartImageByIndex(imgIndex) {
             var imgs = window.__DCStandardImageList;
@@ -896,9 +1088,47 @@ export class PageContentDrawer {
             this.ctx.fill();
             this.ctx.fillStyle = oldStyle;
         };
+        // 44 FillMatrix 填充一个矩阵，用于绘制二维码
         this.Functions[44] = function (reader) {
+            var fillColor = reader.ReadString();
+            var strData = reader.ReadString();
+            var vLeft = reader.ReadInt32();
+            var vTop = reader.ReadInt32();
+            var vWidth = reader.ReadInt32();
+            var vHeight = reader.ReadInt32();
+            if (strData == null || strData.length == 0) {
+                throw "FillMatrix 数据错误";
+            }
+            var strLines = strData.split('|');
+            var oldStyle = this.ctx.fillStyle;
+            this.ctx.fillStyle = fillColor;
+            this.ctx.beginPath();
+            for (var rowIndex = 0; rowIndex < strLines.length; rowIndex++) {
+                var strLine = strLines[rowIndex];
+                for (var colIndex = 0; colIndex < strLine.length; colIndex++) {
+                    if (strLine.charAt(colIndex) == '0') {
+                        // 此处填充一个小黑框
+                        this.ctx.rect(
+                            vLeft + (vWidth * colIndex / strLine.length),
+                            vTop + (vHeight * rowIndex / strLines.length),
+                            vWidth / strLine.length,
+                            vHeight / strLines.length);
+                    }
+                }
+            }
+            this.ctx.fill();
+            this.ctx.fillStyle = oldStyle;
         };
+        // FillRectangleFloat 采用浮点数坐标的填充矩形
         this.Functions[45] = function (reader) {
+            var oldStyle = this.ctx.fillStyle;
+            this.ctx.fillStyle = reader.ReadString();
+            var vLeft = reader.ReadSingle();
+            var vTop = reader.ReadSingle();
+            var vWidth = reader.ReadSingle();
+            var vHeight = reader.ReadSingle();
+            this.ctx.fillRect(vLeft, vTop, vWidth, vHeight);
+            this.ctx.fillStyle = oldStyle;
         };
     }
     /** 取消任务 */
@@ -1003,22 +1233,6 @@ export class PageContentDrawer {
         if (this.Reader == null || this._Cancel == true) {
             return;
         }
-        if (this.ImageTable != null && this.ImageTable.length > 0) {
-            var tick = new Date().valueOf() - this.CreationTime.valueOf();
-            if (tick < 500) {
-                // 任务创建尚未有500毫秒，则判断图片是否加载完毕
-                for (var iCount = 0; iCount < this.ImageTable.length; iCount++) {
-                    var img = this.ImageTable[iCount];
-                    if (img.complete == false) {
-                        // 还存在图片尚未加载完毕,等待,暂时退出
-                        WriterControl_Task.AddTaskFast(this);
-                        return false;
-                    }
-                }
-            }
-        }
-        //var tasks = window.__DCWriter_DrawTasks20221221;
-        //this.DoubleBuffer = false;
         if (this.DoubleBuffer == true) {
             // 启用双缓冲技术
             if (this.TempElementForDoubleBuffer == null) {
@@ -1083,110 +1297,129 @@ export class PageContentDrawer {
         //    }
         //    return -1;
         //};
-        var thisReader = this.Reader;
         this.ctx.imageSmoothingEnabled = true;
         this.ctx.textBaseline = "alphabetic";
         //this.ctx.textRendering = "optimizeLegibility";
         this.ctx.textRendering = "geometricPrecision"; 
-        this.ctx.fontSomoothing = "subpixel-antialiased"; 
-        //var lastFuncIndex = -1;
-        //var funcIndexs = new Array();
-        while (thisReader.EOF == false && this._Cancel != true) {
-            //var f1 = thisReader.ReadByte();
-            //var f2 = thisReader.ReadByte();
-            //if (f1 != 0xff && f2 != 0xff) {
-            //    console.log("aaaa222 " + thisReader.Position);
-            //}
-            var fIndex = thisReader.ReadByte();
+        this.ctx.fontSomoothing = "subpixel-antialiased";
+        function InnerRunFunctions(thisClass) {
 
-            //if (typeof (fIndex) == "number") {
-            //    console.log("zzz");
-            //}
-            //fIndex = ParseFunctionIndex(fIndex);
-
-            if (fIndex == 32) {
-                if (this.RectangleForClear != null) {
-                    this.ctx.clearRect(
-                        this.RectangleForClear[0],
-                        this.RectangleForClear[1],
-                        this.RectangleForClear[2],
-                        this.RectangleForClear[3]);
-                    this.RectangleForClear = null;
+            //var lastFuncIndex = -1;
+            //var funcIndexs = new Array();
+            var thisReader = this.Reader;
+            while (thisReader.EOF == false && this._Cancel != true) {
+                var fIndex = thisReader.ReadByte();
+                if (fIndex == 32) {
+                    if (this.RectangleForClear != null) {
+                        this.ctx.clearRect(
+                            this.RectangleForClear[0],
+                            this.RectangleForClear[1],
+                            this.RectangleForClear[2],
+                            this.RectangleForClear[3]);
+                        this.RectangleForClear = null;
+                    }
+                    continue;
                 }
-                continue;
-            }
-            if (fIndex >= 0 && fIndex < fLength) {
-                var func = thisClass.Functions[fIndex];
-                if (func == null) {
-                    throw "不支持的模块编号:" + fIndex;
-                }
-                thisClass.DrawCodeCount++;
-                func.call(thisClass, thisReader);
-                if (fIndex == this.FunctionIndex_ImageTable) {
-                    // 遇到图片库，则需要等待图片数据加载完毕，暂时退出
-                    WriterControl_Task.AddTaskFast(this);
-                    return false;
-                }
-            }
-            else {
-                throw "不支持的模块编号:" + fIndex;
-            }
-            //lastFuncIndex = fIndex;
-            //funcIndexs.push(fIndex);
-            //if (funcIndexs.length > 50) {
-            //    funcIndexs.shift();
-            //}
-        }
-        if (thisReader.EOF) {
-            // 任务完毕，清空数据
-            //this.__RemoveTask(tasks, this);
-            if (this.AllowClip) {
-                if (this.SaveCount > 0) {
-                    while (this.SaveCount > 0) {
-                        this.ctx.restore();
-                        this.SaveCount--;
+                if (fIndex >= 0 && fIndex < fLength) {
+                    var func = thisClass.Functions[fIndex];
+                    if (func == null) {
+                        throw "不支持的模块编号:" + fIndex;
+                    }
+                    thisClass.DrawCodeCount++;
+                    func.call(thisClass, thisReader);
+                    if (fIndex == 29) {
+                        // 加载图片数据
+                        function waitImageLoaded(img) {
+                            return new Promise((resolve, reject) => {
+                                if (img.complete && img.naturalWidth !== 0) {
+                                    resolve(img);
+                                } else {
+                                    img.onload = function ()
+                                    {
+                                        img.onload = null;
+                                        img.onerror = null;
+                                        resolve(img);
+                                        URL.revokeObjectURL(img.srcTemp2);
+                                        img.srcTemp2 = null;
+                                    };
+                                    img.onerror = function (e)
+                                    {
+                                        img.onload = null;
+                                        img.onerror = null;
+                                        this.isError = true;
+                                        console.log(e);
+                                        resolve(e);
+                                        //reject(e);
+                                        URL.revokeObjectURL(img.srcTemp2);
+                                        img.srcTemp2 = null;
+                                    };
+                                }
+                            });
+                        }
+                        Promise.all(this.ImageTable.map(waitImageLoaded)).then(() => {
+                            InnerRunFunctions.call(thisClass, thisClass);
+                            // 所有图片都加载完成，可以安全后续处理
+                            // 例如：this.RunTask() 或其他操作
+                        });
+                        return false;
                     }
                 }
-                this.ctx.restore();
+                else {
+                    throw "不支持的模块编号:" + fIndex;
+                }
             }
-            if (this.DoubleBuffer == true && this.TempElementForDoubleBuffer != null) {
-                // 提交缓冲的结果
-                var ctx2 = this.CanvasElement.getContext("2d");
-                var x1 = this.DoubleBufferBounds[0];
-                var y1 = this.DoubleBufferBounds[1];
-                var w1 = this.DoubleBufferBounds[2];
-                var h1 = this.DoubleBufferBounds[3];
-                this.DoubleBufferBounds = null;
-                ctx2.imageSmoothingEnabled = false;
-                ctx2.clearRect(x1, y1, w1, h1);
-                //ctx2.strokeStyle = "blue";
-                //ctx2.setLineDash([6, 6]);
-                //ctx2.strokeRect(x1, y1, w1, h1);
-                ctx2.drawImage(
-                    this.TempElementForDoubleBuffer,
-                    x1, y1, w1, h1,
-                    x1, y1, w1, h1);
-                this.TempElementForDoubleBuffer.remove();
-                this.TempElementForDoubleBuffer = null;
+            if (thisReader.EOF) {
+                // 任务完毕，清空数据
+                //this.__RemoveTask(tasks, this);
+                if (this.AllowClip) {
+                    if (this.SaveCount > 0) {
+                        while (this.SaveCount > 0) {
+                            this.ctx.restore();
+                            this.SaveCount--;
+                        }
+                    }
+                    this.ctx.restore();
+                }
+                if (this.DoubleBuffer == true && this.TempElementForDoubleBuffer != null) {
+                    // 提交缓冲的结果
+                    var ctx2 = this.CanvasElement.getContext("2d");
+                    var x1 = this.DoubleBufferBounds[0];
+                    var y1 = this.DoubleBufferBounds[1];
+                    var w1 = this.DoubleBufferBounds[2];
+                    var h1 = this.DoubleBufferBounds[3];
+                    this.DoubleBufferBounds = null;
+                    ctx2.imageSmoothingEnabled = false;
+                    ctx2.clearRect(x1, y1, w1, h1);
+                    //ctx2.strokeStyle = "blue";
+                    //ctx2.setLineDash([6, 6]);
+                    //ctx2.strokeRect(x1, y1, w1, h1);
+                    ctx2.drawImage(
+                        this.TempElementForDoubleBuffer,
+                        x1, y1, w1, h1,
+                        x1, y1, w1, h1);
+                    this.TempElementForDoubleBuffer.remove();
+                    this.TempElementForDoubleBuffer = null;
+                }
+                if (typeof (this.EventAfterDraw) == "function") {
+                    // 触发事件
+                    var func = this.EventAfterDraw;
+                    this.EventAfterDraw = null;
+                    func.call(this, this);
+                }
+                this.CanvasElement = null;
+                this.Reader = null;
+                this.ctx = null;
+                this.ImageTable = null;
+                this.BrushTable = null;
+                this.ColorTable = null;
+                this.FontTable = null;
+                return true;
             }
-            if (typeof (this.EventAfterDraw) == "function") {
-                // 触发事件
-                var func = this.EventAfterDraw;
-                this.EventAfterDraw = null;
-                func.call(this, this);
+            else {
+                return false;
             }
-            this.CanvasElement = null;
-            this.Reader = null;
-            this.ctx = null;
-            this.ImageTable = null;
-            this.BrushTable = null;
-            this.ColorTable = null;
-            this.FontTable = null;
-            return true;
-        }
-        else {
-            return false;
-        }
+        };
+        InnerRunFunctions.call(this, this);
     }
 };
 
