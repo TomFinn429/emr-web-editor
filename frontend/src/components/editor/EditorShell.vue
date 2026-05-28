@@ -4,8 +4,10 @@ import EditorStatusBar from './EditorStatusBar.vue'
 import PropertyInspectorPanel from './PropertyInspectorPanel.vue'
 import TemplateTreePanel from './TemplateTreePanel.vue'
 import WorkbenchAssistPanel from './WorkbenchAssistPanel.vue'
+import WorkbenchChromeHeader from './WorkbenchChromeHeader.vue'
 import WorkbenchDialog from './WorkbenchDialog.vue'
 import WorkbenchEditorArea from './WorkbenchEditorArea.vue'
+import WorkbenchModuleNav from './WorkbenchModuleNav.vue'
 import WorkbenchTopMenu from './WorkbenchTopMenu.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import { useDocumentImport } from '../../composables/useDocumentImport'
@@ -38,6 +40,7 @@ import {
   requestTemplateUpload,
   saveTemplateAsContent,
   saveTemplateContent,
+  type TemplateScopeId,
   type TemplateTreeNode,
   type TemplateWorkbenchData,
 } from '../../services/templateWorkbenchService'
@@ -79,6 +82,12 @@ const canUseTemplateCommands = computed(() => Boolean(currentTemplateId.value))
 const statusRenderMode = computed(() => (rendererMode.value === 'external' ? '外部渲染' : '结构化预览'))
 const workbenchTree = computed(() => workbenchData.value?.templateTree || [])
 const workbenchCategories = computed(() => workbenchData.value?.categories || ['全部分类'])
+const workbenchScopes = computed(() => workbenchData.value?.templateScopes || [
+  { id: 'global' as const, label: '全局' },
+  { id: 'hospital' as const, label: '全院' },
+  { id: 'department' as const, label: '科室' },
+  { id: 'personal' as const, label: '个人' },
+])
 const metadataTree = computed(() => workbenchData.value?.metadataTree || [])
 const fragmentTemplateTree = computed(() => workbenchData.value?.fragmentTemplateTree || [])
 const templateProperties = computed(() => workbenchData.value?.templateProperties || null)
@@ -237,6 +246,9 @@ async function runAppCommand(commandId: EditorCommandId) {
     useHeaderFooterMock('已创建页眉页脚配置占位，等待 WriterControl 页眉页脚命令接入。')
   } else if (commandId === 'saveAsHeaderFooter') {
     useHeaderFooterMock('已保存为页眉页脚 mock 状态，第四阶段可接页眉页脚库接口。')
+  } else if (commandId === 'refreshDocument') {
+    await refreshWorkbenchData(currentTemplateId.value)
+    commandMessage.value = '文档状态已刷新。'
   }
 }
 
@@ -592,7 +604,7 @@ async function clearDocument() {
   rendererError.value = null
 }
 
-async function createDirectory(parentId: string) {
+async function createDirectory(parentId: string, scope?: TemplateScopeId) {
   const name = await dialog.requestText({
     title: '新建目录',
     message: '请输入目录名称',
@@ -603,11 +615,11 @@ async function createDirectory(parentId: string) {
   if (!name) {
     return
   }
-  createTemplateDirectory(parentId, name)
+  createTemplateDirectory(parentId, name, scope)
   await refreshWorkbenchData(currentTemplateId.value)
 }
 
-async function createTemplate(parentId: string) {
+async function createTemplate(parentId: string, scope?: TemplateScopeId) {
   const name = await dialog.requestText({
     title: '新建模板',
     message: '请输入模板名称',
@@ -618,7 +630,7 @@ async function createTemplate(parentId: string) {
   if (!name) {
     return
   }
-  const template = createTemplateFile(parentId, name)
+  const template = createTemplateFile(parentId, name, undefined, scope)
   session.loadTemplate({
     id: template.id,
     name: template.name,
@@ -730,87 +742,96 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
 
 <template>
   <div class="app-shell">
-    <WorkbenchTopMenu
-      :file-name="session.document.value?.fileName"
-      :is-importing="importState.isImporting.value"
-      :can-save="canSaveFromWriter"
-      :can-print="Boolean(session.document.value)"
-      :can-upload="canUseTemplateCommands"
-      :can-use-writer-print="canUseWriter"
-      :can-use-writer-commands="canUseWriter"
-      :is-saving="session.isSaving.value"
-      :is-print-previewing="isPrintPreviewing"
-      @import-file="handleLocalImport"
-      @command="handleWorkbenchCommand"
-    />
+    <WorkbenchChromeHeader />
 
-    <main class="app-shell__body">
-      <TemplateTreePanel
-        :nodes="workbenchTree"
-        :categories="workbenchCategories"
-        :selected-node-id="selectedTreeNodeId"
-        :is-loading="isLoadingWorkbench"
-        :error="workbenchError || templatesError"
-        @select-template="handleTemplateTreeSelect"
-        @create-directory="createDirectory"
-        @create-template="createTemplate"
-        @rename-node="renameTreeNode"
-        @delete-node="deleteTreeNode"
-      />
+    <section class="app-shell__workspace">
+      <WorkbenchModuleNav />
 
-      <section class="app-shell__middle">
-        <WorkbenchAssistPanel
-          :metadata-tree="metadataTree"
-          :fragment-template-tree="fragmentTemplateTree"
-          :selected-metadata-id="selectedMetadataId"
-          :selected-fragment-id="selectedFragmentId"
-          @refresh-metadata="refreshMetadataPanel"
-          @refresh-fragments="refreshFragmentPanel"
-          @select-metadata="selectMetadata"
-          @bind-metadata="bindMetadata"
-          @insert-metadata="insertMetadataAsInputField"
-          @select-fragment="selectFragment"
-          @insert-fragment="insertFragment"
-        />
-        <WorkbenchEditorArea
-          :document="previewDocument"
+      <section class="app-shell__editor-frame">
+        <WorkbenchTopMenu
           :file-name="session.document.value?.fileName"
-          :status-message="statusMessage"
-          :warning-text="warningText"
+          :is-importing="importState.isImporting.value"
+          :can-save="canSaveFromWriter"
+          :can-print="Boolean(session.document.value)"
+          :can-upload="canUseTemplateCommands"
+          :can-use-writer-print="canUseWriter"
+          :can-use-writer-commands="canUseWriter"
+          :is-saving="session.isSaving.value"
+          :is-print-previewing="isPrintPreviewing"
+          @import-file="handleLocalImport"
+          @command="handleWorkbenchCommand"
+        />
+
+        <main class="app-shell__body">
+          <TemplateTreePanel
+            :nodes="workbenchTree"
+            :categories="workbenchCategories"
+            :scopes="workbenchScopes"
+            :selected-node-id="selectedTreeNodeId"
+            :is-loading="isLoadingWorkbench"
+            :error="workbenchError || templatesError"
+            @select-template="handleTemplateTreeSelect"
+            @create-directory="createDirectory"
+            @create-template="createTemplate"
+            @rename-node="renameTreeNode"
+            @delete-node="deleteTreeNode"
+          />
+
+          <section class="app-shell__middle">
+            <WorkbenchAssistPanel
+              :metadata-tree="metadataTree"
+              :fragment-template-tree="fragmentTemplateTree"
+              :selected-metadata-id="selectedMetadataId"
+              :selected-fragment-id="selectedFragmentId"
+              @refresh-metadata="refreshMetadataPanel"
+              @refresh-fragments="refreshFragmentPanel"
+              @select-metadata="selectMetadata"
+              @bind-metadata="bindMetadata"
+              @insert-metadata="insertMetadataAsInputField"
+              @select-fragment="selectFragment"
+              @insert-fragment="insertFragment"
+            />
+            <WorkbenchEditorArea
+              :document="previewDocument"
+              :file-name="session.document.value?.fileName"
+              :status-message="statusMessage"
+              :warning-text="warningText"
+              :zoom="zoom"
+              :validation-issues="session.validationIssues.value"
+              :open-tabs="openTabs"
+              :active-template-id="activeTemplateId"
+              @mode-change="rendererMode = $event"
+              @render-error="rendererError = $event"
+              @writer-ready="updateWriterElement"
+              @select-issue="handleValidationIssue"
+              @select-tab="selectOpenTab"
+              @close-tab="closeOpenTab"
+            />
+          </section>
+
+          <PropertyInspectorPanel
+            :template-properties="templateProperties"
+            :element-properties="elementProperties"
+            :element-status="elementInspector.updateStatus.value"
+            :history-versions="historyVersions"
+            :show-history="showHistoryVersions"
+            @toggle-history="showHistoryVersions = !showHistoryVersions"
+            @refresh-element="elementInspector.refreshFromWriter"
+            @select-element-type="selectElementType"
+            @update-element="updateElementProperties"
+          />
+        </main>
+
+        <EditorStatusBar
+          :file-name="session.document.value?.fileName"
+          :save-state="session.saveState.value"
+          :render-mode="statusRenderMode"
           :zoom="zoom"
-          :validation-issues="session.validationIssues.value"
-          :open-tabs="openTabs"
-          :active-template-id="activeTemplateId"
-          @mode-change="rendererMode = $event"
-          @render-error="rendererError = $event"
-          @writer-ready="updateWriterElement"
-          @select-issue="handleValidationIssue"
-          @select-tab="selectOpenTab"
-          @close-tab="closeOpenTab"
+          :validation-count="session.validationIssues.value.length"
+          :is-print-previewing="isPrintPreviewing"
         />
       </section>
-
-      <PropertyInspectorPanel
-        :template-properties="templateProperties"
-        :element-properties="elementProperties"
-        :element-status="elementInspector.updateStatus.value"
-        :history-versions="historyVersions"
-        :show-history="showHistoryVersions"
-        @toggle-history="showHistoryVersions = !showHistoryVersions"
-        @refresh-element="elementInspector.refreshFromWriter"
-        @select-element-type="selectElementType"
-        @update-element="updateElementProperties"
-      />
-    </main>
-
-    <EditorStatusBar
-      :file-name="session.document.value?.fileName"
-      :save-state="session.saveState.value"
-      :render-mode="statusRenderMode"
-      :zoom="zoom"
-      :validation-count="session.validationIssues.value.length"
-      :is-print-previewing="isPrintPreviewing"
-    />
+    </section>
 
     <WorkbenchDialog
       :state="dialog.state.value"
@@ -828,10 +849,24 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   background: #eef2f6;
   color: #1f2937;
   font-family: "Microsoft YaHei UI", "Segoe UI", Arial, sans-serif;
+}
+
+.app-shell__workspace {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: 136px minmax(0, 1fr);
+}
+
+.app-shell__editor-frame {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .app-shell__body {
@@ -849,6 +884,14 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
 }
 
 @media (max-width: 860px) {
+  .app-shell__workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell__workspace :deep(.module-nav) {
+    display: none;
+  }
+
   .app-shell__body {
     grid-template-columns: minmax(0, 1fr);
   }

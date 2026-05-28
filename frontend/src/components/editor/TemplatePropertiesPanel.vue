@@ -26,6 +26,34 @@ const emit = defineEmits<Emits>()
       <dd>{{ props.properties.category }}</dd>
     </div>
     <div class="template-properties__row">
+      <dt>类型</dt>
+      <dd>{{ props.properties.type }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>打印方式</dt>
+      <dd>{{ props.properties.printMode }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>允许重复</dt>
+      <dd>{{ props.properties.allowRepeat ? '是' : '否' }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>签署级别</dt>
+      <dd>{{ props.properties.signLevel }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>使用科室</dt>
+      <dd>{{ props.properties.departments.join('、') }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>作者</dt>
+      <dd>{{ props.properties.author }}</dd>
+    </div>
+    <div class="template-properties__row">
+      <dt>更新者</dt>
+      <dd>{{ props.properties.updatedBy }}</dd>
+    </div>
+    <div class="template-properties__row">
       <dt>文件</dt>
       <dd>{{ props.properties.fileName }}</dd>
     </div>

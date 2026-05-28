@@ -11,12 +11,12 @@ describe('commandRegistry', () => {
   it('exposes the full template workbench menu order', () => {
     expect(topMenuTabs.map(tab => tab.label)).toEqual([
       '文件',
+      '编辑',
       '格式',
       '段落',
-      '常规',
+      '插入',
       '设计',
       '表格',
-      '插入',
       '高级',
     ])
   })
@@ -44,6 +44,7 @@ describe('commandRegistry', () => {
     expect(writerCommandIds).toEqual(expect.arrayContaining([
       'undo',
       'redo',
+      'strikethrough',
       'bold',
       'alignCenter',
       'insertInputField',
@@ -90,6 +91,25 @@ describe('commandRegistry', () => {
     expect(findCommandDefinition('insertQrcode')?.kind).toBe('app')
     expect(findCommandDefinition('insertHeaderFooter')?.kind).toBe('app')
     expect(findCommandDefinition('saveAsHeaderFooter')?.kind).toBe('app')
+  })
+
+  it('adds target-page entries with executable and explicit disabled states', () => {
+    expect(findCommandDefinition('strikethrough')).toMatchObject({
+      kind: 'writer',
+      label: '删除线',
+    })
+    expect(findCommandDefinition('specialCharacter')).toMatchObject({
+      kind: 'placeholder',
+      label: '特殊字符',
+    })
+    expect(findCommandDefinition('refreshDocument')).toMatchObject({
+      kind: 'app',
+      label: '刷新文档',
+    })
+    expect(findCommandDefinition('xmlSource')).toMatchObject({
+      kind: 'placeholder',
+      label: 'XML 源码',
+    })
   })
 
   it('keeps barcode and qrcode as app commands backed by writerElementAdapter', () => {

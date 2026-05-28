@@ -451,6 +451,6 @@ function installCanvasDrawFilter() {
     if (fillRuleOrPath !== undefined) {
       return originalFill.call(this, fillRuleOrPath)
     }
-    return originalFill.call(this)
+    return Reflect.apply(originalFill, this, [])
   }
 }

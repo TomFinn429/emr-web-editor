@@ -23,12 +23,40 @@ export interface EditorElementProperties {
   name: string
   supportLevel: 'writer' | 'mock'
   code?: string
+  placeholder?: string
+  hintText?: string
+  labelText?: string
+  unitText?: string
   defaultValue?: string
   readonly?: boolean
   required?: boolean
   visible?: boolean
+  hidden?: boolean
   bindingPath?: string
+  textBindingPath?: string
   dataElementId?: string
+  dataSourceName?: string
+  inputFormat?: string
+  outputFormat?: string
+  validationRule?: string
+  allowedCharacters?: string
+  calculateExpression?: string
+  visibleExpression?: string
+  printVisibleExpression?: string
+  customProperties?: string
+  allowDelete?: boolean
+  allowKeyboardEdit?: boolean
+  encrypted?: boolean
+  printVisible?: boolean
+  border?: string
+  textAlign?: string
+  fixedWidth?: number
+  focusShortcut?: string
+  activationMode?: string
+  highlight?: boolean
+  maxContentLength?: number
+  textColor?: string
+  backgroundTextColor?: string
   displayText?: string
   bindingValue?: string
   defaultChecked?: boolean

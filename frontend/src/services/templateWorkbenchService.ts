@@ -8,6 +8,12 @@ import type { TemplateSummary } from '../types/document'
 
 export type TemplateTreeNodeKind = 'root' | 'category' | 'template'
 export type TemplateUploadStatus = '已上传' | '未上传' | '待上传' | '上传中' | '已取消' | '上传失败'
+export type TemplateScopeId = 'global' | 'hospital' | 'department' | 'personal'
+
+export interface TemplateScopeOption {
+  id: TemplateScopeId
+  label: string
+}
 
 export interface TemplateTreeNode {
   id: string
@@ -16,6 +22,7 @@ export interface TemplateTreeNode {
   category?: string
   templateId?: string
   status?: TemplateUploadStatus
+  scope?: TemplateScopeId
   children?: TemplateTreeNode[]
 }
 
@@ -43,6 +50,14 @@ export interface TemplateProperties {
   source: string
   isDirty: boolean
   uploadMessage: string
+  scope: TemplateScopeId
+  type: string
+  printMode: string
+  allowRepeat: boolean
+  signLevel: string
+  departments: string[]
+  author: string
+  updatedBy: string
 }
 
 export type ElementProperties = EditorElementProperties
@@ -71,6 +86,7 @@ export interface TemplateWorkbenchData {
   metadataTree: MetadataTreeNode[]
   fragmentTemplates: FragmentTemplate[]
   fragmentTemplateTree: FragmentTemplateTreeNode[]
+  templateScopes: TemplateScopeOption[]
   templateProperties: TemplateProperties
   elementProperties: ElementProperties
   historyVersions: TemplateHistoryVersion[]
@@ -81,6 +97,7 @@ export interface TemplateWorkbenchData {
 export interface TemplateTreeFilter {
   category: string
   keyword: string
+  scope?: TemplateScopeId
 }
 
 interface TemplateRecord {
@@ -95,6 +112,14 @@ interface TemplateRecord {
   xml: string
   isDirty: boolean
   uploadMessage: string
+  scope: TemplateScopeId
+  type: string
+  printMode: string
+  allowRepeat: boolean
+  signLevel: string
+  departments: string[]
+  author: string
+  updatedBy: string
   contentTemplateId?: string
 }
 
@@ -112,6 +137,12 @@ const today = '2026-05-18'
 const defaultXml = '<XTextDocument><Body>新建模板</Body></XTextDocument>'
 const templateRootId = 'template-root'
 const templateRootLabel = 'D:\\XML\\notes'
+const templateScopes: TemplateScopeOption[] = [
+  { id: 'global', label: '全局' },
+  { id: 'hospital', label: '全院' },
+  { id: 'department', label: '科室' },
+  { id: 'personal', label: '个人' },
+]
 
 const mockElementProperties = createDefaultElementProperties('none')
 
@@ -134,6 +165,7 @@ export async function fetchTemplateWorkbenchData(activeTemplateId?: string): Pro
     metadataTree: metadata.tree,
     fragmentTemplates: flattenFragmentTemplates(fragments.tree),
     fragmentTemplateTree: fragments.tree,
+    templateScopes: [...templateScopes],
     templateProperties: toTemplateProperties(activeTemplate),
     elementProperties: { ...mockElementProperties },
     historyVersions: getTemplateHistoryVersions(activeId),
@@ -163,13 +195,18 @@ export function getTemplateContent(id: string): TemplateContent | null {
   return template ? toTemplateContent(template) : null
 }
 
-export function createTemplateDirectory(parentId: string, name: string): TemplateTreeNode {
+export function createTemplateDirectory(
+  parentId: string,
+  name: string,
+  scope?: TemplateScopeId,
+): TemplateTreeNode {
   const parent = readTreeNode(parentId)
   const node: TemplateTreeNode = {
     id: createId('directory'),
     label: normalizeName(name, '新建目录'),
     kind: 'category',
     category: normalizeName(name, '新建目录'),
+    scope: scope || parent.scope,
     children: [],
   }
   parent.children = [...(parent.children || []), node]
@@ -203,7 +240,12 @@ export function deleteTemplateDirectory(id: string) {
   return removeTreeNode(id)
 }
 
-export function createTemplateFile(parentId: string, name: string, xml = defaultXml): TemplateRecord {
+export function createTemplateFile(
+  parentId: string,
+  name: string,
+  xml = defaultXml,
+  scope?: TemplateScopeId,
+): TemplateRecord {
   const parent = readTreeNode(parentId)
   if (parent.kind === 'template') {
     throw new Error('不能在模板文件下新建模板。')
@@ -224,6 +266,14 @@ export function createTemplateFile(parentId: string, name: string, xml = default
     xml,
     isDirty: true,
     uploadMessage: '尚未上传',
+    scope: scope || parent.scope || 'personal',
+    type: '病历模板',
+    printMode: '普通打印',
+    allowRepeat: true,
+    signLevel: '一级签名',
+    departments: ['个人模板'],
+    author: '模板制作员',
+    updatedBy: '模板制作员',
   }
   state.templates[id] = record
   state.history[id] = [historyVersion(record, '创建模板')]
@@ -236,6 +286,7 @@ export function createTemplateFile(parentId: string, name: string, xml = default
       category,
       templateId: id,
       status: record.status,
+      scope: record.scope,
     },
   ]
   ensureOpenTab(id)
@@ -345,9 +396,10 @@ export function filterTemplateTree(
 ): TemplateTreeNode[] {
   const keyword = filter.keyword.trim().toLocaleLowerCase()
   const category = filter.category === '全部分类' ? '' : filter.category
+  const scope = filter.scope
 
   return nodes
-    .map(node => filterNode(node, category, keyword))
+    .map(node => filterNode(node, category, keyword, scope))
     .filter((node): node is TemplateTreeNode => node !== null)
 }
 
@@ -422,6 +474,7 @@ function buildTemplateTree(templates: readonly TemplateRecord[]): TemplateTreeNo
         category: template.category,
         templateId: template.id,
         status: template.status,
+        scope: template.scope,
       },
     ]
   }
@@ -474,6 +527,14 @@ function templateRecord(
     xml: `<XTextDocument><Body>${template.name}</Body></XTextDocument>`,
     isDirty: false,
     uploadMessage: status === '已上传' ? '上传完成' : '尚未上传',
+    scope: resolveTemplateScope(template),
+    type: resolveTemplateType(template),
+    printMode: resolvePrintMode(template),
+    allowRepeat: !template.name.includes('首页'),
+    signLevel: template.name.includes('首页') ? '二级签名' : '一级签名',
+    departments: resolveDepartments(template),
+    author: '模板制作员',
+    updatedBy: '模板制作员',
     contentTemplateId: template.id,
   }
 }
@@ -553,6 +614,14 @@ function toTemplateProperties(template: TemplateRecord): TemplateProperties {
     source: template.source,
     isDirty: template.isDirty,
     uploadMessage: template.uploadMessage,
+    scope: template.scope,
+    type: template.type,
+    printMode: template.printMode,
+    allowRepeat: template.allowRepeat,
+    signLevel: template.signLevel,
+    departments: [...template.departments],
+    author: template.author,
+    updatedBy: template.updatedBy,
   }
 }
 
@@ -646,6 +715,7 @@ function syncTemplateNode(template: TemplateRecord) {
   node.category = template.category
   node.status = template.status
   node.templateId = template.id
+  node.scope = template.scope
 }
 
 function updateChildCategory(node: TemplateTreeNode, category: string) {
@@ -665,14 +735,16 @@ function filterNode(
   node: TemplateTreeNode,
   category: string,
   keyword: string,
+  scope?: TemplateScopeId,
 ): TemplateTreeNode | null {
   const children = (node.children || [])
-    .map(child => filterNode(child, category, keyword))
+    .map(child => filterNode(child, category, keyword, scope))
     .filter((child): child is TemplateTreeNode => child !== null)
 
   const matchesCategory = !category || node.category === category || node.kind === 'root'
   const matchesKeyword = !keyword || node.label.toLocaleLowerCase().includes(keyword)
-  const isMatch = matchesCategory && matchesKeyword
+  const matchesScope = !scope || (node.kind === 'template' && node.scope === scope)
+  const isMatch = matchesCategory && matchesKeyword && matchesScope
 
   if (isMatch || children.length > 0) {
     return { ...node, children }
@@ -724,4 +796,32 @@ function nextVersion(version: string) {
   }
 
   return `v${match[1]}.${Number(match[2]) + 1}`
+}
+
+function resolveTemplateScope(template: TemplateSummary): TemplateScopeId {
+  if (template.name.includes('入院')) {
+    return 'department'
+  }
+  if (template.name.includes('首页')) {
+    return 'hospital'
+  }
+  return 'global'
+}
+
+function resolveTemplateType(template: TemplateSummary) {
+  return template.name.includes('首页') ? '病案模板' : '病历模板'
+}
+
+function resolvePrintMode(template: TemplateSummary) {
+  return template.name.includes('首页') ? '套打' : '普通打印'
+}
+
+function resolveDepartments(template: TemplateSummary) {
+  if (template.name.includes('首页')) {
+    return ['全院', '病案室']
+  }
+  if (template.name.includes('入院')) {
+    return ['急诊科', '住院部']
+  }
+  return ['全局']
 }

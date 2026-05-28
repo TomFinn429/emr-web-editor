@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type {
   EditorElementProperties,
   EditorElementType,
   ElementPropertyUpdateResult,
 } from '../../types/editorElement'
+import {
+  createElementPropertyPatch,
+  getElementPropertySchema,
+  type ElementPropertyField,
+} from './elementPropertySchema'
 
 interface Props {
   element: EditorElementProperties
@@ -18,6 +24,7 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const schema = computed(() => getElementPropertySchema(props.element.type))
 
 const typeOptions: Array<{ type: EditorElementType; label: string }> = [
   { type: 'input-field', label: '输入域' },
@@ -30,18 +37,21 @@ const typeOptions: Array<{ type: EditorElementType; label: string }> = [
   { type: 'qrcode', label: '二维码' },
 ]
 
-function updateText(name: keyof EditorElementProperties, event: Event) {
-  const value = (event.target as HTMLInputElement).value
-  emit('update', { [name]: value })
+function fieldTextValue(field: ElementPropertyField) {
+  const value = props.element[field.key]
+  return typeof value === 'number' || typeof value === 'string' ? value : ''
 }
 
-function updateNumber(name: keyof EditorElementProperties, event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  emit('update', { [name]: Number.isNaN(value) ? undefined : value })
+function fieldCheckedValue(field: ElementPropertyField) {
+  return Boolean(props.element[field.key])
 }
 
-function updateBoolean(name: keyof EditorElementProperties, event: Event) {
-  emit('update', { [name]: (event.target as HTMLInputElement).checked })
+function updateField(field: ElementPropertyField, event: Event) {
+  const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  const value = field.kind === 'checkbox'
+    ? (target as HTMLInputElement).checked
+    : target.value
+  emit('update', createElementPropertyPatch(field, value))
 }
 </script>
 
@@ -69,119 +79,42 @@ function updateBoolean(name: keyof EditorElementProperties, event: Event) {
     </button>
 
     <form class="element-properties__form" @submit.prevent>
-      <label class="element-properties__field">
-        <span>控件类型</span>
-        <input :value="props.element.name" @input="updateText('name', $event)" />
+      <label
+        v-for="field in schema"
+        :key="field.key"
+        class="element-properties__field"
+        :class="{ 'element-properties__field--checkbox': field.kind === 'checkbox' }"
+      >
+        <span>{{ field.label }}</span>
+        <input
+          v-if="field.kind === 'checkbox'"
+          type="checkbox"
+          :checked="fieldCheckedValue(field)"
+          @change="updateField(field, $event)"
+        />
+        <select
+          v-else-if="field.kind === 'select'"
+          :value="fieldTextValue(field)"
+          @change="updateField(field, $event)"
+        >
+          <option value="">未设置</option>
+          <option v-for="option in field.options || []" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+        <textarea
+          v-else-if="field.kind === 'textarea'"
+          :value="fieldTextValue(field)"
+          rows="3"
+          @input="updateField(field, $event)"
+        />
+        <input
+          v-else
+          :type="field.kind === 'number' ? 'number' : 'text'"
+          :value="fieldTextValue(field)"
+          @input="updateField(field, $event)"
+        />
       </label>
-
-      <template v-if="props.element.type === 'input-field'">
-        <label class="element-properties__field">
-          <span>编码</span>
-          <input :value="props.element.code" @input="updateText('code', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>默认值</span>
-          <input :value="props.element.defaultValue" @input="updateText('defaultValue', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>数据元绑定</span>
-          <input :value="props.element.bindingPath" @input="updateText('bindingPath', $event)" />
-        </label>
-        <div class="element-properties__checks">
-          <label><input type="checkbox" :checked="props.element.readonly" @change="updateBoolean('readonly', $event)" /> 只读</label>
-          <label><input type="checkbox" :checked="props.element.required" @change="updateBoolean('required', $event)" /> 必填</label>
-          <label><input type="checkbox" :checked="props.element.visible !== false" @change="updateBoolean('visible', $event)" /> 可见</label>
-        </div>
-      </template>
-
-      <template v-else-if="props.element.type === 'radio' || props.element.type === 'checkbox'">
-        <label class="element-properties__field">
-          <span>显示文本</span>
-          <input :value="props.element.displayText" @input="updateText('displayText', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>绑定值</span>
-          <input :value="props.element.bindingValue" @input="updateText('bindingValue', $event)" />
-        </label>
-        <label class="element-properties__checkbox">
-          <input type="checkbox" :checked="props.element.defaultChecked" @change="updateBoolean('defaultChecked', $event)" />
-          默认选中
-        </label>
-        <div class="element-properties__option-list">
-          <strong>候选项</strong>
-          <span v-for="option in props.element.options || []" :key="option.id">
-            {{ option.text }} = {{ option.value }}
-          </span>
-        </div>
-      </template>
-
-      <template v-else-if="props.element.type === 'table'">
-        <label class="element-properties__field">
-          <span>表格 ID</span>
-          <input :value="props.element.tableId" @input="updateText('tableId', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>行数</span>
-          <input type="number" min="1" :value="props.element.rowCount" @input="updateNumber('rowCount', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>列数</span>
-          <input type="number" min="1" :value="props.element.columnCount" @input="updateNumber('columnCount', $event)" />
-        </label>
-      </template>
-
-      <template v-else-if="props.element.type === 'table-row'">
-        <label class="element-properties__field">
-          <span>表格 ID</span>
-          <input :value="props.element.tableId" @input="updateText('tableId', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>行序号</span>
-          <input type="number" min="1" :value="props.element.rowIndex" @input="updateNumber('rowIndex', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>行高</span>
-          <input type="number" min="0" :value="props.element.height" @input="updateNumber('height', $event)" />
-        </label>
-      </template>
-
-      <template v-else-if="props.element.type === 'table-cell'">
-        <label class="element-properties__field">
-          <span>单元格</span>
-          <input :value="props.element.cellPosition" @input="updateText('cellPosition', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>宽度</span>
-          <input type="number" min="0" :value="props.element.width" @input="updateNumber('width', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>高度</span>
-          <input type="number" min="0" :value="props.element.height" @input="updateNumber('height', $event)" />
-        </label>
-      </template>
-
-      <template v-else-if="props.element.type === 'barcode' || props.element.type === 'qrcode'">
-        <label class="element-properties__field">
-          <span>编码内容</span>
-          <input :value="props.element.codeContent" @input="updateText('codeContent', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>绑定字段</span>
-          <input :value="props.element.bindingPath" @input="updateText('bindingPath', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>宽度</span>
-          <input type="number" min="1" :value="props.element.width" @input="updateNumber('width', $event)" />
-        </label>
-        <label class="element-properties__field">
-          <span>高度</span>
-          <input type="number" min="1" :value="props.element.height" @input="updateNumber('height', $event)" />
-        </label>
-        <label class="element-properties__checkbox">
-          <input type="checkbox" :checked="props.element.showText" @change="updateBoolean('showText', $event)" />
-          显示文本
-        </label>
-      </template>
     </form>
   </section>
 </template>
@@ -269,9 +202,10 @@ function updateBoolean(name: keyof EditorElementProperties, event: Event) {
   color: #607084;
 }
 
-.element-properties__field input {
+.element-properties__field input,
+.element-properties__field select,
+.element-properties__field textarea {
   min-width: 0;
-  height: 28px;
   padding: 0 7px;
   border: 1px solid #c8d3de;
   border-radius: 4px;
@@ -279,28 +213,26 @@ function updateBoolean(name: keyof EditorElementProperties, event: Event) {
   color: #26364a;
 }
 
-.element-properties__checks,
-.element-properties__option-list {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
+.element-properties__field input,
+.element-properties__field select {
+  height: 28px;
 }
 
-.element-properties__checkbox {
+.element-properties__field textarea {
+  min-height: 62px;
+  padding-top: 6px;
+  resize: vertical;
+}
+
+.element-properties__field--checkbox {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.element-properties__option-list {
-  padding: 8px;
-  border: 1px solid #d9e2ea;
-  border-radius: 4px;
-  background: #fff;
-}
-
-.element-properties__option-list span {
-  color: #26364a;
+.element-properties__field--checkbox input {
+  width: 16px;
+  height: 16px;
 }
 </style>

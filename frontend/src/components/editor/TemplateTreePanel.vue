@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { FilePlus, FolderOpen, FolderPlus, Search } from 'lucide-vue-next'
-import { computed, shallowRef } from 'vue'
-import type { TemplateTreeNode } from '../../services/templateWorkbenchService'
+import { computed, shallowRef, watch } from 'vue'
+import type { TemplateScopeOption, TemplateTreeNode } from '../../services/templateWorkbenchService'
 import { filterTemplateTree } from '../../services/templateWorkbenchService'
 import TemplateTreeNodeItem from './TemplateTreeNode.vue'
 
 interface Props {
   nodes: readonly TemplateTreeNode[]
   categories: readonly string[]
+  scopes: readonly TemplateScopeOption[]
   selectedNodeId?: string
   isLoading?: boolean
   error?: string | null
@@ -15,8 +16,8 @@ interface Props {
 
 interface Emits {
   selectTemplate: [node: TemplateTreeNode]
-  createDirectory: [parentId: string]
-  createTemplate: [parentId: string]
+  createDirectory: [parentId: string, scope?: TemplateScopeOption['id']]
+  createTemplate: [parentId: string, scope?: TemplateScopeOption['id']]
   renameNode: [node: TemplateTreeNode]
   deleteNode: [node: TemplateTreeNode]
 }
@@ -25,13 +26,32 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const keyword = shallowRef('')
+const selectedScope = shallowRef('global')
 const selectedCategory = shallowRef('全部分类')
-const expandedNodeIds = shallowRef<Set<string>>(new Set(['hospital-root', 'category-home']))
+const expandedNodeIds = shallowRef<Set<string>>(new Set(['template-root']))
+const rootNodeId = computed(() => props.nodes[0]?.id || 'template-root')
 
 const visibleNodes = computed(() => filterTemplateTree(props.nodes, {
   category: selectedCategory.value,
   keyword: keyword.value,
+  scope: selectedScope.value as TemplateScopeOption['id'],
 }))
+const currentScope = computed(() => selectedScope.value as TemplateScopeOption['id'])
+
+watch(
+  () => props.nodes,
+  (nodes) => {
+    const next = new Set(expandedNodeIds.value)
+    for (const root of nodes) {
+      next.add(root.id)
+      for (const child of root.children || []) {
+        next.add(child.id)
+      }
+    }
+    expandedNodeIds.value = next
+  },
+  { immediate: true },
+)
 
 function toggleNode(node: TemplateTreeNode) {
   if (!node.children?.length) {
@@ -67,7 +87,7 @@ function selectNode(node: TemplateTreeNode) {
         class="template-tree__more"
         type="button"
         title="新建目录"
-        @click="emit('createDirectory', 'hospital-root')"
+        @click="emit('createDirectory', rootNodeId, currentScope)"
       >
         <FolderPlus :size="16" aria-hidden="true" />
       </button>
@@ -75,9 +95,22 @@ function selectNode(node: TemplateTreeNode) {
         class="template-tree__more"
         type="button"
         title="新建模板"
-        @click="emit('createTemplate', 'hospital-root')"
+        @click="emit('createTemplate', rootNodeId, currentScope)"
       >
         <FilePlus :size="16" aria-hidden="true" />
+      </button>
+    </div>
+
+    <div class="template-tree__scopes" aria-label="模板范围">
+      <button
+        v-for="scope in props.scopes"
+        :key="scope.id"
+        class="template-tree__scope"
+        :class="{ 'template-tree__scope--active': selectedScope === scope.id }"
+        type="button"
+        @click="selectedScope = scope.id"
+      >
+        {{ scope.label }}
       </button>
     </div>
 
@@ -105,8 +138,8 @@ function selectNode(node: TemplateTreeNode) {
           :expanded-node-ids="expandedNodeIds"
           @toggle="toggleNode"
           @select="selectNode"
-          @create-directory="emit('createDirectory', $event.id)"
-          @create-template="emit('createTemplate', $event.id)"
+          @create-directory="emit('createDirectory', $event.id, $event.scope || currentScope)"
+          @create-template="emit('createTemplate', $event.id, $event.scope || currentScope)"
           @rename-node="emit('renameNode', $event)"
           @delete-node="emit('deleteNode', $event)"
         />
@@ -156,6 +189,30 @@ function selectNode(node: TemplateTreeNode) {
   border-radius: 4px;
   background: #fff;
   color: #3f5368;
+}
+
+.template-tree__scopes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 8px 0;
+  background: #f2f6f9;
+}
+
+.template-tree__scope {
+  height: 28px;
+  border: 1px solid #c8d3de;
+  border-radius: 4px;
+  background: #fff;
+  color: #40566d;
+  font-size: 12px;
+}
+
+.template-tree__scope--active {
+  border-color: #7ca6c0;
+  background: #dfeff7;
+  color: #1f4f73;
+  font-weight: 700;
 }
 
 .template-tree__filters {

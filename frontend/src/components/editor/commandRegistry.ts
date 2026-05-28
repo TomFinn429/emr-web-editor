@@ -95,8 +95,8 @@ export const topMenuTabs: CommandMenuTab[] = [
     ],
   },
   {
-    id: 'format',
-    label: '格式',
+    id: 'edit',
+    label: '编辑',
     groups: [
       {
         id: 'clipboard',
@@ -110,6 +110,12 @@ export const topMenuTabs: CommandMenuTab[] = [
           writerCommand('selectAll', '全选', 'selectall', null, false, 'CheckSquare'),
         ],
       },
+    ],
+  },
+  {
+    id: 'format',
+    label: '格式',
+    groups: [
       {
         id: 'font',
         label: '字体',
@@ -117,6 +123,7 @@ export const topMenuTabs: CommandMenuTab[] = [
           writerCommand('bold', '加粗', 'Bold', null, false, 'Bold'),
           writerCommand('italic', '斜体', 'Italic', null, false, 'Italic'),
           writerCommand('underline', '下划线', 'Underline', null, false, 'Underline'),
+          writerCommand('strikethrough', '删除线', 'Strikeout', null, false, 'Strikethrough'),
           placeholderCommand('fontName', '字体'),
           placeholderCommand('fontSize', '字号'),
           placeholderCommand('foreColor', '文字颜色'),
@@ -136,6 +143,7 @@ export const topMenuTabs: CommandMenuTab[] = [
           writerCommand('alignLeft', '左对齐', 'AlignLeft', null, false, 'AlignLeft'),
           writerCommand('alignCenter', '居中', 'AlignCenter', null, false, 'AlignCenter'),
           writerCommand('alignRight', '右对齐', 'AlignRight', null, false, 'AlignRight'),
+          placeholderCommand('alignJustify', '分散对齐'),
         ],
       },
       {
@@ -146,8 +154,8 @@ export const topMenuTabs: CommandMenuTab[] = [
     ],
   },
   {
-    id: 'common',
-    label: '常规',
+    id: 'insert',
+    label: '插入',
     groups: [
       {
         id: 'clinical-control',
@@ -174,12 +182,47 @@ export const topMenuTabs: CommandMenuTab[] = [
         ],
       },
       {
-        id: 'view-control',
-        label: '视图',
+        id: 'insert-document',
+        label: '文档元素',
         commands: [
-          appCommand('zoomOut', '缩小', 'ZoomOut'),
-          appCommand('resetZoom', '重置缩放', 'RotateCcw'),
-          appCommand('zoomIn', '放大', 'ZoomIn'),
+          writerCommand('insertInputFieldFromInsert', '插入输入域', 'InsertInputField', null, true, 'TextCursorInput'),
+          writerCommand(
+            'insertRadioFromInsert',
+            '插入单选框',
+            'InsertCheckBoxOrRadio',
+            { Name: 'radio', Type: 'radio', CaptionFlowLayout: true },
+            true,
+            'CircleDot',
+          ),
+          writerCommand(
+            'insertCheckboxFromInsert',
+            '插入复选框',
+            'InsertCheckBoxOrRadio',
+            { Name: 'checkbox', Type: 'checkbox', CaptionFlowLayout: true },
+            true,
+            'CheckSquare',
+          ),
+          placeholderCommand('specialCharacter', '特殊字符'),
+          placeholderCommand('insertImage', '图片'),
+          appCommand('insertHeaderFooter', '插入页眉页脚', 'PanelTop'),
+          appCommand('saveAsHeaderFooter', '另存为页眉页脚', 'SaveAll'),
+          appCommand('insertBarcode', '插入条形码', 'Barcode'),
+          appCommand('insertQrcode', '插入二维码', 'QrCode'),
+          writerCommand('insertPageBreak', '分页符', 'insertpagebreak', null, true, 'FileText'),
+          writerCommand(
+            'insertPageInfo',
+            '页码',
+            'InsertPageInfoElement',
+            {
+              ID: 'pageinfo1',
+              Height: '65',
+              Width: '400',
+              ValueType: 'PageIndex',
+              FormatString: '第[%PageIndex%]页 共[%NumOfPages%]页',
+            },
+            true,
+            'Hash',
+          ),
         ],
       },
     ],
@@ -192,7 +235,25 @@ export const topMenuTabs: CommandMenuTab[] = [
         id: 'template-design',
         label: '模板设计',
         commands: [
+          placeholderCommand('designMode', '设计模式'),
+          appCommand('refreshDocument', '刷新文档', 'RefreshCw'),
+          placeholderCommand('xmlSource', 'XML 源码'),
           placeholderCommand('templateAudit', '上传审批'),
+        ],
+      },
+      {
+        id: 'view-control',
+        label: '视图',
+        commands: [
+          appCommand('zoomOut', '缩小', 'ZoomOut'),
+          appCommand('resetZoom', '重置缩放', 'RotateCcw'),
+          appCommand('zoomIn', '放大', 'ZoomIn'),
+        ],
+      },
+      {
+        id: 'template-resource',
+        label: '资源管理',
+        commands: [
           placeholderCommand('dataElementManager', '数据元'),
           placeholderCommand('dictionaryManager', '字典'),
           placeholderCommand('dataSourceManager', '数据源'),
@@ -219,54 +280,6 @@ export const topMenuTabs: CommandMenuTab[] = [
           writerCommand('tableProperties', '表格属性', 'tableproperties', null, true, 'Settings'),
           writerCommand('rowProperties', '行属性', 'tablerowproperties', null, true, 'Settings'),
           writerCommand('cellProperties', '单元格属性', 'tablecellproperties', null, true, 'Settings'),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'insert',
-    label: '插入',
-    groups: [
-      {
-        id: 'insert-document',
-        label: '文档元素',
-        commands: [
-          writerCommand('insertInputFieldFromInsert', '插入输入域', 'InsertInputField', null, true, 'TextCursorInput'),
-          writerCommand(
-            'insertRadioFromInsert',
-            '插入单选框',
-            'InsertCheckBoxOrRadio',
-            { Name: 'radio', Type: 'radio', CaptionFlowLayout: true },
-            true,
-            'CircleDot',
-          ),
-          writerCommand(
-            'insertCheckboxFromInsert',
-            '插入复选框',
-            'InsertCheckBoxOrRadio',
-            { Name: 'checkbox', Type: 'checkbox', CaptionFlowLayout: true },
-            true,
-            'CheckSquare',
-          ),
-          appCommand('insertHeaderFooter', '插入页眉页脚', 'PanelTop'),
-          appCommand('saveAsHeaderFooter', '另存为页眉页脚', 'SaveAll'),
-          appCommand('insertBarcode', '插入条形码', 'Barcode'),
-          appCommand('insertQrcode', '插入二维码', 'QrCode'),
-          writerCommand('insertPageBreak', '分页符', 'insertpagebreak', null, true, 'FileText'),
-          writerCommand(
-            'insertPageInfo',
-            '页码',
-            'InsertPageInfoElement',
-            {
-              ID: 'pageinfo1',
-              Height: '65',
-              Width: '400',
-              ValueType: 'PageIndex',
-              FormatString: '第[%PageIndex%]页 共[%NumOfPages%]页',
-            },
-            true,
-            'Hash',
-          ),
         ],
       },
     ],

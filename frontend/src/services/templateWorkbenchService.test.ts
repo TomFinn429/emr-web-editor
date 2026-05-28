@@ -98,6 +98,51 @@ describe('templateWorkbenchService', () => {
     ])
   })
 
+  it('returns target-page template scopes and filters tree by scope', async () => {
+    const data = await fetchTemplateWorkbenchData()
+
+    expect(data.templateScopes.map(scope => scope.label)).toEqual(['全局', '全院', '科室', '个人'])
+    expect(data.templateScopes[0]).toMatchObject({ id: 'global', label: '全局' })
+
+    const departmentOnly = filterTemplateTree(data.templateTree, {
+      category: '全部分类',
+      keyword: '',
+      scope: 'department',
+    })
+    const visibleTemplates = departmentOnly.flatMap(root =>
+      (root.children || []).flatMap(category => category.children || []),
+    )
+
+    expect(visibleTemplates.map(node => node.label)).toEqual(['入院告知书'])
+    expect(visibleTemplates.every(node => node.scope === 'department')).toBe(true)
+    expect(filterTemplateTree(data.templateTree, {
+      category: '全部分类',
+      keyword: '',
+      scope: 'personal',
+    })).toEqual([])
+  })
+
+  it('creates new directories and templates inside the selected template scope', async () => {
+    const directory = createTemplateDirectory('template-root', '科室专用目录', 'department')
+    const template = createTemplateFile(directory.id, '科室随访记录', '<XTextDocument />', 'department')
+    const data = await fetchTemplateWorkbenchData(template.id)
+    const departmentOnly = filterTemplateTree(data.templateTree, {
+      category: '全部分类',
+      keyword: '科室随访',
+      scope: 'department',
+    })
+    const personalOnly = filterTemplateTree(data.templateTree, {
+      category: '全部分类',
+      keyword: '科室随访',
+      scope: 'personal',
+    })
+
+    expect(directory.scope).toBe('department')
+    expect(template.scope).toBe('department')
+    expect(findTemplateTreeNode(departmentOnly, template.id)?.label).toBe('科室随访记录')
+    expect(findTemplateTreeNode(personalOnly, template.id)).toBeNull()
+  })
+
   it('returns an empty tree when no keyword matches', async () => {
     const { templateTree } = await fetchTemplateWorkbenchData()
 
@@ -117,6 +162,15 @@ describe('templateWorkbenchService', () => {
     expect(data.activeTemplateId).toBe('西医病案首页')
     expect(data.templateProperties.id).toBe('西医病案首页')
     expect(data.templateProperties.name).toBe('西医病案首页')
+    expect(data.templateProperties).toMatchObject({
+      type: '病案模板',
+      printMode: '套打',
+      allowRepeat: false,
+      signLevel: '二级签名',
+      departments: ['全院', '病案室'],
+      author: '模板制作员',
+      updatedBy: '模板制作员',
+    })
     expect(data.historyVersions.length).toBeGreaterThan(0)
   })
 
