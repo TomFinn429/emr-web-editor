@@ -1,5 +1,6 @@
 import { readonly, shallowRef } from 'vue'
 import type { ImportedDocument } from '../types/document'
+import { createClientId } from '../utils/idGenerator'
 
 const maxFileSize = 10 * 1024 * 1024
 const sensitiveTerms = ['DC', '\u90fd\u660c']
@@ -60,7 +61,7 @@ async function readLocalXmlDocument(file: File): Promise<ImportedDocument> {
     : []
 
   return {
-    id: crypto.randomUUID(),
+    id: createClientId(),
     fileName: sanitizedFileName,
     xml: sanitizeXmlText(xml),
     warnings,
