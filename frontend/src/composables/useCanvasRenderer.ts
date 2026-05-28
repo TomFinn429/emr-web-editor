@@ -1,6 +1,7 @@
 import { readonly, shallowRef } from 'vue'
 import type { ShallowRef } from 'vue'
 import type { ImportedDocument } from '../types/document'
+import { createClientId } from '../utils/idGenerator'
 import type { WriterPrintTarget } from '../utils/writerPrint'
 
 export interface ExternalWriterElement extends HTMLElement, WriterPrintTarget {
@@ -88,7 +89,7 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
   await waitForExternalStart()
 
   const editorElement = document.createElement('div') as ExternalWriterElement
-  editorElement.id = `writer-host-${crypto.randomUUID()}`
+  editorElement.id = createClientId('writer-host')
   editorElement.setAttribute('dctype', 'WriterControlForWASM')
   editorElement.setAttribute('RuleVisible', 'false')
   editorElement.setAttribute('AllowDrop', 'false')
