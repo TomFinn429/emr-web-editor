@@ -20,11 +20,11 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const hostRef = useTemplateRef<HTMLDivElement>('host')
-const { isRendering, renderError, mode, writerElement, renderDocument, clear } = useCanvasRenderer()
+const { isRendering, renderError, mode, writerElement, pageSize, renderDocument, clear } = useCanvasRenderer()
 
 const isExternalMode = computed(() => mode.value === 'external')
-const surfaceStyle = computed(() => getSurfaceStyle(mode.value, props.zoom))
-const canvasLayerStyle = computed(() => getCanvasLayerStyle(mode.value, props.zoom))
+const surfaceStyle = computed(() => getSurfaceStyle(mode.value, props.zoom, pageSize.value))
+const canvasLayerStyle = computed(() => getCanvasLayerStyle(mode.value, props.zoom, pageSize.value))
 
 watch(
   () => props.document,
@@ -124,25 +124,22 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__canvas-layer {
-  width: 795.333px;
-  min-height: 1123.333px;
   transform-origin: top center;
 }
 
 .preview-panel__canvas-layer--external {
-  width: 795.333px;
-  min-width: 795.333px;
   transform-origin: top center;
 }
 
 .preview-panel__host {
-  width: 795.333px;
-  min-height: 1123.333px;
+  width: 100%;
+  min-width: 100%;
+  min-height: inherit;
 }
 
 .preview-panel__host--external {
-  width: 795.333px;
-  min-width: 795.333px;
+  width: 100%;
+  min-width: 100%;
 }
 
 .preview-panel__host :deep(.preview-canvas) {
@@ -153,18 +150,18 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__host :deep(.external-renderer-host) {
-  width: 795.333px !important;
-  min-width: 795.333px !important;
-  min-height: 1123.333px;
+  width: 100% !important;
+  min-width: 100% !important;
+  min-height: inherit;
   background: #fff;
   outline: 1px solid #aeb8c2;
   box-shadow: 0 8px 20px rgba(31, 42, 58, 0.18);
 }
 
 .preview-panel__host :deep(.external-renderer-host [dctype="page-container"]) {
-  width: 795.333px !important;
-  min-width: 795.333px !important;
-  overflow-x: hidden !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  overflow: auto !important;
   text-align: left !important;
 }
 
@@ -175,9 +172,9 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 }
 
 .preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"]) {
-  width: 795.333px !important;
-  min-width: 795.333px !important;
-  overflow-x: hidden !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  overflow: auto !important;
   text-align: left !important;
 }
 

@@ -2,6 +2,13 @@ import { readonly, shallowRef } from 'vue'
 import type { ShallowRef } from 'vue'
 import type { ImportedDocument } from '../types/document'
 import { createClientId } from '../utils/idGenerator'
+import {
+  DEFAULT_PREVIEW_PAGE_SIZE,
+  getPreviewPageSizeFromXml,
+  getRenderedPageSize,
+  type PreviewPageSize,
+} from '../utils/writerPageLayout'
+import { getWriterBootstrapAttributes, getWriterServicePageUrl } from '../utils/writerRendererConfig'
 import type { WriterPrintTarget } from '../utils/writerPrint'
 
 export interface ExternalWriterElement extends HTMLElement, WriterPrintTarget {
@@ -38,11 +45,14 @@ export function useCanvasRenderer() {
   const renderError = shallowRef<string | null>(null)
   const mode = shallowRef<RendererMode>('preview')
   const writerElement = shallowRef<ExternalWriterElement | null>(null)
+  const pageSize = shallowRef<PreviewPageSize>(DEFAULT_PREVIEW_PAGE_SIZE)
 
   async function renderDocument(container: HTMLElement, document: ImportedDocument) {
     isRendering.value = true
     renderError.value = null
     writerElement.value = null
+    const previewPageSize = getPreviewPageSizeFromXml(document.xml)
+    pageSize.value = previewPageSize
     container.replaceChildren()
 
     try {
@@ -50,18 +60,19 @@ export function useCanvasRenderer() {
       if (rendered) {
         mode.value = 'external'
         writerElement.value = rendered
+        pageSize.value = getRenderedPageSize(rendered) ?? previewPageSize
         return
       }
 
       mode.value = 'preview'
       writerElement.value = null
       container.replaceChildren()
-      renderPreviewCanvas(container, document)
+      renderPreviewCanvas(container, document, previewPageSize)
     } catch (error) {
       mode.value = 'preview'
       writerElement.value = null
       container.replaceChildren()
-      renderPreviewCanvas(container, document)
+      renderPreviewCanvas(container, document, previewPageSize)
       renderError.value = error instanceof Error ? error.message : '渲染资源加载失败，已切换到预览模式。'
     } finally {
       isRendering.value = false
@@ -72,6 +83,7 @@ export function useCanvasRenderer() {
     container?.replaceChildren()
     writerElement.value = null
     renderError.value = null
+    pageSize.value = DEFAULT_PREVIEW_PAGE_SIZE
   }
 
   return {
@@ -79,6 +91,7 @@ export function useCanvasRenderer() {
     renderError: readonly(renderError),
     mode: readonly(mode),
     writerElement: writerElement as Readonly<ShallowRef<ExternalWriterElement | null>>,
+    pageSize: readonly(pageSize),
     renderDocument,
     clear,
   }
@@ -162,9 +175,12 @@ export async function preloadExternalRenderer() {
       resolve()
       return
     }
-    // DCWriter 5.0 注册码验证依赖 ServicePageUrl 进行域名匹配
-    ;(window as any).__DCWriterServicePageUrl =
-      'http://10.0.15.23:8084/MyWriter/MoreHandleDCWriterServicePage'
+    const servicePageUrl = getWriterServicePageUrl()
+    if (servicePageUrl) {
+      ;(window as any).__DCWriterServicePageUrl = servicePageUrl
+    } else {
+      delete (window as any).__DCWriterServicePageUrl
+    }
 
     const jQueryPath = import.meta.env.DEV
       ? '/renderer-dev/_framework/jquery-1.7.2.min.js'
@@ -174,10 +190,20 @@ export async function preloadExternalRenderer() {
       installCanvasDrawFilter()
       const script = document.createElement('script')
       script.src = rendererBootstrapPath
-      script.setAttribute('servicepageurl', (window as any).__DCWriterServicePageUrl)
+      for (const [name, value] of Object.entries(getWriterBootstrapAttributes(servicePageUrl))) {
+        script.setAttribute(name, value)
+      }
       script.async = true
       script.onload = () => {
-        waitForExternalStart().then(resolve)
+        waitForExternalStart().then(() => {
+          if (isExternalRendererReady()) {
+            resolve()
+            return
+          }
+
+          window.__medicalRecordRendererLoading = undefined
+          reject(new Error('External renderer did not become ready'))
+        })
       }
       script.onerror = () => reject(new Error('Failed to load renderer bootstrap'))
       document.head.appendChild(script)
@@ -258,13 +284,13 @@ function waitUntil(predicate: () => boolean, timeoutMs: number): Promise<void> {
   })
 }
 
-function renderPreviewCanvas(container: HTMLElement, importedDocument: ImportedDocument) {
+function renderPreviewCanvas(container: HTMLElement, importedDocument: ImportedDocument, pageSize: PreviewPageSize) {
   const canvas = document.createElement('canvas')
-  const pageWidth = 794
-  const pageHeight = 1123
+  const pageWidth = pageSize.width
+  const pageHeight = pageSize.height
   const ratio = window.devicePixelRatio || 1
-  canvas.width = pageWidth * ratio
-  canvas.height = pageHeight * ratio
+  canvas.width = Math.round(pageWidth * ratio)
+  canvas.height = Math.round(pageHeight * ratio)
   canvas.style.width = `${pageWidth}px`
   canvas.style.height = `${pageHeight}px`
   canvas.className = 'preview-canvas'
@@ -286,7 +312,7 @@ function drawPage(
   importedDocument: ImportedDocument,
 ) {
   const text = extractReadableText(importedDocument.xml)
-  const lines = wrapText(context, text, 640)
+  const lines = wrapText(context, text, Math.max(240, width - 154))
 
   context.fillStyle = '#ffffff'
   context.fillRect(0, 0, width, height)
@@ -316,7 +342,8 @@ function drawPage(
 
   let y = 184
   const lineHeight = 30
-  for (const line of lines.slice(0, 27)) {
+  const maxLineCount = Math.max(1, Math.floor((height - 260) / lineHeight))
+  for (const line of lines.slice(0, maxLineCount)) {
     context.fillText(line, 92, y)
     y += lineHeight
   }
