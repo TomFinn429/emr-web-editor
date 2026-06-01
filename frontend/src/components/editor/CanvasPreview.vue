@@ -161,7 +161,8 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 .preview-panel__host :deep(.external-renderer-host [dctype="page-container"]) {
   width: 100% !important;
   min-width: 100% !important;
-  overflow: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   text-align: left !important;
 }
 
@@ -174,7 +175,8 @@ watch(writerElement, (value) => emit('writerReady', value), { immediate: true })
 .preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"]) {
   width: 100% !important;
   min-width: 100% !important;
-  overflow: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   text-align: left !important;
 }
 

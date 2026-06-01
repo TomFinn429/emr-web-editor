@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import canvasPreviewSource from './CanvasPreview.vue?raw'
 import { getCanvasLayerStyle, getSurfaceStyle } from './canvasPreviewLayout'
 import { DEFAULT_PREVIEW_PAGE_SIZE, getPreviewPageSizeFromXml, getRenderedPageSize } from '../../utils/writerPageLayout'
 
@@ -62,4 +63,27 @@ describe('canvas preview layout styles', () => {
       minHeight: '1123px',
     })
   })
+
+  it('hides horizontal overflow on DCWriter internal page scrollers', () => {
+    const pageContainerStyle = extractStyleRule(
+      '.preview-panel__host :deep(.external-renderer-host [dctype="page-container"])',
+    )
+    const printPreviewStyle = extractStyleRule(
+      '.preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"])',
+    )
+
+    expect(pageContainerStyle).toContain('overflow-y: auto !important;')
+    expect(pageContainerStyle).toContain('overflow-x: hidden !important;')
+    expect(pageContainerStyle).not.toContain('overflow: auto !important;')
+
+    expect(printPreviewStyle).toContain('overflow-y: auto !important;')
+    expect(printPreviewStyle).toContain('overflow-x: hidden !important;')
+    expect(printPreviewStyle).not.toContain('overflow: auto !important;')
+  })
 })
+
+function extractStyleRule(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = canvasPreviewSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))
+  return match?.[1] ?? ''
+}
