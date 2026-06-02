@@ -159,7 +159,7 @@ export async function fetchTemplateWorkbenchData(activeTemplateId?: string): Pro
   const metadata = await fetchMetadataTree()
   const fragments = await fetchFragmentTemplateTree()
   return {
-    templateTree: cloneTree(state.templateTree),
+    templateTree: visibleTemplateTree(state.templateTree),
     categories: ['全部分类', ...collectCategories(state.templateTree)],
     metadataItems: flattenMetadataItems(metadata.tree),
     metadataTree: metadata.tree,
@@ -511,6 +511,14 @@ function emptyTemplateTree(): TemplateTreeNode[] {
   ]
 }
 
+function visibleTemplateTree(nodes: readonly TemplateTreeNode[]) {
+  if (nodes.length === 1 && nodes[0]?.kind === 'root') {
+    return cloneTree(nodes[0].children || [])
+  }
+
+  return cloneTree(nodes)
+}
+
 function templateRecord(
   template: TemplateSummary,
   status: TemplateUploadStatus = '未上传',
@@ -527,7 +535,7 @@ function templateRecord(
     xml: `<XTextDocument><Body>${template.name}</Body></XTextDocument>`,
     isDirty: false,
     uploadMessage: status === '已上传' ? '上传完成' : '尚未上传',
-    scope: resolveTemplateScope(template),
+    scope: 'global',
     type: resolveTemplateType(template),
     printMode: resolvePrintMode(template),
     allowRepeat: !template.name.includes('首页'),
@@ -796,16 +804,6 @@ function nextVersion(version: string) {
   }
 
   return `v${match[1]}.${Number(match[2]) + 1}`
-}
-
-function resolveTemplateScope(template: TemplateSummary): TemplateScopeId {
-  if (template.name.includes('入院')) {
-    return 'department'
-  }
-  if (template.name.includes('首页')) {
-    return 'hospital'
-  }
-  return 'global'
 }
 
 function resolveTemplateType(template: TemplateSummary) {

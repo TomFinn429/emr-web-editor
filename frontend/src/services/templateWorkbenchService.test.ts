@@ -65,9 +65,9 @@ describe('templateWorkbenchService', () => {
   it('returns workbench data from the configured XML template list', async () => {
     const data = await fetchTemplateWorkbenchData()
 
-    expect(data.templateTree[0]?.label).toBe('D:\\XML\\notes')
-    expect(data.templateTree[0]?.children?.[0]?.label).toBe('本地模板')
-    expect(data.templateTree[0]?.children?.[0]?.children?.map(node => node.label)).toEqual([
+    expect(data.templateTree[0]?.label).toBe('本地模板')
+    expect(findTemplateTreeNode(data.templateTree, 'template-root')).toBeNull()
+    expect(data.templateTree[0]?.children?.map(node => node.label)).toEqual([
       'ICU手术患者交接记录单',
       '入院告知书',
       '西医病案首页',
@@ -91,30 +91,37 @@ describe('templateWorkbenchService', () => {
     })
 
     expect(filtered).toHaveLength(1)
-    expect(filtered[0]?.label).toBe('D:\\XML\\notes')
-    expect(filtered[0]?.children?.[0]?.label).toBe('本地模板')
-    expect(filtered[0]?.children?.[0]?.children?.map(node => node.label)).toEqual([
+    expect(filtered[0]?.label).toBe('本地模板')
+    expect(filtered[0]?.children?.map(node => node.label)).toEqual([
       '西医病案首页',
     ])
   })
 
-  it('returns target-page template scopes and filters tree by scope', async () => {
+  it('keeps loaded local templates under the global scope', async () => {
     const data = await fetchTemplateWorkbenchData()
 
     expect(data.templateScopes.map(scope => scope.label)).toEqual(['全局', '全院', '科室', '个人'])
     expect(data.templateScopes[0]).toMatchObject({ id: 'global', label: '全局' })
 
+    const globalOnly = filterTemplateTree(data.templateTree, {
+      category: '全部分类',
+      keyword: '',
+      scope: 'global',
+    })
+    const globalTemplates = globalOnly.flatMap(category => category.children || [])
     const departmentOnly = filterTemplateTree(data.templateTree, {
       category: '全部分类',
       keyword: '',
       scope: 'department',
     })
-    const visibleTemplates = departmentOnly.flatMap(root =>
-      (root.children || []).flatMap(category => category.children || []),
-    )
 
-    expect(visibleTemplates.map(node => node.label)).toEqual(['入院告知书'])
-    expect(visibleTemplates.every(node => node.scope === 'department')).toBe(true)
+    expect(globalTemplates.map(node => node.label)).toEqual([
+      'ICU手术患者交接记录单',
+      '入院告知书',
+      '西医病案首页',
+    ])
+    expect(globalTemplates.every(node => node.scope === 'global')).toBe(true)
+    expect(departmentOnly).toEqual([])
     expect(filterTemplateTree(data.templateTree, {
       category: '全部分类',
       keyword: '',

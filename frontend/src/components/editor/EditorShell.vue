@@ -7,7 +7,6 @@ import WorkbenchAssistPanel from './WorkbenchAssistPanel.vue'
 import WorkbenchChromeHeader from './WorkbenchChromeHeader.vue'
 import WorkbenchDialog from './WorkbenchDialog.vue'
 import WorkbenchEditorArea from './WorkbenchEditorArea.vue'
-import WorkbenchModuleNav from './WorkbenchModuleNav.vue'
 import WorkbenchTopMenu from './WorkbenchTopMenu.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import { useDocumentImport } from '../../composables/useDocumentImport'
@@ -745,8 +744,6 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
     <WorkbenchChromeHeader />
 
     <section class="app-shell__workspace">
-      <WorkbenchModuleNav />
-
       <section class="app-shell__editor-frame">
         <WorkbenchTopMenu
           :file-name="session.document.value?.fileName"
@@ -859,7 +856,7 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: 136px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-shell__editor-frame {
@@ -884,14 +881,6 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
 }
 
 @media (max-width: 860px) {
-  .app-shell__workspace {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .app-shell__workspace :deep(.module-nav) {
-    display: none;
-  }
-
   .app-shell__body {
     grid-template-columns: minmax(0, 1fr);
   }
