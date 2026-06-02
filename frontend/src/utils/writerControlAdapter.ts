@@ -21,6 +21,8 @@ export interface WriterControlTarget extends WriterPrintTarget {
   addEventListener?: HTMLElement['addEventListener']
   removeEventListener?: HTMLElement['removeEventListener']
   DocumentContentChanged?: (sender: unknown, args: unknown) => void
+  SelectionChanged?: (sender: unknown, args: unknown) => void
+  DocumentSelectionChanged?: (sender: unknown, args: unknown) => void
 }
 
 export type WriterAdapterFailureReason =
@@ -120,6 +122,44 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
       return () => {
         if (target.DocumentContentChanged === contentChangedHandler) {
           target.DocumentContentChanged = previousDocumentContentChanged
+        }
+
+        fallbackEvents.forEach((eventName) => {
+          target.removeEventListener?.(eventName, fallbackHandler, true)
+        })
+      }
+    },
+
+    onSelectionChanged(callback: () => void) {
+      if (!target) {
+        return () => {}
+      }
+
+      const previousSelectionChanged = target.SelectionChanged
+      const previousDocumentSelectionChanged = target.DocumentSelectionChanged
+      const selectionChangedHandler = (sender: unknown, args: unknown) => {
+        previousSelectionChanged?.call(target, sender, args)
+        callback()
+      }
+      const documentSelectionChangedHandler = (sender: unknown, args: unknown) => {
+        previousDocumentSelectionChanged?.call(target, sender, args)
+        callback()
+      }
+      target.SelectionChanged = selectionChangedHandler
+      target.DocumentSelectionChanged = documentSelectionChangedHandler
+
+      const fallbackEvents = ['click', 'mouseup', 'keyup'] as const
+      const fallbackHandler = () => callback()
+      fallbackEvents.forEach((eventName) => {
+        target.addEventListener?.(eventName, fallbackHandler, true)
+      })
+
+      return () => {
+        if (target.SelectionChanged === selectionChangedHandler) {
+          target.SelectionChanged = previousSelectionChanged
+        }
+        if (target.DocumentSelectionChanged === documentSelectionChangedHandler) {
+          target.DocumentSelectionChanged = previousDocumentSelectionChanged
         }
 
         fallbackEvents.forEach((eventName) => {

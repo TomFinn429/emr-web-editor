@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>电子病历 Web 编辑器主流程说明</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        --ink: #172033;
+        --muted: #5b6676;
+        --line: #d6dde7;
+        --paper: #ffffff;
+        --soft: #f5f8fb;
+        --brand: #1f6f8b;
+        --green: #3d7d5c;
+        --amber: #a46513;
+        --red: #a83f3f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #edf1f6;
+        color: var(--ink);
+        font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+        line-height: 1.68;
+      }
+      main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 56px; }
+      .hero, .section {
+        border: 1px solid var(--line);
+        background: var(--paper);
+        box-shadow: 0 14px 34px rgba(23, 32, 51, 0.08);
+      }
+      .hero {
+        padding: 34px 38px;
+        background: linear-gradient(135deg, #fff 0%, #eef6f7 58%, #f7f2e9 100%);
+      }
+      .section { margin-top: 24px; padding: 28px; }
+      h1, h2, h3 { margin: 0; letter-spacing: 0; line-height: 1.28; }
+      h1 { max-width: 900px; font-size: clamp(30px, 4vw, 48px); }
+      h2 { margin-top: 0; font-size: 24px; }
+      h3 { font-size: 18px; }
+      p { margin: 0; }
+      .eyebrow { margin-bottom: 10px; color: #174c66; font-size: 13px; font-weight: 700; }
+      .lead { margin-top: 10px; color: var(--muted); }
+      .summary { max-width: 940px; margin-top: 16px; color: var(--muted); font-size: 16px; }
+      .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+      .pill {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        padding: 4px 10px;
+        border: 1px solid #cfd8e4;
+        background: rgba(255, 255, 255, 0.72);
+        color: #2e4057;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+      .box { min-height: 130px; padding: 15px; border: 1px solid #cbd6df; background: var(--soft); }
+      .box strong { display: block; margin-bottom: 6px; color: #174c66; font-size: 15px; }
+      .box span { display: block; color: var(--muted); font-size: 13px; }
+      .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+      .note { padding: 18px; border: 1px solid var(--line); background: #fbfcfe; }
+      .note strong { display: block; margin-bottom: 8px; }
+      ol, ul { margin: 10px 0 0; padding-left: 22px; }
+      li { margin: 6px 0; }
+      code { padding: 2px 5px; background: #eef2f5; color: #23354c; font-family: Consolas, "Cascadia Mono", monospace; font-size: 0.92em; }
+      table { width: 100%; margin-top: 16px; border-collapse: collapse; overflow-wrap: anywhere; }
+      th, td { padding: 12px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { background: #eef3f6; color: #23354c; font-size: 14px; }
+      .states { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+      .state { min-height: 104px; padding: 14px; border-top: 4px solid var(--brand); background: #f8fbfd; }
+      .state:nth-child(2) { border-top-color: var(--amber); }
+      .state:nth-child(3) { border-top-color: #5c6f91; }
+      .state:nth-child(4) { border-top-color: var(--green); }
+      .state:nth-child(5) { border-top-color: var(--red); }
+      .small { color: var(--muted); font-size: 13px; }
+      .callout { margin-top: 16px; padding: 16px 18px; border-left: 5px solid var(--amber); background: #fff8ed; }
+      .sources { columns: 2; column-gap: 34px; }
+      @media (max-width: 980px) {
+        main { width: min(100% - 24px, 760px); }
+        .flow, .grid, .states { grid-template-columns: 1fr; }
+        .sources { columns: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">主流程说明文档</p>
+        <h1>电子病历 Web 编辑器从进入工作台到保存输出的完整链路</h1>
+        <p class="summary">
+          本文基于当前仓库代码梳理，目标是让产品、研发和交付同事快速理解：页面如何进入编辑器、模板和本地 XML 如何加载、编辑行为如何标记未保存、保存与导出如何落到接口或本地工作台状态，以及外部 DCWriter 渲染不可用时如何降级。
+        </p>
+        <div class="meta">
+          <span class="pill">生成位置：根目录 / main-flow-docs</span>
+          <span class="pill">范围：前端工作台 + 后端 API 边界</span>
+          <span class="pill">更新日期：2026-06-02</span>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>一、总体结论</h2>
+        <p class="lead">
+          当前项目的核心不是传统多页面路由，而是一个 Vue 工作台壳层。<code>App.vue</code> 根据演示阶段决定展示月度演示页或进入 <code>EditorShell</code>。进入主编辑器后，<code>EditorShell</code> 统一协调模板树、辅助面板、编辑区、属性面板、状态栏和对话框。
+        </p>
+        <div class="flow">
+          <div class="box"><strong>1. 入口判断</strong><span><code>App.vue</code> 读取 query/env stage，普通主编辑流程进入 <code>EditorShell</code>。</span></div>
+          <div class="box"><strong>2. 工作台初始化</strong><span>挂载后调用 <code>fetchTemplateWorkbenchData</code> 拉取模板树、元数据、片段模板、属性和页签。</span></div>
+          <div class="box"><strong>3. 打开文档</strong><span>用户选择模板或导入本地 XML，写入 <code>useDocumentSession</code> 的当前文档会话。</span></div>
+          <div class="box"><strong>4. 渲染编辑</strong><span><code>CanvasPreview</code> 优先尝试 DCWriter 外部渲染，失败后使用结构化 Canvas 预览。</span></div>
+          <div class="box"><strong>5. 操作与标脏</strong><span>菜单命令、内容变化、元数据绑定、片段插入都会通过会话或模板状态标记未保存。</span></div>
+          <div class="box"><strong>6. 保存输出</strong><span>保存先从 WriterControl 取 XML 并校验，再 POST 后端；导出则生成 XML 下载。</span></div>
+        </div>
+        <div class="callout">
+          代码中没有发现独立 LLM/AI 服务主链路。<code>WorkbenchAssistPanel</code> 是“编辑辅助面板”，职责是元数据与片段模板，不等同于 AI 对话或自动生成。
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>二、入口与初始化流程</h2>
+        <div class="grid">
+          <div class="note">
+            <strong>页面入口</strong>
+            <ol>
+              <li><code>frontend/src/App.vue</code> 调用 <code>resolvePresentationStage</code>。</li>
+              <li>当 stage 为 <code>xml-import</code> 时进入演示页 <code>XmlImportMilestone</code>。</li>
+              <li>其他情况进入主编辑工作台 <code>EditorShell</code>。</li>
+            </ol>
+          </div>
+          <div class="note">
+            <strong>工作台挂载</strong>
+            <ol>
+              <li><code>EditorShell</code> 在 <code>onMounted</code> 中执行 <code>loadWorkbenchData()</code>。</li>
+              <li><code>loadWorkbenchData()</code> 调用 <code>fetchTemplateWorkbenchData(currentTemplateId)</code>。</li>
+              <li>返回数据驱动模板树、元数据树、片段模板树、模板属性、历史版本和打开页签。</li>
+            </ol>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>数据</th><th>来源</th><th>当前实现特点</th></tr></thead>
+          <tbody>
+            <tr><td>模板列表与模板内容</td><td><code>templateService.ts</code> 调用 <code>/api/templates</code> 和 <code>/api/templates/{id}</code></td><td>开发环境先由 <code>devLocalTemplateApiPlugin</code> 从 <code>D:/XML/notes</code> 读取 XML；未被插件处理的 <code>/api</code> 请求再代理到后端。</td></tr>
+            <tr><td>工作台状态</td><td><code>templateWorkbenchService.ts</code></td><td>维护内存态模板树、页签、历史版本、上传状态和模板属性，是当前 MVP 的工作台状态中心。</td></tr>
+            <tr><td>后端模板与保存 API</td><td><code>backend/Program.cs</code></td><td>提供 <code>GET /api/templates</code>、<code>GET /api/templates/{id}</code>、<code>POST /api/documents/save</code>，保存结果进入内存 <code>SavedDocumentStore</code>。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>三、打开文档的两条路径</h2>
+        <div class="grid">
+          <div class="note">
+            <strong>路径 A：从模板树打开</strong>
+            <ol>
+              <li>用户点击模板树节点，触发 <code>handleTemplateTreeSelect(node)</code>。</li>
+              <li>若当前文档已标脏，<code>canReplaceCurrentDocumentAsync</code> 弹出确认。</li>
+              <li><code>handleTemplateSelect(id)</code> 调用 <code>openTemplateContent(id)</code>。</li>
+              <li><code>openTemplateContent</code> 读取模板 XML、确保页签打开，并更新 active template。</li>
+              <li><code>session.loadTemplate(template)</code> 写入当前会话，保存状态设为 <code>saved</code>。</li>
+              <li><code>refreshWorkbenchData(id)</code> 刷新右侧属性、历史版本和打开页签。</li>
+            </ol>
+          </div>
+          <div class="note">
+            <strong>路径 B：导入本地 XML</strong>
+            <ol>
+              <li>顶部菜单触发 <code>handleLocalImport(file)</code>。</li>
+              <li><code>useDocumentImport.importFile</code> 检查文件大小、XML 格式和解析结果。</li>
+              <li>导入时会对演示敏感标识做脱敏，并生成本地文档 id。</li>
+              <li><code>session.loadLocalDocument(imported)</code> 写入当前会话，来源标记为 <code>local</code>。</li>
+              <li>本地导入不绑定模板 id，因此保存失败时不会走模板 mock 降级保存。</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>四、渲染与编辑链路</h2>
+        <p class="lead">当前文档进入会话后，会转换为预览输入并传给编辑区。真实渲染由 <code>useCanvasRenderer</code> 决策：优先加载 DCWriter 外部渲染资源，失败时自动回退到前端 Canvas 结构化预览。</p>
+        <table>
+          <thead><tr><th>阶段</th><th>关键函数或组件</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>预览对象转换</td><td><code>toPreviewDocument(session.document.value)</code></td><td>把 <code>EditorDocument</code> 转成 <code>ImportedDocument</code>，交给 <code>WorkbenchEditorArea</code>。</td></tr>
+            <tr><td>渲染触发</td><td><code>CanvasPreview</code> watch <code>props.document</code></td><td>文档为空时清空画布；文档变化时调用 <code>renderDocument(host, document)</code>。</td></tr>
+            <tr><td>外部渲染</td><td><code>tryExternalRenderer</code></td><td>加载 <code>/renderer/_framework/dcwriter5.js</code> 和 jQuery，创建 <code>WriterControlForWASM</code>，再调用 <code>LoadDocumentFromString(xml, 'xml')</code>。</td></tr>
+            <tr><td>降级预览</td><td><code>renderPreviewCanvas</code></td><td>外部渲染不可用、加载失败或未生成 canvas 时，绘制结构化预览画布并显示可读 XML 文本。</td></tr>
+            <tr><td>编辑器适配</td><td><code>createWriterControlAdapter</code></td><td>统一封装加载、保存、命令执行、打印、打印预览，以及内容变化和选区变化监听。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>五、命令、属性与未保存状态</h2>
+        <p class="lead">所有菜单命令先进入 <code>handleWorkbenchCommand</code>。命令注册表会区分应用级命令、WriterControl 命令和占位命令。应用级命令由 <code>runAppCommand</code> 处理，编辑器命令由 <code>runEditorCommand</code> 经适配器发送给外部编辑器。</p>
+        <div class="grid">
+          <div class="note">
+            <strong>会标脏的典型行为</strong>
+            <ul>
+              <li>WriterControl 内容变化事件：<code>onContentChanged</code> 调用 <code>session.markDirty()</code>。</li>
+              <li>执行可写编辑命令成功：<code>runEditorCommand</code> 调用 <code>session.markDirty()</code>。</li>
+              <li>插入元数据输入域、片段模板、条码或二维码成功后标脏。</li>
+              <li>当前文档绑定模板 id 时，同时调用 <code>markTemplateDirty(templateId)</code> 更新工作台模板状态。</li>
+            </ul>
+          </div>
+          <div class="note">
+            <strong>辅助面板职责</strong>
+            <ul>
+              <li>元数据面板支持选择、绑定到当前输入域、插入为输入域。</li>
+              <li>片段模板面板支持选择片段，并将片段 XML 插入 WriterControl。</li>
+              <li>属性面板通过 <code>useElementInspector</code> 读取或更新当前选中元素属性。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="states">
+          <div class="state"><strong>idle</strong><span class="small">未加载文档或已清空。</span></div>
+          <div class="state"><strong>dirty</strong><span class="small">当前文档或模板存在未保存修改。</span></div>
+          <div class="state"><strong>saving</strong><span class="small">保存命令已触发，正在从编辑器取 XML 并请求接口。</span></div>
+          <div class="state"><strong>saved</strong><span class="small">保存成功，或模板保存接口失败后已降级写入工作台 mock 模板。</span></div>
+          <div class="state"><strong>failed</strong><span class="small">导入、渲染、校验、保存或编辑器能力缺失导致操作失败。</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>六、保存、导出、打印与模板上传</h2>
+        <table>
+          <thead><tr><th>用户动作</th><th>主调用链</th><th>结果</th></tr></thead>
+          <tbody>
+            <tr><td>保存</td><td><code>saveToBackend</code> → <code>saveDocumentToBackend</code> → <code>adapter.saveXml</code> → <code>validateDocumentXml</code> → <code>POST /api/documents/save</code></td><td>成功时清空校验问题并标记 <code>saved</code>。若真实保存接口失败且当前文档来自模板，则降级调用 <code>saveTemplateContent</code> 写入工作台 mock 模板。</td></tr>
+            <tr><td>下载 XML</td><td><code>downloadCurrentXml</code> → <code>adapter.saveXml</code> → <code>downloadXml</code></td><td>创建 XML Blob 并触发浏览器下载；若绑定模板，同时更新工作台模板内容。</td></tr>
+            <tr><td>另存为模板</td><td><code>saveAsTemplate</code> → 对话框取名 → <code>saveTemplateAsContent</code> 或 <code>createTemplateFile</code></td><td>生成新模板记录，切换当前会话到新模板，并刷新工作台数据。</td></tr>
+            <tr><td>打印/打印预览</td><td><code>printDocument</code> / <code>openPrintPreview</code> → <code>adapter.print</code> / <code>adapter.openPrintPreview</code></td><td>由 WriterControl 打印能力执行；失败消息进入状态提示。</td></tr>
+            <tr><td>上传模板</td><td><code>requestTemplateUpload</code> → <code>beginTemplateUpload</code> → <code>completeTemplateUpload</code></td><td>当前是前端内存 mock 上传队列，用定时器模拟待上传、上传中、已上传状态。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>七、异常与降级路径</h2>
+        <ul>
+          <li>切换文档前若 <code>session.isDirty</code> 为真，会弹出“未保存修改”确认，用户取消则停止切换。</li>
+          <li>本地导入要求文件非空、不超过 10MB、文件名或内容像 XML，并且能被 <code>DOMParser</code> 正常解析。</li>
+          <li>外部 DCWriter 资源加载失败、API 未暴露、未生成 canvas 时，自动回退到结构化 Canvas 预览。</li>
+          <li>保存前会检查 XML 是否可解析，并校验必填输入域；必填项为空时保存失败并显示校验面板。</li>
+          <li>真实后端保存失败但文档来源于模板时，会把 XML 写入工作台 mock 模板，并提示真实接口暂不可用。</li>
+          <li>真实后端保存失败且文档是本地导入时，只会标记失败，不会伪装成模板保存成功。</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>八、关键源码索引</h2>
+        <ul class="sources">
+          <li><code>frontend/src/App.vue</code>：入口展示分支。</li>
+          <li><code>frontend/src/components/editor/EditorShell.vue</code>：主工作台编排与命令处理。</li>
+          <li><code>frontend/src/composables/useDocumentSession.ts</code>：当前文档与保存状态。</li>
+          <li><code>frontend/src/composables/useDocumentImport.ts</code>：本地 XML 导入、校验、脱敏。</li>
+          <li><code>frontend/src/components/editor/WorkbenchEditorArea.vue</code>：页签、状态提示、预览区和校验面板。</li>
+          <li><code>frontend/src/components/editor/CanvasPreview.vue</code>：预览组件与渲染触发。</li>
+          <li><code>frontend/src/composables/useCanvasRenderer.ts</code>：外部渲染与 Canvas 降级。</li>
+          <li><code>frontend/src/utils/writerControlAdapter.ts</code>：WriterControl 能力适配。</li>
+          <li><code>frontend/src/services/templateWorkbenchService.ts</code>：模板工作台内存状态。</li>
+          <li><code>frontend/src/services/templateService.ts</code>：模板 HTTP API。</li>
+          <li><code>frontend/src/services/documentSaveService.ts</code>：保存接口与 XML 下载。</li>
+          <li><code>frontend/src/services/documentValidationService.ts</code>：保存前 XML 和必填项校验。</li>
+          <li><code>frontend/devLocalTemplateApiPlugin.ts</code>：开发态本地模板 API。</li>
+          <li><code>frontend/vite.config.ts</code>：本地模板插件、渲染资源插件和 <code>/api</code> 代理。</li>
+          <li><code>backend/Program.cs</code>：后端模板、保存、导入和渲染资源端点。</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -4,6 +4,7 @@ import type {
   ElementCandidateOption,
   MetadataTreeNode,
 } from '../types/editorElement'
+import { composeWriterValueBinding } from '../utils/writerValueBinding'
 
 let selectedElement = createDefaultElementProperties('input-field')
 
@@ -54,8 +55,26 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       readonly: false,
       required: false,
       visible: true,
+      hidden: false,
       bindingPath: '',
       dataElementId: '',
+      placeholder: '',
+      hintText: '',
+      labelText: '',
+      unitText: '',
+      startBorderText: '【',
+      endBorderText: '】',
+      textAlign: 'Near',
+      fixedWidth: 0,
+      focusShortcut: 'None',
+      activationMode: 'F2',
+      highlight: 'Default',
+      inputFormat: 'Text',
+      outputFormat: '',
+      allowDelete: true,
+      allowKeyboardEdit: true,
+      encrypted: 'None',
+      printVisible: 'Visible',
       supportLevel: 'mock',
     }
   }
@@ -82,6 +101,7 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       rowCount: 3,
       columnCount: 4,
       width: 520,
+      allowDelete: true,
       supportLevel: 'mock',
     }
   }
@@ -94,6 +114,7 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       tableId: 'Table1',
       rowIndex: 1,
       height: 32,
+      allowDelete: true,
       supportLevel: 'mock',
     }
   }
@@ -109,6 +130,8 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       cellPosition: '第 1 行，第 1 列',
       width: 120,
       height: 32,
+      textAlign: 'Near',
+      bindingPath: '',
       supportLevel: 'mock',
     }
   }
@@ -156,24 +179,37 @@ export function bindMetadataToInputField(
 }
 
 export function toInputFieldWriterOptions(element: EditorElementProperties) {
+  const valueBinding = composeWriterValueBinding(element)
+
   return {
     ID: element.code || element.id,
     Name: element.name,
     BackgroundText: element.name,
     InnerValue: element.defaultValue || '',
     Text: element.defaultValue || '',
-    BindingPath: element.bindingPath || element.code || '',
-    ValueBinding: {
-      BindingPath: element.bindingPath || element.code || '',
-    },
+    DataSource: valueBinding.DataSource,
+    BindingPath: valueBinding.BindingPath,
+    BindingPathForText: valueBinding.BindingPathForText,
+    ValueBinding: valueBinding,
     ContentReadonly: Boolean(element.readonly),
     UserEditable: !element.readonly,
     Visible: element.visible !== false,
     EnableValueValidate: true,
+    EditorActiveMode: normalizeActivationMode(element.activationMode),
     Required: Boolean(element.required),
     StartBorderText: '【',
     EndBorderText: '】',
   }
+}
+
+function normalizeActivationMode(value: EditorElementProperties['activationMode']) {
+  if (Array.isArray(value)) {
+    return value.map(String).map(item => item.trim()).filter(Boolean).join(' ')
+  }
+  if (typeof value === 'string') {
+    return value.split(/[,\s;|]+/).map(item => item.trim()).filter(Boolean).join(' ')
+  }
+  return ''
 }
 
 export function toChoiceWriterOptions(element: EditorElementProperties) {

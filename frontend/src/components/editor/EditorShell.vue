@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import EditorStatusBar from './EditorStatusBar.vue'
 import PropertyInspectorPanel from './PropertyInspectorPanel.vue'
 import TemplateTreePanel from './TemplateTreePanel.vue'
@@ -71,6 +71,7 @@ const showHistoryVersions = shallowRef(false)
 const selectedMetadataId = shallowRef<string | undefined>()
 const selectedFragmentId = shallowRef<string | undefined>()
 let disposeContentChanged: (() => void) | null = null
+let disposeSelectionChanged: (() => void) | null = null
 
 const adapter = computed(() => createWriterControlAdapter(writerElement.value))
 const elementInspector = useElementInspector({ writerTarget: writerElement })
@@ -92,6 +93,7 @@ const fragmentTemplateTree = computed(() => workbenchData.value?.fragmentTemplat
 const templateProperties = computed(() => workbenchData.value?.templateProperties || null)
 const elementProperties = computed<EditorElementProperties>(() => ({
   ...elementInspector.selectedElement.value,
+  activationMode: cloneActivationMode(elementInspector.selectedElement.value.activationMode),
   options: elementInspector.selectedElement.value.options
     ? [...elementInspector.selectedElement.value.options]
     : undefined,
@@ -100,6 +102,15 @@ const historyVersions = computed(() => workbenchData.value?.historyVersions || [
 const openTabs = computed(() => workbenchData.value?.openTabs || [])
 const activeTemplateId = computed(() => workbenchData.value?.activeTemplateId)
 const currentTemplateId = computed(() => session.document.value?.templateId || activeTemplateId.value)
+
+function cloneActivationMode(
+  value: string | readonly string[] | undefined,
+): EditorElementProperties['activationMode'] {
+  if (Array.isArray(value)) return Array.from(value)
+  if (typeof value === 'string') return value
+  return undefined
+}
+
 const statusMessage = computed(() => {
   if (importState.isImporting.value) return '正在导入 XML'
   if (importState.error.value) return importState.error.value
@@ -115,6 +126,11 @@ const warningText = computed(() => session.document.value?.warnings.join('；') 
 
 onMounted(() => {
   loadWorkbenchData()
+})
+
+onBeforeUnmount(() => {
+  disposeContentChanged?.()
+  disposeSelectionChanged?.()
 })
 
 async function loadWorkbenchData() {
@@ -458,14 +474,20 @@ function closePrintPreview() {
 
 function updateWriterElement(element: ExternalWriterElement | null) {
   disposeContentChanged?.()
+  disposeSelectionChanged?.()
   disposeContentChanged = null
+  disposeSelectionChanged = null
   writerElement.value = element
   isPrintPreviewing.value = false
   printMessage.value = null
   commandMessage.value = null
   if (element) {
+    const writerAdapter = createWriterControlAdapter(element)
     elementInspector.refreshFromWriter()
-    disposeContentChanged = createWriterControlAdapter(element).onContentChanged(() => {
+    disposeSelectionChanged = writerAdapter.onSelectionChanged(() => {
+      elementInspector.refreshFromWriter()
+    })
+    disposeContentChanged = writerAdapter.onContentChanged(() => {
       session.markDirty()
       if (currentTemplateId.value) {
         markTemplateDirty(currentTemplateId.value)

@@ -184,6 +184,37 @@ describe('writerControlAdapter', () => {
     expect(removeEventListener).toHaveBeenCalledWith('cut', expect.any(Function), true)
   })
 
+  it('binds WriterControl selection change callback and DOM selection fallbacks', () => {
+    const previousSelectionChanged = vi.fn()
+    const addEventListener = vi.fn()
+    const removeEventListener = vi.fn()
+    const target: WriterControlTarget = {
+      SelectionChanged: previousSelectionChanged,
+      addEventListener,
+      removeEventListener,
+    }
+    const onSelectionChanged = vi.fn()
+
+    const dispose = createWriterControlAdapter(target).onSelectionChanged(onSelectionChanged)
+    target.SelectionChanged?.(target, { TriggerType: 'test' })
+    addEventListener.mock.calls
+      .filter(([eventName]) => eventName === 'click')
+      .forEach(([, handler]) => handler(new Event('click')))
+
+    expect(previousSelectionChanged).toHaveBeenCalledWith(target, { TriggerType: 'test' })
+    expect(onSelectionChanged).toHaveBeenCalledTimes(2)
+    expect(addEventListener).toHaveBeenCalledWith('click', expect.any(Function), true)
+    expect(addEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function), true)
+    expect(addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function), true)
+
+    dispose()
+
+    expect(target.SelectionChanged).toBe(previousSelectionChanged)
+    expect(removeEventListener).toHaveBeenCalledWith('click', expect.any(Function), true)
+    expect(removeEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function), true)
+    expect(removeEventListener).toHaveBeenCalledWith('keyup', expect.any(Function), true)
+  })
+
   it('does not overwrite a newer WriterControl content change callback when disposed', () => {
     const previousContentChanged = vi.fn()
     const nextContentChanged = vi.fn()

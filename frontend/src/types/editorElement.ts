@@ -27,17 +27,26 @@ export interface EditorElementProperties {
   hintText?: string
   labelText?: string
   unitText?: string
+  startBorderText?: string
+  endBorderText?: string
   defaultValue?: string
-  readonly?: boolean
+  readonly?: boolean | string
   required?: boolean
   visible?: boolean
   hidden?: boolean
   bindingPath?: string
   textBindingPath?: string
+  valueBinding?: Record<string, unknown> | string
   dataElementId?: string
   dataSourceName?: string
   inputFormat?: string
   outputFormat?: string
+  allowMultiSelect?: boolean
+  dynamicListItems?: boolean
+  listValueSeparatorChar?: string
+  listValueFormatString?: string
+  innerListSourceName?: string
+  listItems?: string
   validationRule?: string
   allowedCharacters?: string
   calculateExpression?: string
@@ -46,14 +55,14 @@ export interface EditorElementProperties {
   customProperties?: string
   allowDelete?: boolean
   allowKeyboardEdit?: boolean
-  encrypted?: boolean
-  printVisible?: boolean
+  encrypted?: boolean | string
+  printVisible?: boolean | string
   border?: string
   textAlign?: string
   fixedWidth?: number
   focusShortcut?: string
-  activationMode?: string
-  highlight?: boolean
+  activationMode?: string | string[]
+  highlight?: boolean | string
   maxContentLength?: number
   textColor?: string
   backgroundTextColor?: string

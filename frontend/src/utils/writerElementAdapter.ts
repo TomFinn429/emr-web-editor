@@ -3,6 +3,11 @@ import type {
   EditorElementType,
   ElementPropertyUpdateResult,
 } from '../types/editorElement'
+import {
+  composeWriterValueBinding,
+  parseWriterValueBinding,
+  readWriterValueBindingString,
+} from './writerValueBinding'
 
 export interface WriterElementTarget {
   addEventListener?: HTMLElement['addEventListener']
@@ -250,6 +255,7 @@ function normalizeWriterElement(rawElement: Record<string, unknown>): EditorElem
   const type = inferElementType(rawElement)
   const id = readString(rawElement, ['ID', 'Id', 'id', 'Name', 'name']) || `${type}-writer`
   const name = readString(rawElement, ['Name', 'name', 'BackgroundText', 'Text']) || labelForType(type)
+  const valueBinding = parseWriterValueBinding(rawElement['ValueBinding'])
 
   return {
     id,
@@ -260,15 +266,57 @@ function normalizeWriterElement(rawElement: Record<string, unknown>): EditorElem
     readonly: readBoolean(rawElement, ['ContentReadonly', 'Readonly', 'readonly']),
     required: readBoolean(rawElement, ['Required', 'NotNull', 'required']),
     visible: readBoolean(rawElement, ['Visible', 'visible'], true),
-    bindingPath: readString(rawElement, ['BindingPath', 'bindingPath', 'DataElementCode'])
-      || readNestedString(rawElement, ['ValueBinding', 'BindingPath'])
-      || readNestedString(rawElement, ['ValueBinding', 'BindingPathForText']),
+    dataSourceName: readWriterValueBindingString(valueBinding, ['DataSource'])
+      || readString(rawElement, ['DataSource']),
+    bindingPath: readWriterValueBindingString(valueBinding, ['BindingPath'])
+      || readString(rawElement, ['BindingPath', 'bindingPath', 'DataElementCode'])
+      || readWriterValueBindingString(valueBinding, ['BindingPathForText']),
+    textBindingPath: readWriterValueBindingString(valueBinding, ['BindingPathForText'])
+      || readString(rawElement, ['BindingPathForText']),
+    valueBinding: valueBinding || readObjectOrString(rawElement, ['ValueBinding']),
+    placeholder: readString(rawElement, ['BackgroundText', 'Placeholder']),
+    hintText: readString(rawElement, ['ToolTip']),
+    labelText: readString(rawElement, ['LabelText']),
+    unitText: readString(rawElement, ['UnitText']),
+    startBorderText: readString(rawElement, ['StartBorderText']),
+    endBorderText: readString(rawElement, ['EndBorderText']),
+    textAlign: readString(rawElement, ['Alignment']),
+    fixedWidth: readNumber(rawElement, ['SpecifyWidth']),
+    focusShortcut: readString(rawElement, ['MoveFocusHotKey']),
+    activationMode: readMultiValue(rawElement, ['EditorActiveMode']),
+    highlight: readString(rawElement, ['EnableHighlight']),
+    hidden: readHidden(rawElement),
+    inputFormat: readString(rawElement, ['InnerEditStyle']),
+    outputFormat: readString(rawElement, ['DisplayFormat']),
+    allowMultiSelect: readBoolean(rawElement, ['InnerMultiSelect']),
+    dynamicListItems: readBoolean(rawElement, ['DynamicListItems']),
+    listValueSeparatorChar: readString(rawElement, ['ListValueSeparatorChar']),
+    listValueFormatString: readString(rawElement, ['ListValueFormatString']),
+    innerListSourceName: readString(rawElement, ['InnerListSourceName']),
+    listItems: readJsonishString(rawElement, ['ListItems']),
+    allowDelete: readBoolean(rawElement, ['Deleteable'], true),
+    allowKeyboardEdit: readBoolean(rawElement, ['UserEditable'], true),
+    maxContentLength: readNumber(rawElement, ['MaxInputLength']),
+    encrypted: readString(rawElement, ['ViewEncryptType']),
+    validationRule: readJsonishString(rawElement, ['ValidateStyle']),
+    allowedCharacters: readString(rawElement, ['LimitedInputChars']),
+    calculateExpression: readString(rawElement, ['ValueExpression']),
+    visibleExpression: readString(rawElement, ['VisibleExpression']),
+    printVisibleExpression: readString(rawElement, ['PrintVisibilityExpression']),
+    textColor: readString(rawElement, ['TextColor']),
+    backgroundTextColor: readString(rawElement, ['BackgroundTextColor']),
+    customProperties: readJsonishString(rawElement, ['Attributes']),
+    printVisible: readString(rawElement, ['PrintVisibility']),
     displayText: readString(rawElement, ['DisplayText', 'Text']),
     bindingValue: readString(rawElement, ['Value', 'BindingValue']),
     defaultChecked: readBoolean(rawElement, ['Checked', 'DefaultChecked']),
     tableId: readString(rawElement, ['TableID', 'TableId', 'OwnerTable']),
     rowIndex: readNumber(rawElement, ['RowIndex']),
     columnIndex: readNumber(rawElement, ['ColumnIndex']),
+    cellPosition: readString(rawElement, ['CellPosition']),
+    rowCount: readNumber(rawElement, ['RowCount']),
+    columnCount: readNumber(rawElement, ['ColumnCount']),
+    border: readString(rawElement, ['Border']),
     width: readNumber(rawElement, ['Width', 'SpecifyWidth']),
     height: readNumber(rawElement, ['Height']),
     codeContent: readString(rawElement, ['CodeContent', 'Text', 'Value']),
@@ -365,21 +413,53 @@ function callCurrentElement(target: WriterElementTarget) {
 
 function toWriterElementOptions(properties: EditorElementProperties): Record<string, unknown> {
   if (properties.type === 'input-field') {
+    const valueBinding = composeWriterValueBinding(properties)
+
     return {
       ID: properties.code || properties.id,
       Name: properties.name,
-      BackgroundText: properties.name,
+      BackgroundText: properties.placeholder || properties.name,
+      ToolTip: properties.hintText || '',
+      LabelText: properties.labelText || '',
+      UnitText: properties.unitText || '',
+      StartBorderText: properties.startBorderText ?? '【',
+      EndBorderText: properties.endBorderText ?? '】',
+      Alignment: properties.textAlign || 'Near',
+      SpecifyWidth: properties.fixedWidth,
+      MoveFocusHotKey: properties.focusShortcut || 'None',
+      EditorActiveMode: normalizeMultiValue(properties.activationMode),
+      EnableHighlight: properties.highlight || 'Default',
+      Visible: properties.hidden ? 'None' : properties.visible !== false,
       InnerValue: properties.defaultValue || '',
       Text: properties.defaultValue || '',
-      ContentReadonly: Boolean(properties.readonly),
-      UserEditable: !properties.readonly,
+      DataSource: valueBinding.DataSource,
+      ValueBinding: valueBinding,
+      BindingPath: valueBinding.BindingPath,
+      BindingPathForText: valueBinding.BindingPathForText,
+      InnerEditStyle: properties.inputFormat || 'Text',
+      InnerMultiSelect: Boolean(properties.allowMultiSelect),
+      DynamicListItems: Boolean(properties.dynamicListItems),
+      ListValueSeparatorChar: properties.listValueSeparatorChar || '',
+      ListValueFormatString: properties.listValueFormatString || '',
+      InnerListSourceName: properties.innerListSourceName || '',
+      ListItems: parseJsonish(properties.listItems),
+      DisplayFormat: properties.outputFormat || '',
+      ContentReadonly: properties.readonly ?? false,
+      Deleteable: properties.allowDelete !== false,
+      UserEditable: properties.allowKeyboardEdit ?? !properties.readonly,
+      MaxInputLength: properties.maxContentLength,
+      ViewEncryptType: properties.encrypted || 'None',
+      ValidateStyle: parseJsonish(properties.validationRule),
+      LimitedInputChars: properties.allowedCharacters || '',
+      ValueExpression: properties.calculateExpression || '',
+      VisibleExpression: properties.visibleExpression || '',
+      PrintVisibilityExpression: properties.printVisibleExpression || '',
+      TextColor: properties.textColor || '',
+      BackgroundTextColor: properties.backgroundTextColor || '',
+      PrintVisibility: properties.printVisible || 'Visible',
+      Attributes: parseJsonish(properties.customProperties),
       Required: Boolean(properties.required),
-      Visible: properties.visible !== false,
       EnableValueValidate: true,
-      ValueBinding: {
-        BindingPath: properties.bindingPath || properties.code || '',
-      },
-      BindingPath: properties.bindingPath || properties.code || '',
     }
   }
 
@@ -389,6 +469,49 @@ function toWriterElementOptions(properties: EditorElementProperties): Record<str
       Text: properties.displayText || properties.name,
       Value: properties.bindingValue || '',
       Checked: Boolean(properties.defaultChecked),
+    }
+  }
+
+  if (properties.type === 'table-cell') {
+    return {
+      ID: properties.id,
+      Name: properties.name,
+      TableID: properties.tableId,
+      RowIndex: properties.rowIndex,
+      ColumnIndex: properties.columnIndex,
+      CellPosition: properties.cellPosition,
+      Width: properties.width,
+      Height: properties.height,
+      Alignment: properties.textAlign,
+      BindingPath: properties.bindingPath,
+      BackgroundText: properties.placeholder,
+      VisibleExpression: properties.visibleExpression || '',
+      Deleteable: properties.allowDelete !== false,
+    }
+  }
+
+  if (properties.type === 'table-row') {
+    return {
+      ID: properties.id,
+      Name: properties.name,
+      TableID: properties.tableId,
+      RowIndex: properties.rowIndex,
+      Height: properties.height,
+      VisibleExpression: properties.visibleExpression || '',
+      Deleteable: properties.allowDelete !== false,
+    }
+  }
+
+  if (properties.type === 'table') {
+    return {
+      ID: properties.id,
+      Name: properties.name,
+      TableID: properties.tableId || properties.id,
+      RowCount: properties.rowCount,
+      ColumnCount: properties.columnCount,
+      Border: properties.border,
+      Width: properties.width,
+      Deleteable: properties.allowDelete !== false,
     }
   }
 
@@ -443,13 +566,44 @@ function readString(rawElement: Record<string, unknown>, names: string[]) {
   return ''
 }
 
-function readNestedString(rawElement: Record<string, unknown>, path: [string, string]) {
-  const parent = rawElement[path[0]]
-  if (!parent || typeof parent !== 'object') {
-    return ''
+function readMultiValue(rawElement: Record<string, unknown>, names: string[]) {
+  for (const name of names) {
+    const value = rawElement[name]
+    const normalized = normalizeMultiValueToArray(value)
+    if (normalized.length > 0) {
+      return normalized
+    }
   }
+  return undefined
+}
 
-  return readString(parent as Record<string, unknown>, [path[1]])
+function readObjectOrString(rawElement: Record<string, unknown>, names: string[]) {
+  for (const name of names) {
+    const value = rawElement[name]
+    if (value && typeof value === 'object') return value as Record<string, unknown>
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return undefined
+}
+
+function readJsonishString(rawElement: Record<string, unknown>, names: string[]) {
+  for (const name of names) {
+    const value = rawElement[name]
+    if (typeof value === 'string') return value
+    if (value && typeof value === 'object') return JSON.stringify(value)
+  }
+  return ''
+}
+
+function readHidden(rawElement: Record<string, unknown>) {
+  const visible = rawElement['Visible']
+  if (typeof visible === 'string') {
+    return visible === 'Hidden' || visible === 'None' || visible === 'false' || visible === 'False'
+  }
+  if (typeof visible === 'boolean') {
+    return !visible
+  }
+  return false
 }
 
 function readBoolean(rawElement: Record<string, unknown>, names: string[], fallback = false) {
@@ -470,6 +624,33 @@ function readNumber(rawElement: Record<string, unknown>, names: string[]) {
     }
   }
   return undefined
+}
+
+function parseJsonish(value: unknown) {
+  if (typeof value !== 'string') return value
+  if (!value.trim()) return ''
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+function normalizeMultiValue(value: EditorElementProperties['activationMode']) {
+  return normalizeMultiValueToArray(value).join(' ')
+}
+
+function normalizeMultiValueToArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map(String).map(item => item.trim()).filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    return value.split(/[,\s;|]+/).map(item => item.trim()).filter(Boolean)
+  }
+  if (typeof value === 'number') {
+    return [String(value)]
+  }
+  return []
 }
 
 function callGetter(getter: WriterElementTarget['GetCurrentElement'], target: WriterElementTarget) {

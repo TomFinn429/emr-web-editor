@@ -51,6 +51,7 @@ describe('writerElementAdapter', () => {
       InnerValue: '42',
       ContentReadonly: 'False',
       Visible: 'True',
+      EditorActiveMode: 'Program F2 MouseDblClick',
       ValueBinding: {
         BindingPath: 'Patient.Age',
       },
@@ -67,10 +68,117 @@ describe('writerElementAdapter', () => {
         name: '年龄',
         defaultValue: '42',
         bindingPath: 'Patient.Age',
+        activationMode: ['Program', 'F2', 'MouseDblClick'],
         supportLevel: 'writer',
       },
     })
     expect(getElementProperties).toHaveBeenCalledWith(inputRef, false)
+  })
+
+  it('splits ValueBinding JSON into assignment fields for the property panel', () => {
+    expect(readSelectedWriterElement({
+      GetCurrentElement: vi.fn(() => ({
+        TypeName: 'XTextInputFieldElement',
+        ID: 'Patient.Age',
+        Name: '年龄',
+        DataSource: 'stale-top-level',
+        BindingPath: 'Stale.BindingPath',
+        BindingPathForText: 'Stale.TextPath',
+        ValueBinding: JSON.stringify({
+          DataSource: 'patient',
+          BindingPath: 'Patient.Age.Value',
+          BindingPathForText: 'Patient.Age.Text',
+        }),
+      })),
+    })).toMatchObject({
+      ok: true,
+      element: {
+        type: 'input-field',
+        dataSourceName: 'patient',
+        bindingPath: 'Patient.Age.Value',
+        textBindingPath: 'Patient.Age.Text',
+      },
+    })
+  })
+
+  it('reads current table cell, row, and table through confirmed WriterControl APIs', () => {
+    const cellRef = { kind: 'cell-ref' }
+    const rowRef = { kind: 'row-ref' }
+    const tableRef = { kind: 'table-ref' }
+
+    expect(readSelectedWriterElement({
+      CurrentTableCell: vi.fn(() => cellRef),
+      GetElementProperties: vi.fn(() => ({
+        TypeName: 'XTableCellElement',
+        ID: 'cell-1-1',
+        Name: '评分单元格',
+        TableID: 'ScoreTable',
+        RowIndex: 1,
+        ColumnIndex: 1,
+        CellPosition: '第 1 行，第 1 列',
+        Width: 80,
+        Height: 24,
+        Alignment: 'Center',
+        BindingPath: 'Score.Value',
+      })),
+    })).toMatchObject({
+      ok: true,
+      element: {
+        type: 'table-cell',
+        id: 'cell-1-1',
+        tableId: 'ScoreTable',
+        rowIndex: 1,
+        columnIndex: 1,
+        cellPosition: '第 1 行，第 1 列',
+        textAlign: 'Center',
+        bindingPath: 'Score.Value',
+      },
+    })
+
+    expect(readSelectedWriterElement({
+      CurrentTableRow: vi.fn(() => rowRef),
+      GetElementProperties: vi.fn(() => ({
+        TypeName: 'XTableRowElement',
+        ID: 'row-1',
+        Name: '评分行',
+        TableID: 'ScoreTable',
+        RowIndex: 1,
+        Height: 28,
+        VisibleExpression: '[Score]>0',
+      })),
+    })).toMatchObject({
+      ok: true,
+      element: {
+        type: 'table-row',
+        tableId: 'ScoreTable',
+        rowIndex: 1,
+        height: 28,
+        visibleExpression: '[Score]>0',
+      },
+    })
+
+    expect(readSelectedWriterElement({
+      CurrentTable: vi.fn(() => tableRef),
+      GetElementProperties: vi.fn(() => ({
+        TypeName: 'XTableElement',
+        ID: 'ScoreTable',
+        Name: '评分表',
+        RowCount: 5,
+        ColumnCount: 4,
+        Width: 520,
+        Deleteable: false,
+      })),
+    })).toMatchObject({
+      ok: true,
+      element: {
+        type: 'table',
+        id: 'ScoreTable',
+        rowCount: 5,
+        columnCount: 4,
+        width: 520,
+        allowDelete: false,
+      },
+    })
   })
 
   it('updates selected writer element properties when a supported setter exists', () => {
@@ -98,7 +206,15 @@ describe('writerElementAdapter', () => {
       readonly: true,
       required: true,
       visible: false,
+      dataSourceName: 'patient',
       bindingPath: 'Patient.Name',
+      textBindingPath: 'Patient.Name.Text',
+      valueBinding: {
+        DataSource: 'stale',
+        BindingPath: 'Stale.Path',
+        BindingPathForText: 'Stale.TextPath',
+      },
+      activationMode: ['Program', 'F2', 'MouseDblClick'],
     }
 
     expect(updateSelectedWriterElementProperties({
@@ -117,9 +233,96 @@ describe('writerElementAdapter', () => {
       ContentReadonly: true,
       Required: true,
       Visible: false,
+      EditorActiveMode: 'Program F2 MouseDblClick',
+      DataSource: 'patient',
       ValueBinding: {
+        DataSource: 'patient',
         BindingPath: 'Patient.Name',
+        BindingPathForText: 'Patient.Name.Text',
       },
+      BindingPath: 'Patient.Name',
+      BindingPathForText: 'Patient.Name.Text',
+    }), true)
+  })
+
+  it('writes table cell, row, and table properties through their current WriterControl elements', () => {
+    const cellRef = { kind: 'cell-ref' }
+    const rowRef = { kind: 'row-ref' }
+    const tableRef = { kind: 'table-ref' }
+    const setElementProperties = vi.fn(() => true)
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentTableCell: vi.fn(() => cellRef),
+      SetElementProperties: setElementProperties,
+    }, {
+      ...createDefaultElementProperties('table-cell'),
+      id: 'cell-1-1',
+      name: '评分单元格',
+      tableId: 'ScoreTable',
+      rowIndex: 1,
+      columnIndex: 1,
+      width: 80,
+      height: 24,
+      textAlign: 'Center',
+      bindingPath: 'Score.Value',
+      placeholder: '评分',
+    })).toMatchObject({ ok: true })
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentTableRow: vi.fn(() => rowRef),
+      SetElementProperties: setElementProperties,
+    }, {
+      ...createDefaultElementProperties('table-row'),
+      id: 'row-1',
+      name: '评分行',
+      tableId: 'ScoreTable',
+      rowIndex: 1,
+      height: 28,
+      visibleExpression: '[Score]>0',
+      allowDelete: false,
+    })).toMatchObject({ ok: true })
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentTable: vi.fn(() => tableRef),
+      SetElementProperties: setElementProperties,
+    }, {
+      ...createDefaultElementProperties('table'),
+      id: 'ScoreTable',
+      name: '评分表',
+      rowCount: 5,
+      columnCount: 4,
+      width: 520,
+      allowDelete: false,
+    })).toMatchObject({ ok: true })
+
+    expect(setElementProperties).toHaveBeenNthCalledWith(1, cellRef, expect.objectContaining({
+      ID: 'cell-1-1',
+      Name: '评分单元格',
+      TableID: 'ScoreTable',
+      RowIndex: 1,
+      ColumnIndex: 1,
+      Width: 80,
+      Height: 24,
+      Alignment: 'Center',
+      BindingPath: 'Score.Value',
+      BackgroundText: '评分',
+    }), true)
+    expect(setElementProperties).toHaveBeenNthCalledWith(2, rowRef, expect.objectContaining({
+      ID: 'row-1',
+      Name: '评分行',
+      TableID: 'ScoreTable',
+      RowIndex: 1,
+      Height: 28,
+      VisibleExpression: '[Score]>0',
+      Deleteable: false,
+    }), true)
+    expect(setElementProperties).toHaveBeenNthCalledWith(3, tableRef, expect.objectContaining({
+      ID: 'ScoreTable',
+      Name: '评分表',
+      RowCount: 5,
+      ColumnCount: 4,
+      Width: 520,
+      Deleteable: false,
     }), true)
   })
 

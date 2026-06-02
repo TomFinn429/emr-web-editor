@@ -71,10 +71,47 @@ describe('elementPropertyService', () => {
       Name: '患者姓名',
       BackgroundText: '患者姓名',
       BindingPath: 'Patient.Name',
+      EditorActiveMode: 'F2',
       ValueBinding: {
         BindingPath: 'Patient.Name',
       },
       EnableValueValidate: true,
+    })
+  })
+
+  it('composes assignment fields into Writer ValueBinding options', () => {
+    const inputField = {
+      ...createDefaultElementProperties('input-field'),
+      dataSourceName: 'patient',
+      bindingPath: 'Patient.Name.Value',
+      textBindingPath: 'Patient.Name.Text',
+      valueBinding: {
+        DataSource: 'stale',
+        BindingPath: 'Stale.Value',
+        BindingPathForText: 'Stale.Text',
+      },
+    }
+
+    expect(toInputFieldWriterOptions(inputField)).toMatchObject({
+      DataSource: 'patient',
+      BindingPath: 'Patient.Name.Value',
+      BindingPathForText: 'Patient.Name.Text',
+      ValueBinding: {
+        DataSource: 'patient',
+        BindingPath: 'Patient.Name.Value',
+        BindingPathForText: 'Patient.Name.Text',
+      },
+    })
+  })
+
+  it('writes multi-value activation mode as Writer-compatible space separated values', () => {
+    const inputField = {
+      ...createDefaultElementProperties('input-field'),
+      activationMode: ['Program', 'F2', 'MouseDblClick'],
+    }
+
+    expect(toInputFieldWriterOptions(inputField)).toMatchObject({
+      EditorActiveMode: 'Program F2 MouseDblClick',
     })
   })
 
