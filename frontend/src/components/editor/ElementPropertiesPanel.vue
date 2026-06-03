@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { ElOption, ElSelect } from 'element-plus'
 import 'element-plus/es/components/select/style/css'
 import 'element-plus/es/components/option/style/css'
@@ -13,8 +13,11 @@ import {
   createElementPropertyPatch,
   getElementPropertyMultiSelectValues,
   getVisibleElementPropertyGroups,
+  summarizeStaticListItems,
   type ElementPropertyField,
 } from './elementPropertySchema'
+import DisplayFormatPicker from './DisplayFormatPicker.vue'
+import ListItemsEditorDialog from './ListItemsEditorDialog.vue'
 
 interface Props {
   element: EditorElementProperties
@@ -30,6 +33,10 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const groups = computed(() => getVisibleElementPropertyGroups(props.element.type, props.element))
+const editingListItemsField = shallowRef<ElementPropertyField | null>(null)
+const editingListItemsValue = computed(() => editingListItemsField.value
+  ? fieldTextValue(editingListItemsField.value)
+  : '')
 
 const referenceTypeOptions: Array<{ type: EditorElementType; label: string }> = [
   { type: 'input-field', label: '输入域' },
@@ -64,11 +71,11 @@ const typeOptions = computed(() => {
   ]
 })
 
-function fieldTextValue(field: ElementPropertyField) {
+function fieldTextValue(field: ElementPropertyField): string {
   const value = props.element[field.key]
   if (Array.isArray(value)) return value.join(',')
   if (typeof value === 'object' && value) return JSON.stringify(value)
-  return typeof value === 'number' || typeof value === 'string' ? value : ''
+  return typeof value === 'number' || typeof value === 'string' ? String(value) : ''
 }
 
 function fieldCheckedValue(field: ElementPropertyField) {
@@ -96,6 +103,23 @@ function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
       ? [value]
       : []
   emit('update', createElementPropertyPatch(field, selectedValues))
+}
+
+function updateFieldValue(field: ElementPropertyField, value: string) {
+  emit('update', createElementPropertyPatch(field, value))
+}
+
+function openListItemsEditor(field: ElementPropertyField) {
+  editingListItemsField.value = field
+}
+
+function closeListItemsEditor() {
+  editingListItemsField.value = null
+}
+
+function saveListItems(value: string) {
+  if (!editingListItemsField.value) return
+  updateFieldValue(editingListItemsField.value, value)
 }
 </script>
 
@@ -187,6 +211,24 @@ function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
                 rows="2"
                 @input="updateField(field, $event)"
               />
+              <span v-else-if="field.kind === 'list-items'" class="element-properties__json">
+                <input
+                  type="text"
+                  readonly
+                  :value="summarizeStaticListItems(fieldTextValue(field))"
+                  :placeholder="field.placeholder || field.label"
+                  @dblclick="openListItemsEditor(field)"
+                />
+                <button type="button" :title="`编辑${field.label}`" @click="openListItemsEditor(field)">
+                  <Edit3 :size="13" aria-hidden="true" />
+                </button>
+              </span>
+              <DisplayFormatPicker
+                v-else-if="field.kind === 'display-format'"
+                :value="fieldTextValue(field)"
+                :options="field.options || []"
+                @update="updateFieldValue(field, $event)"
+              />
               <span v-else-if="field.kind === 'json'" class="element-properties__json">
                 <input
                   type="text"
@@ -210,6 +252,12 @@ function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
         </div>
       </section>
     </form>
+    <ListItemsEditorDialog
+      :open="Boolean(editingListItemsField)"
+      :value="editingListItemsValue"
+      @close="closeListItemsEditor"
+      @save="saveListItems"
+    />
   </section>
 </template>
 
@@ -425,6 +473,10 @@ function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
 .element-properties__json input {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+}
+
+.element-properties__json input[readonly] {
+  cursor: pointer;
 }
 
 .element-properties__json button {

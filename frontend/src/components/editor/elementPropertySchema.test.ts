@@ -9,6 +9,7 @@ import {
   getVisibleElementPropertyGroups,
   isElementPropertyMultiSelectOptionSelected,
 } from './elementPropertySchema'
+import * as elementPropertySchema from './elementPropertySchema'
 
 describe('elementPropertySchema', () => {
   it('exposes target-page input-field property keys', () => {
@@ -94,6 +95,33 @@ describe('elementPropertySchema', () => {
     })
     expect(groups.flatMap(group => group.fields).find(field => field.writerName === 'EditorActiveMode')).toMatchObject({
       kind: 'multi-select',
+    })
+    expect(groups.flatMap(group => group.fields).find(field => field.writerName === 'ListItems')).toMatchObject({
+      key: 'listItems',
+      kind: 'list-items',
+    })
+    expect(groups.flatMap(group => group.fields).find(field => field.writerName === 'DisplayFormat')).toMatchObject({
+      key: 'outputFormat',
+      kind: 'display-format',
+      options: expect.arrayContaining([
+        { label: 'None', value: 'None' },
+        {
+          label: 'Numeric',
+          value: 'Numeric',
+          children: expect.arrayContaining([
+            { label: '0.00', value: '0.00' },
+            { label: '#.00', value: '#.00' },
+          ]),
+        },
+        {
+          label: 'DateTime',
+          value: 'DateTime',
+          children: expect.arrayContaining([
+            { label: 'yyyy-MM-dd HH:mm:ss', value: 'yyyy-MM-dd HH:mm:ss' },
+            { label: 'yyyy-MM-dd', value: 'yyyy-MM-dd' },
+          ]),
+        },
+      ]),
     })
   })
 
@@ -267,5 +295,46 @@ describe('elementPropertySchema', () => {
       component: 'element-select',
       collapseTags: true,
     })
+  })
+
+  it('summarizes and validates static list item JSON like the online editor', () => {
+    type StaticListItemLike = {
+      Text: string
+      TextInList?: string | null
+      Value: string
+      Group?: string | null
+      Tag?: string | null
+      ID?: string | number | null
+    }
+    const schemaModule = elementPropertySchema as unknown as {
+      parseStaticListItems?: (value: string) => StaticListItemLike[]
+      summarizeStaticListItems?: (value: string) => string
+      stringifyStaticListItems?: (items: StaticListItemLike[]) => string
+      validateStaticListItems?: (items: StaticListItemLike[]) => { ok: boolean; message?: string }
+    }
+
+    expect(typeof schemaModule.parseStaticListItems).toBe('function')
+    expect(typeof schemaModule.summarizeStaticListItems).toBe('function')
+    expect(typeof schemaModule.stringifyStaticListItems).toBe('function')
+    expect(typeof schemaModule.validateStaticListItems).toBe('function')
+    if (!schemaModule.parseStaticListItems || !schemaModule.summarizeStaticListItems || !schemaModule.stringifyStaticListItems || !schemaModule.validateStaticListItems) {
+      return
+    }
+
+    const source = '[{"Text":"男","TextInList":"","Value":"1","Group":null,"Tag":null,"ID":null},{"Text":"女","TextInList":null,"Value":"2","Group":"基本","Tag":"demo","ID":12}]'
+    const items = schemaModule.parseStaticListItems(source)
+
+    expect(items).toEqual([
+      { Text: '男', TextInList: '', Value: '1', Group: null, Tag: null, ID: null },
+      { Text: '女', TextInList: null, Value: '2', Group: '基本', Tag: 'demo', ID: 12 },
+    ])
+    expect(schemaModule.summarizeStaticListItems(source)).toBe('2项')
+    expect(schemaModule.summarizeStaticListItems('not-json')).toBe('双击新增..')
+    expect(schemaModule.validateStaticListItems(items)).toEqual({ ok: true })
+    expect(schemaModule.validateStaticListItems([{ Text: '', TextInList: null, Value: '1', Group: null, Tag: null, ID: null }])).toEqual({
+      ok: false,
+      message: '文本不可为空，请检查配置',
+    })
+    expect(schemaModule.stringifyStaticListItems(items)).toBe('[{"Text":"男","TextInList":"","Value":"1","Group":null,"Tag":null,"ID":null},{"Text":"女","TextInList":null,"Value":"2","Group":"基本","Tag":"demo","ID":12}]')
   })
 })

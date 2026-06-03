@@ -7,6 +7,8 @@ export type ElementPropertyFieldKind =
   | 'switch'
   | 'select'
   | 'multi-select'
+  | 'list-items'
+  | 'display-format'
   | 'textarea'
   | 'color'
   | 'json'
@@ -29,12 +31,18 @@ export interface ElementPropertyVisibilityRule {
   equals: string | number | boolean | Array<string | number | boolean>
 }
 
+export interface ElementPropertyOption {
+  label: string
+  value: string
+  children?: ElementPropertyOption[]
+}
+
 export interface ElementPropertyField {
   key: keyof EditorElementProperties
   writerName: string
   label: string
   kind: ElementPropertyFieldKind
-  options?: Array<{ label: string; value: string }>
+  options?: ElementPropertyOption[]
   placeholder?: string
   span?: number
   component?: 'element-select'
@@ -279,6 +287,52 @@ const inputFormatOptions = [
   { label: '数值类型', value: 'Numeric' },
 ]
 
+export const displayFormatOptions: ElementPropertyOption[] = [
+  { label: 'None', value: 'None' },
+  {
+    label: 'Numeric',
+    value: 'Numeric',
+    children: [
+      { label: '0.00', value: '0.00' },
+      { label: '#.00', value: '#.00' },
+      { label: 'c', value: 'c' },
+      { label: 'e', value: 'e' },
+      { label: 'f', value: 'f' },
+      { label: 'g', value: 'g' },
+      { label: 'r', value: 'r' },
+      { label: 'FormatedSize', value: 'FormatedSize' },
+    ],
+  },
+  {
+    label: 'Currency',
+    value: 'Currency',
+    children: [
+      { label: '00.00', value: '00.00' },
+      { label: '大写中文', value: '大写中文' },
+      { label: '小写中文', value: '小写中文' },
+      { label: '#.00', value: '#.00' },
+      { label: 'c', value: 'c' },
+    ],
+  },
+  {
+    label: 'DateTime',
+    value: 'DateTime',
+    children: [
+      { label: 'yyyy-MM-dd HH:mm:ss', value: 'yyyy-MM-dd HH:mm:ss' },
+      { label: 'yyyy-MM-dd', value: 'yyyy-MM-dd' },
+      { label: 'yyyy-MM-dd hh:mm:ss', value: 'yyyy-MM-dd hh:mm:ss' },
+      { label: 'HH:mm:ss', value: 'HH:mm:ss' },
+      { label: 'yyyy年MM月dd日', value: 'yyyy年MM月dd日' },
+      { label: 'yyyy年MM月dd日 HH时', value: 'yyyy年MM月dd日 HH时' },
+      { label: 'mm分ss秒', value: 'mm分ss秒' },
+      { label: 'd', value: 'd' },
+      { label: 'D', value: 'D' },
+      { label: 'f', value: 'f' },
+      { label: 'F', value: 'F' },
+    ],
+  },
+]
+
 const readonlyOptions = [
   { label: '只读', value: 'true' },
   { label: '不只读', value: 'false' },
@@ -349,8 +403,8 @@ const inputFieldGroups: ElementPropertyGroup[] = [
       { key: 'listValueSeparatorChar', writerName: 'ListValueSeparatorChar', label: '列表分割符', kind: 'text', visibleWhen: dropdownListVisibleWhen },
       { key: 'listValueFormatString', writerName: 'ListValueFormatString', label: '列表格式化', kind: 'text', visibleWhen: dropdownListVisibleWhen },
       { key: 'innerListSourceName', writerName: 'InnerListSourceName', label: '字典来源', kind: 'text', visibleWhen: dropdownListVisibleWhen },
-      { key: 'listItems', writerName: 'ListItems', label: '静态项目内容', kind: 'json', placeholder: '双击编辑..', visibleWhen: dropdownListVisibleWhen },
-      { key: 'outputFormat', writerName: 'DisplayFormat', label: '输出格式', kind: 'text' },
+      { key: 'listItems', writerName: 'ListItems', label: '静态项目内容', kind: 'list-items', placeholder: '双击编辑..', visibleWhen: dropdownListVisibleWhen },
+      { key: 'outputFormat', writerName: 'DisplayFormat', label: '输出格式', kind: 'display-format', options: displayFormatOptions },
     ],
   },
   {
@@ -608,10 +662,81 @@ export function isElementPropertyMultiSelectOptionSelected(value: unknown, optio
   return getElementPropertyMultiSelectValues(value).some(item => item === optionValue)
 }
 
+export interface StaticListItem {
+  Text: string
+  TextInList: string | null
+  Value: string
+  Group: string | null
+  Tag: string | null
+  ID: string | number | null
+}
+
+export function parseStaticListItems(value: string): StaticListItem[] {
+  if (!value.trim()) return []
+
+  try {
+    const rawItems = JSON.parse(value)
+    if (!Array.isArray(rawItems)) return []
+
+    return rawItems.map(item => normalizeStaticListItem(item))
+  }
+  catch {
+    return []
+  }
+}
+
+export function summarizeStaticListItems(value: string) {
+  const items = parseStaticListItems(value)
+  return items.length > 0 ? `${items.length}项` : '双击新增..'
+}
+
+export function stringifyStaticListItems(items: StaticListItem[]) {
+  return JSON.stringify(items.map(item => normalizeStaticListItem(item)))
+}
+
+export function validateStaticListItems(items: StaticListItem[]) {
+  const emptyText = items.some(item => item.Text.trim() === '')
+  if (emptyText) {
+    return {
+      ok: false,
+      message: '文本不可为空，请检查配置',
+    }
+  }
+
+  return { ok: true }
+}
+
 function valuesMatch(actual: unknown, expected: string | number | boolean) {
   if (Array.isArray(actual)) {
     return actual.some(item => String(item) === String(expected))
   }
 
   return String(actual ?? '') === String(expected)
+}
+
+function stringValue(value: unknown) {
+  if (value === null || value === undefined) return ''
+  return String(value)
+}
+
+function nullableStringValue(value: unknown) {
+  if (value === null || value === undefined) return null
+  return String(value)
+}
+
+function staticListIdValue(value: unknown) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'number' || typeof value === 'string') return value
+  return String(value)
+}
+
+function normalizeStaticListItem(item: Partial<StaticListItem> | null | undefined): StaticListItem {
+  return {
+    Text: stringValue(item?.Text),
+    TextInList: nullableStringValue(item?.TextInList),
+    Value: stringValue(item?.Value),
+    Group: nullableStringValue(item?.Group),
+    Tag: nullableStringValue(item?.Tag),
+    ID: staticListIdValue(item?.ID),
+  }
 }
