@@ -52,7 +52,7 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       name: '输入域',
       code: 'Field.Code',
       defaultValue: '',
-      readonly: false,
+      readonly: 'Inherit',
       required: false,
       visible: true,
       hidden: false,
@@ -75,6 +75,9 @@ export function createDefaultElementProperties(type: EditorElementType): EditorE
       allowKeyboardEdit: true,
       encrypted: 'None',
       printVisible: 'Visible',
+      textColor: '#FFFFFF00',
+      backgroundTextColor: '#FFFFFF00',
+      backgroundColor: '#FFFFFF00',
       supportLevel: 'mock',
     }
   }
@@ -191,15 +194,26 @@ export function toInputFieldWriterOptions(element: EditorElementProperties) {
     BindingPath: valueBinding.BindingPath,
     BindingPathForText: valueBinding.BindingPathForText,
     ValueBinding: valueBinding,
-    ContentReadonly: Boolean(element.readonly),
-    UserEditable: !element.readonly,
+    ContentReadonly: normalizeContentReadonly(element.readonly),
+    UserEditable: element.allowKeyboardEdit !== false,
     Visible: element.visible !== false,
     EnableValueValidate: true,
     EditorActiveMode: normalizeActivationMode(element.activationMode),
     Required: Boolean(element.required),
     StartBorderText: '【',
     EndBorderText: '】',
+    TextColor: element.textColor || '',
+    BackgroundTextColor: element.backgroundTextColor || '',
+    Style: {
+      BackgroundColorString: element.backgroundColor || '',
+    },
   }
+}
+
+function normalizeContentReadonly(value: EditorElementProperties['readonly']) {
+  if (value === true || value === 'true') return true
+  if (value === false || value === 'false') return false
+  return 'Inherit'
 }
 
 function normalizeActivationMode(value: EditorElementProperties['activationMode']) {

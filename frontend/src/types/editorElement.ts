@@ -66,6 +66,8 @@ export interface EditorElementProperties {
   maxContentLength?: number
   textColor?: string
   backgroundTextColor?: string
+  backgroundColor?: string
+  style?: Record<string, unknown>
   displayText?: string
   bindingValue?: string
   defaultChecked?: boolean

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { ElOption, ElSelect } from 'element-plus'
+import { ElColorPicker, ElOption, ElSelect } from 'element-plus'
+import 'element-plus/es/components/color-picker/style/css'
 import 'element-plus/es/components/select/style/css'
 import 'element-plus/es/components/option/style/css'
 import { Edit3, RefreshCw } from 'lucide-vue-next'
@@ -13,11 +14,16 @@ import {
   createElementPropertyPatch,
   getElementPropertyMultiSelectValues,
   getVisibleElementPropertyGroups,
+  normalizeColorPickerValue,
+  summarizeCustomAttributes,
   summarizeStaticListItems,
+  toColorPickerValue,
   type ElementPropertyField,
 } from './elementPropertySchema'
+import CustomAttributesEditorDialog from './CustomAttributesEditorDialog.vue'
 import DisplayFormatPicker from './DisplayFormatPicker.vue'
 import ListItemsEditorDialog from './ListItemsEditorDialog.vue'
+import ValidationRuleEditorDialog from './ValidationRuleEditorDialog.vue'
 
 interface Props {
   element: EditorElementProperties
@@ -34,8 +40,16 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const groups = computed(() => getVisibleElementPropertyGroups(props.element.type, props.element))
 const editingListItemsField = shallowRef<ElementPropertyField | null>(null)
+const editingValidationRuleField = shallowRef<ElementPropertyField | null>(null)
+const editingCustomAttributesField = shallowRef<ElementPropertyField | null>(null)
 const editingListItemsValue = computed(() => editingListItemsField.value
   ? fieldTextValue(editingListItemsField.value)
+  : '')
+const editingValidationRuleValue = computed(() => editingValidationRuleField.value
+  ? fieldTextValue(editingValidationRuleField.value)
+  : '')
+const editingCustomAttributesValue = computed(() => editingCustomAttributesField.value
+  ? fieldTextValue(editingCustomAttributesField.value)
   : '')
 
 const referenceTypeOptions: Array<{ type: EditorElementType; label: string }> = [
@@ -73,8 +87,12 @@ const typeOptions = computed(() => {
 
 function fieldTextValue(field: ElementPropertyField): string {
   const value = props.element[field.key]
+  if ((value === null || value === undefined || value === '') && field.defaultValue !== undefined) {
+    return field.defaultValue
+  }
   if (Array.isArray(value)) return value.join(',')
   if (typeof value === 'object' && value) return JSON.stringify(value)
+  if (typeof value === 'boolean' && field.kind === 'select') return String(value)
   return typeof value === 'number' || typeof value === 'string' ? String(value) : ''
 }
 
@@ -109,17 +127,47 @@ function updateFieldValue(field: ElementPropertyField, value: string) {
   emit('update', createElementPropertyPatch(field, value))
 }
 
+function updateColorField(field: ElementPropertyField, value: string) {
+  updateFieldValue(field, normalizeColorPickerValue(value))
+}
+
 function openListItemsEditor(field: ElementPropertyField) {
   editingListItemsField.value = field
+}
+
+function openValidationRuleEditor(field: ElementPropertyField) {
+  editingValidationRuleField.value = field
+}
+
+function openCustomAttributesEditor(field: ElementPropertyField) {
+  editingCustomAttributesField.value = field
 }
 
 function closeListItemsEditor() {
   editingListItemsField.value = null
 }
 
+function closeValidationRuleEditor() {
+  editingValidationRuleField.value = null
+}
+
+function closeCustomAttributesEditor() {
+  editingCustomAttributesField.value = null
+}
+
 function saveListItems(value: string) {
   if (!editingListItemsField.value) return
   updateFieldValue(editingListItemsField.value, value)
+}
+
+function saveValidationRule(value: string) {
+  if (!editingValidationRuleField.value) return
+  updateFieldValue(editingValidationRuleField.value, value)
+}
+
+function saveCustomAttributes(value: string) {
+  if (!editingCustomAttributesField.value) return
+  updateFieldValue(editingCustomAttributesField.value, value)
 }
 </script>
 
@@ -173,6 +221,7 @@ function saveListItems(value: string) {
                 v-else-if="field.kind === 'switch'"
                 class="element-properties__switch"
                 type="checkbox"
+                role="switch"
                 :checked="fieldCheckedValue(field)"
                 @change="updateField(field, $event)"
               />
@@ -181,7 +230,7 @@ function saveListItems(value: string) {
                 :value="fieldTextValue(field)"
                 @change="updateField(field, $event)"
               >
-                <option value="">未设置</option>
+                <option v-if="field.allowEmptyOption !== false" value="">未设置</option>
                 <option v-for="option in field.options || []" :key="option.value" :value="option.value">
                   {{ option.label }}
                 </option>
@@ -229,6 +278,31 @@ function saveListItems(value: string) {
                 :options="field.options || []"
                 @update="updateFieldValue(field, $event)"
               />
+              <span v-else-if="field.kind === 'validation-rule'" class="element-properties__json">
+                <input
+                  type="text"
+                  readonly
+                  :value="fieldTextValue(field)"
+                  :placeholder="field.placeholder || field.label"
+                  @click="openValidationRuleEditor(field)"
+                />
+                <button type="button" :title="`编辑${field.label}`" @click="openValidationRuleEditor(field)">
+                  <Edit3 :size="13" aria-hidden="true" />
+                </button>
+              </span>
+              <span v-else-if="field.kind === 'custom-attributes'" class="element-properties__json">
+                <input
+                  type="text"
+                  readonly
+                  :value="summarizeCustomAttributes(fieldTextValue(field))"
+                  :placeholder="field.placeholder || field.label"
+                  @click="openCustomAttributesEditor(field)"
+                  @dblclick="openCustomAttributesEditor(field)"
+                />
+                <button type="button" :title="`编辑${field.label}`" @click="openCustomAttributesEditor(field)">
+                  <Edit3 :size="13" aria-hidden="true" />
+                </button>
+              </span>
               <span v-else-if="field.kind === 'json'" class="element-properties__json">
                 <input
                   type="text"
@@ -240,9 +314,24 @@ function saveListItems(value: string) {
                   <Edit3 :size="13" aria-hidden="true" />
                 </button>
               </span>
+              <span v-else-if="field.kind === 'color'" class="element-properties__color">
+                <input
+                  type="text"
+                  :value="fieldTextValue(field)"
+                  :placeholder="field.placeholder || field.label"
+                  @input="updateField(field, $event)"
+                />
+                <ElColorPicker
+                  :model-value="toColorPickerValue(fieldTextValue(field))"
+                  show-alpha
+                  color-format="rgb"
+                  :predefine="['#000000FF', '#FFFFFFFF', '#FF0000FF', '#00FF00FF', '#0000FFFF', '#FFFFFF00']"
+                  @update:model-value="updateColorField(field, $event || '')"
+                />
+              </span>
               <input
                 v-else
-                :type="field.kind === 'number' ? 'number' : field.kind === 'color' ? 'color' : 'text'"
+                :type="field.kind === 'number' ? 'number' : 'text'"
                 :value="fieldTextValue(field)"
                 :placeholder="field.placeholder || field.label"
                 @input="updateField(field, $event)"
@@ -257,6 +346,18 @@ function saveListItems(value: string) {
       :value="editingListItemsValue"
       @close="closeListItemsEditor"
       @save="saveListItems"
+    />
+    <ValidationRuleEditorDialog
+      :open="Boolean(editingValidationRuleField)"
+      :value="editingValidationRuleValue"
+      @close="closeValidationRuleEditor"
+      @save="saveValidationRule"
+    />
+    <CustomAttributesEditorDialog
+      :open="Boolean(editingCustomAttributesField)"
+      :value="editingCustomAttributesValue"
+      @close="closeCustomAttributesEditor"
+      @save="saveCustomAttributes"
     />
   </section>
 </template>
@@ -445,10 +546,6 @@ function saveListItems(value: string) {
   font-weight: 700;
 }
 
-.element-properties__field input[type="color"] {
-  padding: 2px;
-}
-
 .element-properties__field input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -459,9 +556,42 @@ function saveListItems(value: string) {
 }
 
 .element-properties__switch {
-  width: 38px;
-  height: 20px;
-  accent-color: #18c26f;
+  position: relative;
+  width: 42px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  appearance: none;
+  background: #ff4d4f !important;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.element-properties__switch::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+  content: "";
+  transition: transform 0.16s ease;
+}
+
+.element-properties__switch:checked {
+  background: #22c55e !important;
+}
+
+.element-properties__switch:checked::after {
+  transform: translateX(20px);
+}
+
+.element-properties__switch:focus-visible {
+  outline: 2px solid rgba(63, 95, 199, 0.32);
+  outline-offset: 2px;
 }
 
 .element-properties__json {
@@ -490,5 +620,34 @@ function saveListItems(value: string) {
   border-radius: 0 4px 4px 0;
   background: #f7fafc;
   color: #697586;
+}
+
+.element-properties__color {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.element-properties__color input {
+  flex: 1 1 auto;
+}
+
+.element-properties__color :deep(.el-color-picker) {
+  flex: 0 0 auto;
+  height: 28px;
+}
+
+.element-properties__color :deep(.el-color-picker__trigger) {
+  width: 30px;
+  height: 28px;
+  padding: 3px;
+  border-color: #c8d3de;
+  border-radius: 4px;
+}
+
+.element-properties__color :deep(.el-color-picker__color) {
+  border-color: #c8d3de;
 }
 </style>

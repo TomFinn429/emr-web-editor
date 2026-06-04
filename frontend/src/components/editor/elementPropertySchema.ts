@@ -12,6 +12,8 @@ export type ElementPropertyFieldKind =
   | 'textarea'
   | 'color'
   | 'json'
+  | 'validation-rule'
+  | 'custom-attributes'
   | 'autocomplete'
 
 export type ElementPropertyRuleSourceId =
@@ -43,6 +45,8 @@ export interface ElementPropertyField {
   label: string
   kind: ElementPropertyFieldKind
   options?: ElementPropertyOption[]
+  defaultValue?: string
+  allowEmptyOption?: boolean
   placeholder?: string
   span?: number
   component?: 'element-select'
@@ -411,12 +415,26 @@ const inputFieldGroups: ElementPropertyGroup[] = [
     id: 'authority',
     label: '权限属性',
     fields: [
-      { key: 'readonly', writerName: 'ContentReadonly', label: '只读', kind: 'select', options: readonlyOptions },
+      {
+        key: 'readonly',
+        writerName: 'ContentReadonly',
+        label: '只读',
+        kind: 'select',
+        options: readonlyOptions,
+        defaultValue: 'Inherit',
+        allowEmptyOption: false,
+      },
       { key: 'allowDelete', writerName: 'Deleteable', label: '允许被删除', kind: 'switch' },
       { key: 'allowKeyboardEdit', writerName: 'UserEditable', label: '允许键盘编辑', kind: 'switch' },
       { key: 'maxContentLength', writerName: 'MaxInputLength', label: '最大内容长度', kind: 'number' },
       { key: 'encrypted', writerName: 'ViewEncryptType', label: '加密显示', kind: 'select', options: encryptOptions },
-      { key: 'validationRule', writerName: 'ValidateStyle', label: '校验', kind: 'json', placeholder: '双击编辑..' },
+      {
+        key: 'validationRule',
+        writerName: 'ValidateStyle',
+        label: '校验',
+        kind: 'validation-rule',
+        placeholder: '{"CheckMaxValue":true,"CheckMinValue":true,"MaxValue":0,"MinValue":0}',
+      },
       { key: 'allowedCharacters', writerName: 'LimitedInputChars', label: '仅可输入字符', kind: 'text', placeholder: '如 0123456789.' },
       { key: 'calculateExpression', writerName: 'ValueExpression', label: '计算表达式', kind: 'autocomplete', span: 2 },
       { key: 'visibleExpression', writerName: 'VisibleExpression', label: '可见性表达式', kind: 'autocomplete', span: 2 },
@@ -429,6 +447,13 @@ const inputFieldGroups: ElementPropertyGroup[] = [
     fields: [
       { key: 'textColor', writerName: 'TextColor', label: '文字颜色', kind: 'color' },
       { key: 'backgroundTextColor', writerName: 'BackgroundTextColor', label: '背景文字颜色', kind: 'color' },
+      {
+        key: 'backgroundColor',
+        writerName: 'Style.BackgroundColorString',
+        label: '背景颜色',
+        kind: 'color',
+        sourceRefs: ['online-p-template-make-chunk', 'writer-api-csharp'],
+      },
     ],
   },
   {
@@ -436,7 +461,7 @@ const inputFieldGroups: ElementPropertyGroup[] = [
     label: '其他属性',
     fields: [
       { key: 'printVisible', writerName: 'PrintVisibility', label: '打印可见性', kind: 'select', options: printVisibleOptions },
-      { key: 'customProperties', writerName: 'Attributes', label: '自定义属性', kind: 'json', placeholder: '双击编辑..', span: 2 },
+      { key: 'customProperties', writerName: 'Attributes', label: '自定义属性', kind: 'custom-attributes', placeholder: '双击编辑..' },
     ],
   },
 ]
@@ -646,6 +671,10 @@ export function createElementPropertyPatch(
     return { [field.key]: getElementPropertyMultiSelectValues(value) }
   }
 
+  if (field.kind === 'select' && value === '' && field.defaultValue !== undefined) {
+    return { [field.key]: field.defaultValue }
+  }
+
   return { [field.key]: value }
 }
 
@@ -662,6 +691,45 @@ export function isElementPropertyMultiSelectOptionSelected(value: unknown, optio
   return getElementPropertyMultiSelectValues(value).some(item => item === optionValue)
 }
 
+export function toColorPickerValue(value: string) {
+  const normalized = value.trim()
+  const hex8 = /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/.exec(normalized)
+  if (!hex8) return normalized
+
+  const [, red, green, blue, alpha] = hex8
+  const alphaValue = Math.round((parseInt(alpha, 16) / 255) * 100) / 100
+  return `rgba(${parseInt(red, 16)}, ${parseInt(green, 16)}, ${parseInt(blue, 16)}, ${alphaValue})`
+}
+
+export function normalizeColorPickerValue(value: string) {
+  const normalized = value.trim()
+  const hex8 = /^#([0-9a-fA-F]{8})$/.exec(normalized)
+  if (hex8) return `#${hex8[1].toUpperCase()}`
+
+  const hex6 = /^#([0-9a-fA-F]{6})$/.exec(normalized)
+  if (hex6) return `#${hex6[1].toUpperCase()}FF`
+
+  const hex3 = /^#([0-9a-fA-F]{3})$/.exec(normalized)
+  if (hex3) {
+    const expanded = hex3[1].split('').map(char => `${char}${char}`).join('')
+    return `#${expanded.toUpperCase()}FF`
+  }
+
+  const rgba = /^rgba?\(([^)]+)\)$/i.exec(normalized)
+  if (!rgba) return normalized
+
+  const parts = rgba[1].split(',').map(part => part.trim())
+  if (parts.length < 3) return normalized
+
+  const red = colorByteValue(parts[0])
+  const green = colorByteValue(parts[1])
+  const blue = colorByteValue(parts[2])
+  const alpha = parts[3] === undefined ? 255 : alphaByteValue(parts[3])
+  if ([red, green, blue, alpha].some(part => part === null)) return normalized
+
+  return `#${byteToHex(red!)}${byteToHex(green!)}${byteToHex(blue!)}${byteToHex(alpha!)}`
+}
+
 export interface StaticListItem {
   Text: string
   TextInList: string | null
@@ -670,6 +738,69 @@ export interface StaticListItem {
   Tag: string | null
   ID: string | number | null
 }
+
+export interface CustomAttributeItem {
+  Text: string
+  Value: string
+}
+
+export interface ValidationRuleConfig {
+  Required: boolean
+  CustomMessage: string
+  ExcludeKeywords: string
+  IncludeKeywords: string
+  MinLength: number | null
+  MaxLength: number | null
+  CheckMinValue: boolean
+  MinValue: number | null
+  CheckMaxValue: boolean
+  MaxValue: number | null
+  CheckDecimalDigits: boolean
+  MaxDecimalDigits: number | null
+  DateTimeMinValue: string
+  DateTimeMaxValue: string
+  RegExpression: string
+}
+
+export interface ValidationRuleDescriptionCell {
+  property: string
+  description: string
+}
+
+export const VALIDATION_RULE_DESCRIPTION_ROWS: [ValidationRuleDescriptionCell, ValidationRuleDescriptionCell][] = [
+  [
+    { property: 'Required:', description: '必填数据 (true/false)' },
+    { property: 'CustomMessage:', description: '错误提示' },
+  ],
+  [
+    { property: 'ExcludeKeywords:', description: '违禁关键字(string)' },
+    { property: 'IncludeKeywords:', description: '允许关键字(string)' },
+  ],
+  [
+    { property: 'MinLength:', description: '最小长度(Numeric)' },
+    { property: 'MaxLength:', description: '最大长度(Numeric)' },
+  ],
+  [
+    { property: 'CheckMinValue:', description: '校验最小值(true/false)' },
+    { property: 'MinValue:', description: '最小值(Numeric)' },
+  ],
+  [
+    { property: 'CheckMaxValue:', description: '校验最大值(true/false)' },
+    { property: 'MaxValue:', description: '最大值(Numeric)' },
+  ],
+  [
+    { property: 'CheckDecimalDigits:', description: '校验最大小数位数(true/false)' },
+    { property: 'MaxDecimalDigits:', description: '最大小数位数(Numeric)' },
+  ],
+  [
+    { property: 'DateTimeMinValue:', description: '最小时间日期值(DateTime)' },
+    { property: 'DateTimeMaxValue:', description: '最大时间日期值(DateTime)' },
+  ],
+  [
+    { property: 'RegExpression:', description: '正则表达式文字(string)' },
+    { property: 'ValueType:', description: '类型(Text/Numeric/DateTime/RegExpress)' },
+  ],
+]
 
 export function parseStaticListItems(value: string): StaticListItem[] {
   if (!value.trim()) return []
@@ -706,12 +837,142 @@ export function validateStaticListItems(items: StaticListItem[]) {
   return { ok: true }
 }
 
+export function parseCustomAttributes(value: string): CustomAttributeItem[] {
+  if (!value.trim()) return []
+
+  try {
+    const raw = JSON.parse(value) as unknown
+    if (!isPlainObject(raw)) return []
+
+    return Object.entries(raw).map(([key, itemValue]) => ({
+      Text: key,
+      Value: stringValue(itemValue),
+    }))
+  }
+  catch {
+    return []
+  }
+}
+
+export function summarizeCustomAttributes(value: string) {
+  if (!value.trim()) return '双击新增..'
+
+  try {
+    const raw = JSON.parse(value) as unknown
+    if (!isPlainObject(raw)) return '双击新增..'
+
+    const count = Object.keys(raw).length
+    return count > 0 ? `${count}项` : '双击新增..'
+  }
+  catch {
+    return '双击新增..'
+  }
+}
+
+export function stringifyCustomAttributes(items: CustomAttributeItem[]) {
+  const output: Record<string, string> = {}
+  for (const item of items) {
+    const key = item.Text.trim()
+    if (!key) continue
+    output[key] = stringValue(item.Value)
+  }
+  return JSON.stringify(output)
+}
+
+export function validateCustomAttributes(items: CustomAttributeItem[]) {
+  const emptyText = items.some(item => item.Text.trim() === '')
+  if (emptyText) {
+    return {
+      ok: false,
+      message: '属性名称不能为空',
+    }
+  }
+
+  return { ok: true }
+}
+
+export function createEmptyValidationRule(): ValidationRuleConfig {
+  return {
+    Required: false,
+    CustomMessage: '',
+    ExcludeKeywords: '',
+    IncludeKeywords: '',
+    MinLength: null,
+    MaxLength: null,
+    CheckMinValue: false,
+    MinValue: null,
+    CheckMaxValue: false,
+    MaxValue: null,
+    CheckDecimalDigits: false,
+    MaxDecimalDigits: null,
+    DateTimeMinValue: '',
+    DateTimeMaxValue: '',
+    RegExpression: '',
+  }
+}
+
+export function parseValidationRule(value: string): ValidationRuleConfig {
+  if (!value.trim()) return createEmptyValidationRule()
+
+  try {
+    const raw = JSON.parse(value) as Record<string, unknown>
+    return normalizeValidationRule(raw)
+  }
+  catch {
+    return createEmptyValidationRule()
+  }
+}
+
+export function stringifyValidationRule(rule: ValidationRuleConfig) {
+  const normalized = normalizeValidationRule(rule as unknown as Record<string, unknown>)
+  const output: Record<string, string | number | boolean> = {}
+
+  if (normalized.Required) output.Required = true
+  if (normalized.CustomMessage) output.CustomMessage = normalized.CustomMessage
+  if (normalized.ExcludeKeywords) output.ExcludeKeywords = normalized.ExcludeKeywords
+  if (normalized.IncludeKeywords) output.IncludeKeywords = normalized.IncludeKeywords
+  if (normalized.MinLength !== null) output.MinLength = normalized.MinLength
+  if (normalized.MaxLength !== null) output.MaxLength = normalized.MaxLength
+  if (normalized.CheckMinValue) output.CheckMinValue = true
+  if (normalized.MinValue !== null) output.MinValue = normalized.MinValue
+  if (normalized.CheckMaxValue) output.CheckMaxValue = true
+  if (normalized.MaxValue !== null) output.MaxValue = normalized.MaxValue
+  if (normalized.CheckDecimalDigits) output.CheckDecimalDigits = true
+  if (normalized.MaxDecimalDigits !== null) output.MaxDecimalDigits = normalized.MaxDecimalDigits
+  if (normalized.DateTimeMinValue) output.DateTimeMinValue = normalized.DateTimeMinValue
+  if (normalized.DateTimeMaxValue) output.DateTimeMaxValue = normalized.DateTimeMaxValue
+  if (normalized.RegExpression) output.RegExpression = normalized.RegExpression
+
+  return JSON.stringify(output)
+}
+
 function valuesMatch(actual: unknown, expected: string | number | boolean) {
   if (Array.isArray(actual)) {
     return actual.some(item => String(item) === String(expected))
   }
 
   return String(actual ?? '') === String(expected)
+}
+
+function colorByteValue(value: string) {
+  const numberValue = value.endsWith('%')
+    ? Math.round((Number(value.slice(0, -1)) / 100) * 255)
+    : Number(value)
+  if (!Number.isFinite(numberValue)) return null
+  return Math.max(0, Math.min(255, Math.round(numberValue)))
+}
+
+function alphaByteValue(value: string) {
+  const numberValue = value.endsWith('%')
+    ? Number(value.slice(0, -1)) / 100
+    : Number(value)
+  if (!Number.isFinite(numberValue)) return null
+  const normalized = numberValue > 1 ? numberValue / 255 : numberValue
+  return Math.max(0, Math.min(255, Math.round(normalized * 255)))
+}
+
+function byteToHex(value: number) {
+  return value.toString(16).padStart(2, '0').toUpperCase()
 }
 
 function stringValue(value: unknown) {
@@ -739,4 +1000,41 @@ function normalizeStaticListItem(item: Partial<StaticListItem> | null | undefine
     Tag: nullableStringValue(item?.Tag),
     ID: staticListIdValue(item?.ID),
   }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function normalizeValidationRule(raw: Record<string, unknown>): ValidationRuleConfig {
+  return {
+    Required: booleanValue(raw.Required),
+    CustomMessage: stringValue(raw.CustomMessage),
+    ExcludeKeywords: stringValue(raw.ExcludeKeywords),
+    IncludeKeywords: stringValue(raw.IncludeKeywords),
+    MinLength: nullableNumberValue(raw.MinLength),
+    MaxLength: nullableNumberValue(raw.MaxLength),
+    CheckMinValue: booleanValue(raw.CheckMinValue),
+    MinValue: nullableNumberValue(raw.MinValue),
+    CheckMaxValue: booleanValue(raw.CheckMaxValue),
+    MaxValue: nullableNumberValue(raw.MaxValue),
+    CheckDecimalDigits: booleanValue(raw.CheckDecimalDigits),
+    MaxDecimalDigits: nullableNumberValue(raw.MaxDecimalDigits),
+    DateTimeMinValue: stringValue(raw.DateTimeMinValue),
+    DateTimeMaxValue: stringValue(raw.DateTimeMaxValue),
+    RegExpression: stringValue(raw.RegExpression ?? raw.Regex ?? raw.RegExpress),
+  }
+}
+
+function booleanValue(value: unknown) {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') return value === 'true' || value === 'True' || value === '1'
+  if (typeof value === 'number') return value === 1
+  return false
+}
+
+function nullableNumberValue(value: unknown) {
+  if (value === null || value === undefined || value === '') return null
+  const numberValue = Number(value)
+  return Number.isNaN(numberValue) ? null : numberValue
 }

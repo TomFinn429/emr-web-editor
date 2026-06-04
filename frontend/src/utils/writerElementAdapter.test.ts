@@ -41,6 +41,23 @@ describe('writerElementAdapter', () => {
     })
   })
 
+  it('normalizes missing ContentReadonly to the online inherited state', () => {
+    const target = {
+      GetCurrentElement: vi.fn(() => ({
+        TypeName: 'XInputField',
+        ID: 'Patient.Name',
+        Name: '患者姓名',
+      })),
+    }
+
+    expect(readSelectedWriterElement(target)).toMatchObject({
+      ok: true,
+      element: {
+        readonly: 'Inherit',
+      },
+    })
+  })
+
   it('reads current input field through confirmed WriterControl APIs', () => {
     const inputRef = { serializeAsArg: vi.fn() }
     const currentInputField = vi.fn(() => inputRef)
@@ -97,6 +114,28 @@ describe('writerElementAdapter', () => {
         dataSourceName: 'patient',
         bindingPath: 'Patient.Age.Value',
         textBindingPath: 'Patient.Age.Text',
+      },
+    })
+  })
+
+  it('reads independent online color properties from the current input field', () => {
+    expect(readSelectedWriterElement({
+      GetCurrentElement: vi.fn(() => ({
+        TypeName: 'XTextInputFieldElement',
+        ID: 'Patient.Color',
+        Name: '颜色字段',
+        TextColor: '#D43C3CFF',
+        BackgroundTextColor: '#0000FFFF',
+        Style: {
+          BackgroundColorString: '#FFFFFF00',
+        },
+      })),
+    })).toMatchObject({
+      ok: true,
+      element: {
+        textColor: '#D43C3CFF',
+        backgroundTextColor: '#0000FFFF',
+        backgroundColor: '#FFFFFF00',
       },
     })
   })
@@ -242,6 +281,50 @@ describe('writerElementAdapter', () => {
       },
       BindingPath: 'Patient.Name',
       BindingPathForText: 'Patient.Name.Text',
+    }), true)
+  })
+
+  it('writes structured ValidateStyle JSON through SetElementProperties', () => {
+    const inputRef = { serializeAsArg: vi.fn() }
+    const setElementProperties = vi.fn(() => true)
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentInputField: vi.fn(() => inputRef),
+      SetElementProperties: setElementProperties,
+    }, {
+      ...createDefaultElementProperties('input-field'),
+      validationRule: '{"Required":true,"CheckMaxValue":true,"MaxValue":99}',
+    })).toMatchObject({ ok: true })
+
+    expect(setElementProperties).toHaveBeenCalledWith(inputRef, expect.objectContaining({
+      ValidateStyle: {
+        Required: true,
+        CheckMaxValue: true,
+        MaxValue: 99,
+      },
+    }), true)
+  })
+
+  it('writes independent online color properties without rewriting alpha values', () => {
+    const inputRef = { serializeAsArg: vi.fn() }
+    const setElementProperties = vi.fn(() => true)
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentInputField: vi.fn(() => inputRef),
+      SetElementProperties: setElementProperties,
+    }, {
+      ...createDefaultElementProperties('input-field'),
+      textColor: '#D43C3CFF',
+      backgroundTextColor: '#18259B00',
+      backgroundColor: '#FFFFFF00',
+    })).toMatchObject({ ok: true })
+
+    expect(setElementProperties).toHaveBeenCalledWith(inputRef, expect.objectContaining({
+      TextColor: '#D43C3CFF',
+      BackgroundTextColor: '#18259B00',
+      Style: {
+        BackgroundColorString: '#FFFFFF00',
+      },
     }), true)
   })
 

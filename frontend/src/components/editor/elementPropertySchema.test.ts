@@ -8,6 +8,11 @@ import {
   getElementPropertySchema,
   getVisibleElementPropertyGroups,
   isElementPropertyMultiSelectOptionSelected,
+  normalizeColorPickerValue,
+  parseValidationRule,
+  stringifyValidationRule,
+  toColorPickerValue,
+  VALIDATION_RULE_DESCRIPTION_ROWS,
 } from './elementPropertySchema'
 import * as elementPropertySchema from './elementPropertySchema'
 
@@ -47,6 +52,7 @@ describe('elementPropertySchema', () => {
       'printVisibleExpression',
       'textColor',
       'backgroundTextColor',
+      'backgroundColor',
       'customProperties',
       'printVisible',
     ]))
@@ -257,7 +263,25 @@ describe('elementPropertySchema', () => {
     expect(textAlign).toBeDefined()
     expect(createElementPropertyPatch(fixedWidth!, '42')).toEqual({ fixedWidth: 42 })
     expect(createElementPropertyPatch(readonly!, true)).toEqual({ readonly: true })
+    expect(createElementPropertyPatch(readonly!, '')).toEqual({ readonly: 'Inherit' })
     expect(createElementPropertyPatch(textAlign!, 'center')).toEqual({ textAlign: 'center' })
+  })
+
+  it('restores online ContentReadonly defaults and select options', () => {
+    const readonly = getElementPropertySchema('input-field').find(field => field.writerName === 'ContentReadonly')
+
+    expect(readonly).toMatchObject({
+      key: 'readonly',
+      label: '只读',
+      kind: 'select',
+      defaultValue: 'Inherit',
+      allowEmptyOption: false,
+      options: [
+        { label: '只读', value: 'true' },
+        { label: '不只读', value: 'false' },
+        { label: '继承父节点', value: 'Inherit' },
+      ],
+    })
   })
 
   it('creates typed patches for multi-select and switch-like fields', () => {
@@ -336,5 +360,142 @@ describe('elementPropertySchema', () => {
       message: '文本不可为空，请检查配置',
     })
     expect(schemaModule.stringifyStaticListItems(items)).toBe('[{"Text":"男","TextInList":"","Value":"1","Group":null,"Tag":null,"ID":null},{"Text":"女","TextInList":null,"Value":"2","Group":"基本","Tag":"demo","ID":12}]')
+  })
+
+  it('models ValidateStyle as the online structured validation editor', () => {
+    const validationRule = getElementPropertySchema('input-field')
+      .find(field => field.writerName === 'ValidateStyle')
+
+    expect(validationRule).toMatchObject({
+      key: 'validationRule',
+      label: '校验',
+      kind: 'validation-rule',
+      placeholder: '{"CheckMaxValue":true,"CheckMinValue":true,"MaxValue":0,"MinValue":0}',
+    })
+
+    const parsed = parseValidationRule('{"Required":true,"CustomMessage":"必填","ExcludeKeywords":"禁用","IncludeKeywords":"允许","MinLength":2,"MaxLength":20,"CheckMinValue":true,"MinValue":1,"CheckMaxValue":true,"MaxValue":99,"CheckDecimalDigits":true,"MaxDecimalDigits":2,"DateTimeMinValue":"2026-01-01","DateTimeMaxValue":"2026-12-31","RegExpression":"^[0-9]+$"}')
+
+    expect(parsed).toEqual({
+      Required: true,
+      CustomMessage: '必填',
+      ExcludeKeywords: '禁用',
+      IncludeKeywords: '允许',
+      MinLength: 2,
+      MaxLength: 20,
+      CheckMinValue: true,
+      MinValue: 1,
+      CheckMaxValue: true,
+      MaxValue: 99,
+      CheckDecimalDigits: true,
+      MaxDecimalDigits: 2,
+      DateTimeMinValue: '2026-01-01',
+      DateTimeMaxValue: '2026-12-31',
+      RegExpression: '^[0-9]+$',
+    })
+    expect(stringifyValidationRule(parsed)).toBe('{"Required":true,"CustomMessage":"必填","ExcludeKeywords":"禁用","IncludeKeywords":"允许","MinLength":2,"MaxLength":20,"CheckMinValue":true,"MinValue":1,"CheckMaxValue":true,"MaxValue":99,"CheckDecimalDigits":true,"MaxDecimalDigits":2,"DateTimeMinValue":"2026-01-01","DateTimeMaxValue":"2026-12-31","RegExpression":"^[0-9]+$"}')
+    expect(VALIDATION_RULE_DESCRIPTION_ROWS).toEqual([
+      [
+        { property: 'Required:', description: '必填数据 (true/false)' },
+        { property: 'CustomMessage:', description: '错误提示' },
+      ],
+      [
+        { property: 'ExcludeKeywords:', description: '违禁关键字(string)' },
+        { property: 'IncludeKeywords:', description: '允许关键字(string)' },
+      ],
+      [
+        { property: 'MinLength:', description: '最小长度(Numeric)' },
+        { property: 'MaxLength:', description: '最大长度(Numeric)' },
+      ],
+      [
+        { property: 'CheckMinValue:', description: '校验最小值(true/false)' },
+        { property: 'MinValue:', description: '最小值(Numeric)' },
+      ],
+      [
+        { property: 'CheckMaxValue:', description: '校验最大值(true/false)' },
+        { property: 'MaxValue:', description: '最大值(Numeric)' },
+      ],
+      [
+        { property: 'CheckDecimalDigits:', description: '校验最大小数位数(true/false)' },
+        { property: 'MaxDecimalDigits:', description: '最大小数位数(Numeric)' },
+      ],
+      [
+        { property: 'DateTimeMinValue:', description: '最小时间日期值(DateTime)' },
+        { property: 'DateTimeMaxValue:', description: '最大时间日期值(DateTime)' },
+      ],
+      [
+        { property: 'RegExpression:', description: '正则表达式文字(string)' },
+        { property: 'ValueType:', description: '类型(Text/Numeric/DateTime/RegExpress)' },
+      ],
+    ])
+  })
+
+  it('models Attributes as the online custom attributes editor', () => {
+    type CustomAttributeItemLike = {
+      Text: string
+      Value: string
+    }
+    const schemaModule = elementPropertySchema as unknown as {
+      parseCustomAttributes?: (value: string) => CustomAttributeItemLike[]
+      summarizeCustomAttributes?: (value: string) => string
+      stringifyCustomAttributes?: (items: CustomAttributeItemLike[]) => string
+      validateCustomAttributes?: (items: CustomAttributeItemLike[]) => { ok: boolean; message?: string }
+    }
+    const attributes = getElementPropertySchema('input-field')
+      .find(field => field.writerName === 'Attributes')
+
+    expect(attributes).toMatchObject({
+      key: 'customProperties',
+      label: '自定义属性',
+      kind: 'custom-attributes',
+      placeholder: '双击编辑..',
+    })
+    expect(typeof schemaModule.parseCustomAttributes).toBe('function')
+    expect(typeof schemaModule.summarizeCustomAttributes).toBe('function')
+    expect(typeof schemaModule.stringifyCustomAttributes).toBe('function')
+    expect(typeof schemaModule.validateCustomAttributes).toBe('function')
+    if (!schemaModule.parseCustomAttributes || !schemaModule.summarizeCustomAttributes || !schemaModule.stringifyCustomAttributes || !schemaModule.validateCustomAttributes) {
+      return
+    }
+
+    const source = '{"height":"180","weight":"140","breathe":"60"}'
+    const items = schemaModule.parseCustomAttributes(source)
+
+    expect(items).toEqual([
+      { Text: 'height', Value: '180' },
+      { Text: 'weight', Value: '140' },
+      { Text: 'breathe', Value: '60' },
+    ])
+    expect(schemaModule.summarizeCustomAttributes(source)).toBe('3项')
+    expect(schemaModule.summarizeCustomAttributes('')).toBe('双击新增..')
+    expect(schemaModule.summarizeCustomAttributes('not-json')).toBe('双击新增..')
+    expect(schemaModule.summarizeCustomAttributes('[{"Text":"height","Value":"180"}]')).toBe('双击新增..')
+    expect(schemaModule.validateCustomAttributes(items)).toEqual({ ok: true })
+    expect(schemaModule.validateCustomAttributes([{ Text: '', Value: '180' }])).toEqual({
+      ok: false,
+      message: '属性名称不能为空',
+    })
+    expect(schemaModule.stringifyCustomAttributes(items)).toBe('{"height":"180","weight":"140","breathe":"60"}')
+  })
+
+  it('keeps online 8-digit hex color values when using the color picker', () => {
+    const colorFields = getElementPropertySchema('input-field')
+      .filter(field => [
+        'TextColor',
+        'BackgroundTextColor',
+        'Style.BackgroundColorString',
+      ].includes(field.writerName))
+
+    expect(colorFields).toEqual([
+      expect.objectContaining({ key: 'textColor', kind: 'color' }),
+      expect.objectContaining({ key: 'backgroundTextColor', kind: 'color' }),
+      expect.objectContaining({ key: 'backgroundColor', kind: 'color' }),
+    ])
+    expect(toColorPickerValue('#FFFFFF00')).toBe('rgba(255, 255, 255, 0)')
+    expect(toColorPickerValue('#00000080')).toBe('rgba(0, 0, 0, 0.5)')
+    expect(normalizeColorPickerValue('rgba(255, 255, 255, 0)')).toBe('#FFFFFF00')
+    expect(normalizeColorPickerValue('rgba(0, 0, 0, 0.5)')).toBe('#00000080')
+    expect(normalizeColorPickerValue('#336699')).toBe('#336699FF')
+    expect(normalizeColorPickerValue('#336699CC')).toBe('#336699CC')
+    expect(normalizeColorPickerValue('transparent')).toBe('transparent')
   })
 })

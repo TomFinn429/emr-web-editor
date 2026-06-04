@@ -263,7 +263,7 @@ function normalizeWriterElement(rawElement: Record<string, unknown>): EditorElem
     name,
     code: readString(rawElement, ['Code', 'code']) || id,
     defaultValue: readString(rawElement, ['InnerValue', 'Value', 'Text']),
-    readonly: readBoolean(rawElement, ['ContentReadonly', 'Readonly', 'readonly']),
+    readonly: readContentReadonly(rawElement),
     required: readBoolean(rawElement, ['Required', 'NotNull', 'required']),
     visible: readBoolean(rawElement, ['Visible', 'visible'], true),
     dataSourceName: readWriterValueBindingString(valueBinding, ['DataSource'])
@@ -305,6 +305,8 @@ function normalizeWriterElement(rawElement: Record<string, unknown>): EditorElem
     printVisibleExpression: readString(rawElement, ['PrintVisibilityExpression']),
     textColor: readString(rawElement, ['TextColor']),
     backgroundTextColor: readString(rawElement, ['BackgroundTextColor']),
+    backgroundColor: readStyleString(rawElement, 'BackgroundColorString'),
+    style: readObject(rawElement['Style']),
     customProperties: readJsonishString(rawElement, ['Attributes']),
     printVisible: readString(rawElement, ['PrintVisibility']),
     displayText: readString(rawElement, ['DisplayText', 'Text']),
@@ -444,9 +446,9 @@ function toWriterElementOptions(properties: EditorElementProperties): Record<str
       InnerListSourceName: properties.innerListSourceName || '',
       ListItems: parseJsonish(properties.listItems),
       DisplayFormat: properties.outputFormat || '',
-      ContentReadonly: properties.readonly ?? false,
+      ContentReadonly: normalizeContentReadonly(properties.readonly),
       Deleteable: properties.allowDelete !== false,
-      UserEditable: properties.allowKeyboardEdit ?? !properties.readonly,
+      UserEditable: properties.allowKeyboardEdit !== false,
       MaxInputLength: properties.maxContentLength,
       ViewEncryptType: properties.encrypted || 'None',
       ValidateStyle: parseJsonish(properties.validationRule),
@@ -454,8 +456,12 @@ function toWriterElementOptions(properties: EditorElementProperties): Record<str
       ValueExpression: properties.calculateExpression || '',
       VisibleExpression: properties.visibleExpression || '',
       PrintVisibilityExpression: properties.printVisibleExpression || '',
-      TextColor: properties.textColor || '',
-      BackgroundTextColor: properties.backgroundTextColor || '',
+      TextColor: toWriterColor(properties.textColor),
+      BackgroundTextColor: toWriterColor(properties.backgroundTextColor),
+      Style: {
+        ...(readObject(properties.style) || {}),
+        BackgroundColorString: toWriterColor(properties.backgroundColor),
+      },
       PrintVisibility: properties.printVisible || 'Visible',
       Attributes: parseJsonish(properties.customProperties),
       Required: Boolean(properties.required),
@@ -586,6 +592,15 @@ function readObjectOrString(rawElement: Record<string, unknown>, names: string[]
   return undefined
 }
 
+function readObject(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : undefined
+}
+
+function readStyleString(rawElement: Record<string, unknown>, name: string) {
+  const style = readObject(rawElement['Style'])
+  return style ? readString(style, [name]) : ''
+}
+
 function readJsonishString(rawElement: Record<string, unknown>, names: string[]) {
   for (const name of names) {
     const value = rawElement[name]
@@ -613,6 +628,27 @@ function readBoolean(rawElement: Record<string, unknown>, names: string[], fallb
     if (typeof value === 'string') return value === 'true' || value === 'True' || value === '1'
   }
   return fallback
+}
+
+function readContentReadonly(rawElement: Record<string, unknown>) {
+  for (const name of ['ContentReadonly', 'Readonly', 'readonly']) {
+    const value = rawElement[name]
+    const normalized = normalizeContentReadonly(value)
+    if (normalized !== undefined) return normalized
+  }
+  return 'Inherit'
+}
+
+function normalizeContentReadonly(value: unknown) {
+  if (value === true) return true
+  if (value === false) return false
+  if (typeof value !== 'string') return undefined
+
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1') return true
+  if (normalized === 'false' || normalized === '0') return false
+  if (normalized === 'inherit') return 'Inherit'
+  return undefined
 }
 
 function readNumber(rawElement: Record<string, unknown>, names: string[]) {
@@ -651,6 +687,10 @@ function normalizeMultiValueToArray(value: unknown) {
     return [String(value)]
   }
   return []
+}
+
+function toWriterColor(value: string | undefined) {
+  return value ? value.trim() : ''
 }
 
 function callGetter(getter: WriterElementTarget['GetCurrentElement'], target: WriterElementTarget) {

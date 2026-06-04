@@ -19,9 +19,12 @@ describe('elementPropertyService', () => {
     expect(createDefaultElementProperties('input-field')).toMatchObject({
       type: 'input-field',
       name: '输入域',
-      readonly: false,
+      readonly: 'Inherit',
       required: false,
       visible: true,
+      textColor: '#FFFFFF00',
+      backgroundTextColor: '#FFFFFF00',
+      backgroundColor: '#FFFFFF00',
     })
     expect(createDefaultElementProperties('barcode')).toMatchObject({
       type: 'barcode',
@@ -76,6 +79,11 @@ describe('elementPropertyService', () => {
         BindingPath: 'Patient.Name',
       },
       EnableValueValidate: true,
+      TextColor: '#FFFFFF00',
+      BackgroundTextColor: '#FFFFFF00',
+      Style: {
+        BackgroundColorString: '#FFFFFF00',
+      },
     })
   })
 
@@ -112,6 +120,28 @@ describe('elementPropertyService', () => {
 
     expect(toInputFieldWriterOptions(inputField)).toMatchObject({
       EditorActiveMode: 'Program F2 MouseDblClick',
+    })
+  })
+
+  it('writes ContentReadonly as the online three-state value without forcing UserEditable', () => {
+    const inheritedInputField = {
+      ...createDefaultElementProperties('input-field'),
+      readonly: 'Inherit',
+      allowKeyboardEdit: true,
+    }
+    const readOnlyInputField = {
+      ...createDefaultElementProperties('input-field'),
+      readonly: 'true',
+      allowKeyboardEdit: false,
+    }
+
+    expect(toInputFieldWriterOptions(inheritedInputField)).toMatchObject({
+      ContentReadonly: 'Inherit',
+      UserEditable: true,
+    })
+    expect(toInputFieldWriterOptions(readOnlyInputField)).toMatchObject({
+      ContentReadonly: true,
+      UserEditable: false,
     })
   })
 
