@@ -145,7 +145,7 @@ function createField(options: {
   children?: Record<string, string>
   innerValue?: string
 }): FieldStub {
-  const children = {
+  const children: Record<string, string> = {
     ...(options.children ?? {}),
     ...(options.innerValue === undefined ? {} : { InnerValue: options.innerValue }),
   }
