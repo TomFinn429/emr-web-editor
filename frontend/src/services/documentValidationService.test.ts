@@ -98,10 +98,43 @@ describe('documentValidationService', () => {
       },
     ])
   })
+
+  it('maps discharge before admission to a legacy validation issue', () => {
+    const xml = `
+<XTextDocument xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <XElements>
+    <Element xsi:type="XInputField">
+      <ID>admission-date</ID>
+      <Name>入院日期</Name>
+      <BindingPath>Visit.AdmissionDate</BindingPath>
+      <InnerValue>2026-06-02</InnerValue>
+    </Element>
+    <Element xsi:type="XInputField">
+      <ID>discharge-date</ID>
+      <Name>出院日期</Name>
+      <BindingPath>Visit.DischargeDate</BindingPath>
+      <InnerValue>2026-06-01</InnerValue>
+    </Element>
+  </XElements>
+</XTextDocument>
+`
+    stubDomParser(createParsedDocumentFromXml(xml))
+
+    expect(validateDocumentXml(xml)).toEqual([
+      expect.objectContaining({
+        id: 'timeline-discharge-before-admission',
+        fieldId: 'discharge-date',
+        fieldName: '出院日期',
+        severity: 'error',
+      }),
+    ])
+  })
 })
 
 interface FieldStub {
   tagName: string
+  attributes: { name: string; value: string }[]
+  children: { tagName: string; textContent: string }[]
   getAttribute: (name: string) => string | null
   querySelector: (selector: string) => { textContent: string } | null
 }
@@ -112,21 +145,24 @@ function createField(options: {
   children?: Record<string, string>
   innerValue?: string
 }): FieldStub {
+  const children = {
+    ...(options.children ?? {}),
+    ...(options.innerValue === undefined ? {} : { InnerValue: options.innerValue }),
+  }
+
   return {
     tagName: options.tagName ?? 'XInputField',
+    attributes: Object.entries(options.attributes).map(([name, value]) => ({ name, value })),
+    children: Object.entries(children).map(([tagName, textContent]) => ({ tagName, textContent })),
     getAttribute(name: string) {
       return options.attributes[name] ?? null
     },
     querySelector(selector: string) {
-      const childName = Object.keys(options.children ?? {}).find((name) =>
+      const childName = Object.keys(children).find((name) =>
         selector.includes(name),
       )
       if (childName) {
-        return { textContent: options.children?.[childName] ?? '' }
-      }
-
-      if (selector.includes('InnerValue') || selector.includes('innerValue')) {
-        return options.innerValue === undefined ? null : { textContent: options.innerValue }
+        return { textContent: children[childName] ?? '' }
       }
 
       return null
@@ -185,6 +221,9 @@ function parseRelevantChildren(source: string) {
       'innerValue',
       'Value',
       'value',
+      'BindingPath',
+      'DataSource',
+      'ValidateStyle',
     ].map((name) => [name, readTagText(source, name)]).filter(([, value]) => value !== null),
   ) as Record<string, string>
 }
