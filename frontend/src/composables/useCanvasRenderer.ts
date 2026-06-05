@@ -1,6 +1,6 @@
 import { readonly, shallowRef } from 'vue'
 import type { ShallowRef } from 'vue'
-import type { ImportedDocument } from '../types/document'
+import type { DocumentSource, ImportedDocument } from '../types/document'
 import { createClientId } from '../utils/idGenerator'
 import {
   DEFAULT_PREVIEW_PAGE_SIZE,
@@ -15,6 +15,10 @@ export interface ExternalWriterElement extends HTMLElement, WriterPrintTarget {
   DocumentOptions?: {
     ViewOptions?: {
       ShowHeaderBottomLine?: boolean
+    }
+    BehaviorOptions?: {
+      DesignMode?: boolean
+      Readonly?: boolean
     }
   }
   LoadDocumentFromString?: (
@@ -103,21 +107,7 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
 
   const editorElement = document.createElement('div') as ExternalWriterElement
   editorElement.id = createClientId('writer-host')
-  editorElement.setAttribute('dctype', 'WriterControlForWASM')
-  editorElement.setAttribute('RuleVisible', 'false')
-  editorElement.setAttribute('AllowDrop', 'false')
-  editorElement.setAttribute('autoCreateControl', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowPageBreak', 'true')
-  editorElement.setAttribute('DocumentOptions.BehaviorOptions.OutputFormatedXMLSource', 'false')
-  editorElement.setAttribute('DocumentOptions.BehaviorOptions.ParagraphFlagFollowTableOrSection', 'true')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowLineNumber', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowHeaderBottomLine', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowInputFieldStateTag', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.IgnoreFieldBorderWhenPrint', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.PrintBackgroundText', 'false')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.PreserveBackgroundTextWhenPrint', 'true')
-  editorElement.setAttribute('DocumentOptions.ViewOptions.FieldBorderPrintVisibility', 'hidden')
-  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', 'true')
+  configureExternalWriterHost(editorElement, importedDocument.source)
   editorElement.className = 'external-renderer-host'
   container.appendChild(editorElement)
 
@@ -136,7 +126,8 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
   }
 
   let hasLoadError = false
-  const loadResult = editorElement.LoadDocumentFromString(importedDocument.xml, 'xml', null, () => {
+  const loadXml = prepareExternalWriterXmlForLoad(importedDocument.xml, importedDocument.source)
+  const loadResult = editorElement.LoadDocumentFromString(loadXml, 'xml', null, () => {
     hasLoadError = true
   })
 
@@ -158,6 +149,82 @@ async function tryExternalRenderer(container: HTMLElement, importedDocument: Imp
 
   return editorElement
 }
+
+export function configureExternalWriterHost(editorElement: HTMLElement, source?: DocumentSource) {
+  const isTemplate = source === 'template'
+  editorElement.setAttribute('dctype', 'WriterControlForWASM')
+  editorElement.setAttribute('RuleVisible', 'false')
+  editorElement.setAttribute('AllowDrop', 'false')
+  editorElement.setAttribute('autoCreateControl', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowPageBreak', 'true')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.OutputFormatedXMLSource', 'false')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.ParagraphFlagFollowTableOrSection', 'true')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowLineNumber', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowHeaderBottomLine', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.ShowInputFieldStateTag', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.IgnoreFieldBorderWhenPrint', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.PrintBackgroundText', 'false')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.PreserveBackgroundTextWhenPrint', 'true')
+  editorElement.setAttribute('DocumentOptions.ViewOptions.FieldBorderPrintVisibility', 'hidden')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.DesignMode', 'false')
+  editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', isTemplate ? 'false' : 'true')
+  editorElement.setAttribute('Readonly', isTemplate ? 'false' : 'true')
+  editorElement.setAttribute('ReadViewMode', 'false')
+}
+
+export function prepareExternalWriterXmlForLoad(xml: string, source?: DocumentSource) {
+  if (source !== 'template') {
+    return xml
+  }
+
+  try {
+    return unlockTemplateContainerReadonly(xml)
+  } catch {
+    return xml
+  }
+}
+
+function unlockTemplateContainerReadonly(xml: string) {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(xml, 'application/xml')
+  if (doc.getElementsByTagName('parsererror').length > 0) {
+    return xml
+  }
+
+  for (const element of Array.from(doc.getElementsByTagName('Element'))) {
+    if (!isTemplateEditableContainer(element)) {
+      continue
+    }
+
+    const contentReadonly = findDirectChildElement(element, 'ContentReadonly')
+    if (contentReadonly?.textContent?.trim().toLowerCase() === 'true') {
+      contentReadonly.textContent = 'False'
+    }
+  }
+
+  return new XMLSerializer().serializeToString(doc)
+}
+
+function isTemplateEditableContainer(element: Element) {
+  return templateEditableContainerTypes.has(readWriterElementType(element))
+}
+
+function readWriterElementType(element: Element) {
+  return element.getAttributeNS('http://www.w3.org/2001/XMLSchema-instance', 'type')
+    || element.getAttribute('xsi:type')
+    || element.getAttribute('type')
+    || ''
+}
+
+function findDirectChildElement(element: Element, localName: string) {
+  return Array.from(element.children).find((child) => child.localName === localName || child.tagName === localName)
+}
+
+const templateEditableContainerTypes = new Set([
+  'XTextTable',
+  'XTextTableRow',
+  'XTextTableCell',
+])
 
 function hideHeaderBottomLine(editorElement: ExternalWriterElement) {
   if (editorElement.DocumentOptions?.ViewOptions) {

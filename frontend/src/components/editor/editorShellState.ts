@@ -20,6 +20,8 @@ export function toPreviewDocument(document: PreviewDocumentInput | null): Import
     fileName: document.fileName,
     xml: document.xml,
     warnings: [...document.warnings],
+    source: document.source,
+    templateId: document.templateId,
     renderMode: 'canvas',
   }
 }

@@ -19,7 +19,19 @@ describe('editorShellState', () => {
       fileName: 'record.xml',
       xml: '<XTextDocument />',
       warnings: ['本地导入未上传服务器。'],
+      source: 'local',
       renderMode: 'canvas',
+    })
+  })
+
+  it('passes template source metadata through to the renderer', () => {
+    expect(toPreviewDocument({
+      ...editorDocument,
+      source: 'template',
+      templateId: '西医病案首页',
+    })).toMatchObject({
+      source: 'template',
+      templateId: '西医病案首页',
     })
   })
 
