@@ -1,0 +1,17 @@
+Medical Record Web Editor Demo
+Copyright 2026 The Medical Record Web Editor Demo contributors
+
+This product includes software developed by the Medical Record Web Editor
+Demo contributors and is licensed under the Apache License, Version 2.0.
+
+The Apache-2.0 license in this repository applies only to repository content
+that the project contributors own or are authorized to license.
+
+This repository may contain local integration paths for third-party rendering
+assets such as DCWriter, WriterControl, or other commercial medical document
+runtime resources. Those names are used only to describe optional
+interoperability points. All related trademarks, copyrights, runtime files,
+binary files, static resources, templates, and product names remain the
+property of their respective owners and are not licensed by this NOTICE or by
+the repository's Apache-2.0 license unless an explicit third-party license says
+otherwise.

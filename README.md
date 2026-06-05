@@ -4,6 +4,14 @@
 
 仓库内容已按公开演示用途整理：不包含真实患者信息、不包含本地运行日志、不包含构建产物，也不包含需要额外授权的渲染运行时资源。
 
+## 许可证和第三方资源边界
+
+本项目自研代码按 Apache License 2.0 授权，详见 `LICENSE`。
+
+该许可证仅适用于本仓库中项目贡献者拥有或有权授权的内容，不覆盖 DCWriter、WriterControl、DCSoft、EMRWriterLite、商业编辑器运行时、反编译产物、专有模板、二进制文件或静态资源。相关名称仅用于描述可选兼容或本地集成点，商标、著作权和其他权利归其各自权利人所有。
+
+第三方依赖和可选本地渲染资源说明见 `NOTICE` 与 `THIRD_PARTY_NOTICES.md`。
+
 ## 功能范围
 
 - 上传 XML 文件并创建临时文档会话。
@@ -99,5 +107,7 @@ dotnet build
 - `backend/artifacts/`
 - `backend/renderer-source/`
 - `backend/renderer-runtime/`
+- `backend/renderer-assets/`
+- `reverse-engineering/`
 - `*.log`
 - 调试截图或临时 JSON
