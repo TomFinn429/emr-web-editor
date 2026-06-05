@@ -3,6 +3,8 @@ export interface ImportedDocument {
   fileName: string
   xml: string
   warnings: string[] | readonly string[]
+  source?: DocumentSource
+  templateId?: string
   renderMode: 'canvas'
 }
 

@@ -65,6 +65,7 @@ async function readLocalXmlDocument(file: File): Promise<ImportedDocument> {
     fileName: sanitizedFileName,
     xml: sanitizeXmlText(xml),
     warnings,
+    source: 'local',
     renderMode: 'canvas',
   }
 }
