@@ -12,8 +12,10 @@ import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import { useDocumentImport } from '../../composables/useDocumentImport'
 import { useElementInspector } from '../../composables/useElementInspector'
 import { useDocumentSession } from '../../composables/useDocumentSession'
+import { useQualityControlSession } from '../../composables/useQualityControlSession'
 import { useWorkbenchDialog } from '../../composables/useWorkbenchDialog'
 import { downloadXml, saveDocumentToBackend } from '../../services/documentSaveService'
+import { extractDocumentFacts } from '../../services/documentFactExtractor'
 import {
   bindMetadataToInputField,
   createDefaultElementProperties,
@@ -21,6 +23,8 @@ import {
 } from '../../services/elementPropertyService'
 import { refreshFragmentTemplateTree } from '../../services/fragmentTemplateService'
 import { refreshMetadataTree } from '../../services/metadataService'
+import { createMockQualityControlAgent, mockAgentVersion } from '../../services/qcAgentService'
+import { createQualityControlReport, runQualityControlRules } from '../../services/qcRuleEngine'
 import {
   batchUploadTemplates,
   beginTemplateUpload,
@@ -43,16 +47,19 @@ import {
   type TemplateTreeNode,
   type TemplateWorkbenchData,
 } from '../../services/templateWorkbenchService'
-import type { EditorCommandId, ValidationIssue, WriterCommandPayload } from '../../types/document'
+import type { EditorCommandId, WriterCommandPayload } from '../../types/document'
 import type { EditorElementProperties, FragmentTemplateTreeNode, MetadataTreeNode } from '../../types/editorElement'
+import type { QualityControlIssue } from '../../types/qualityControl'
 import { insertCodeElement as insertWriterCodeElement, insertFragmentTemplate } from '../../utils/writerElementAdapter'
 import { createWriterControlAdapter } from '../../utils/writerControlAdapter'
 import type { WriterPrintResult } from '../../utils/writerPrint'
 import { createWriterCommandPayload, findCommandDefinition } from './commandRegistry'
-import { toPreviewDocument } from './editorShellState'
+import { createReportFromValidationIssues, toPreviewDocument } from './editorShellState'
 
 const importState = useDocumentImport()
 const session = useDocumentSession()
+const qualityControl = useQualityControlSession()
+const qualityControlAgent = createMockQualityControlAgent()
 const dialog = useWorkbenchDialog()
 
 const zoom = shallowRef(1)
@@ -167,6 +174,7 @@ async function handleTemplateSelect(id: string, treeNodeId?: string) {
   printMessage.value = null
   commandMessage.value = null
   templatesError.value = null
+  qualityControl.clear()
 
   try {
     const template = await openTemplateContent(id)
@@ -200,6 +208,7 @@ async function handleLocalImport(file: File) {
   printMessage.value = null
   commandMessage.value = null
   templatesError.value = null
+  qualityControl.clear()
   await importState.importFile(file)
   if (importState.document.value) {
     session.loadLocalDocument(importState.document.value)
@@ -319,6 +328,7 @@ async function saveToBackend() {
 
   if (result.ok) {
     session.setValidationIssues([])
+    qualityControl.clear()
     commandMessage.value = null
     session.markSaved(result.xml, document.id)
     if (document.templateId) {
@@ -327,9 +337,11 @@ async function saveToBackend() {
     }
   } else if (result.reason === 'validation-failed') {
     session.setValidationIssues(result.issues)
+    qualityControl.setReport(createReportFromValidationIssues(document.id, result.issues))
     session.markFailed('保存前校验未通过。', document.id)
   } else if (result.reason === 'backend-failed' && document.templateId) {
     session.setValidationIssues([])
+    qualityControl.clear()
     session.markSaved(result.xml, document.id)
     saveTemplateContent(document.templateId, result.xml, document.fileName)
     commandMessage.value = `真实保存接口暂不可用：${result.message} 已保存到当前工作台 mock 模板。`
@@ -337,6 +349,35 @@ async function saveToBackend() {
   } else {
     session.markFailed(result.message, document.id)
   }
+}
+
+async function runQualityControl() {
+  const document = session.document.value
+  if (!document) {
+    return
+  }
+
+  const result = adapter.value.saveXml()
+  if (!result.ok) {
+    session.markFailed(result.message, document.id)
+    return
+  }
+
+  await qualityControl.run(document.id, async () => {
+    const facts = extractDocumentFacts({
+      documentId: document.id,
+      fileName: document.fileName,
+      source: document.source,
+      templateId: document.templateId,
+      xml: result.xml,
+    })
+    const ruleIssues = runQualityControlRules(facts)
+    const agentIssues = await qualityControlAgent.analyze(facts)
+
+    return createQualityControlReport(document.id, [...ruleIssues, ...agentIssues], {
+      agentVersion: mockAgentVersion,
+    })
+  })
 }
 
 function downloadCurrentXml() {
@@ -616,6 +657,7 @@ async function clearDocument() {
 
   session.clearDocument()
   importState.clearDocument()
+  qualityControl.clear()
   writerElement.value = null
   selectedTreeNodeId.value = undefined
   showHistoryVersions.value = false
@@ -710,6 +752,7 @@ async function deleteTreeNode(node: TemplateTreeNode) {
     deleteTemplateFile(node.id)
     if (wasActive) {
       session.clearDocument()
+      qualityControl.clear()
       writerElement.value = null
     }
   } else {
@@ -733,6 +776,7 @@ async function closeOpenTab(templateId: string) {
       await handleTemplateSelect(nextId, nextId)
     } else {
       session.clearDocument()
+      qualityControl.clear()
       writerElement.value = null
     }
   }
@@ -743,8 +787,8 @@ async function refreshWorkbenchData(activeId?: string) {
   workbenchData.value = await fetchTemplateWorkbenchData(activeId)
 }
 
-function handleValidationIssue(issue: ValidationIssue) {
-  session.markFailed(`暂时无法自动定位字段“${issue.fieldName}”：${issue.message}`)
+function handleQualityIssue(issue: QualityControlIssue) {
+  session.markFailed(`暂时无法自动定位问题“${issue.title}”：${issue.message}`)
 }
 
 async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
@@ -816,13 +860,18 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
               :status-message="statusMessage"
               :warning-text="warningText"
               :zoom="zoom"
-              :validation-issues="session.validationIssues.value"
+              :quality-control-report="qualityControl.report.value"
+              :is-quality-control-running="qualityControl.isRunning.value"
+              :quality-control-error="qualityControl.error.value"
               :open-tabs="openTabs"
               :active-template-id="activeTemplateId"
               @mode-change="rendererMode = $event"
               @render-error="rendererError = $event"
               @writer-ready="updateWriterElement"
-              @select-issue="handleValidationIssue"
+              @run-quality-control="runQualityControl"
+              @select-quality-issue="handleQualityIssue"
+              @ignore-quality-issue="qualityControl.ignoreIssue"
+              @resolve-quality-issue="qualityControl.resolveIssue"
               @select-tab="selectOpenTab"
               @close-tab="closeOpenTab"
             />

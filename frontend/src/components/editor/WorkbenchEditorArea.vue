@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import CanvasPreview from './CanvasPreview.vue'
-import ValidationPanel from './ValidationPanel.vue'
+import QualityControlPanel from './QualityControlPanel.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import type { TemplateOpenTab } from '../../services/templateWorkbenchService'
-import type { ImportedDocument, ValidationIssue } from '../../types/document'
+import type { ImportedDocument } from '../../types/document'
+import type { QualityControlIssue, QualityControlReport } from '../../types/qualityControl'
 
 interface Props {
   document: ImportedDocument | null
@@ -11,7 +12,9 @@ interface Props {
   statusMessage: string
   warningText: string
   zoom: number
-  validationIssues: readonly ValidationIssue[]
+  qualityControlReport: QualityControlReport | null
+  isQualityControlRunning: boolean
+  qualityControlError: string | null
   openTabs: readonly TemplateOpenTab[]
   activeTemplateId?: string
 }
@@ -20,7 +23,10 @@ interface Emits {
   modeChange: [mode: string]
   renderError: [message: string | null]
   writerReady: [writerElement: ExternalWriterElement | null]
-  selectIssue: [issue: ValidationIssue]
+  runQualityControl: []
+  selectQualityIssue: [issue: QualityControlIssue]
+  ignoreQualityIssue: [issueId: string]
+  resolveQualityIssue: [issueId: string]
   selectTab: [templateId: string]
   closeTab: [templateId: string]
 }
@@ -63,9 +69,14 @@ const emit = defineEmits<Emits>()
       @writer-ready="emit('writerReady', $event)"
     />
 
-    <ValidationPanel
-      :issues="props.validationIssues"
-      @select-issue="emit('selectIssue', $event)"
+    <QualityControlPanel
+      :report="props.qualityControlReport"
+      :is-running="props.isQualityControlRunning"
+      :error="props.qualityControlError"
+      @run-quality-control="emit('runQualityControl')"
+      @select-issue="emit('selectQualityIssue', $event)"
+      @ignore-issue="emit('ignoreQualityIssue', $event)"
+      @resolve-issue="emit('resolveQualityIssue', $event)"
     />
   </section>
 </template>

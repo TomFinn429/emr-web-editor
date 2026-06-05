@@ -83,7 +83,7 @@ export interface QualityControlIssue {
   title: string
   message: string
   suggestion: string
-  evidence: EvidenceSnippet[]
+  evidence: readonly EvidenceSnippet[]
   fieldId?: string
   fieldName?: string
   blocking: boolean
@@ -107,7 +107,7 @@ export interface QualityControlReport {
   agentVersion: string
   generatedAt: string
   summary: QualityControlSummary
-  issues: QualityControlIssue[]
+  issues: readonly QualityControlIssue[]
 }
 
 export interface QualityControlRunInput {
