@@ -26,6 +26,12 @@ describe('commandRegistry', () => {
       'save',
       'saveAsTemplate',
       'downloadXml',
+      'exportXml',
+      'exportPdf',
+      'exportDoc',
+      'exportTxt',
+      'exportHtml',
+      'exportJson',
       'uploadTemplate',
       'batchUploadTemplates',
       'cancelUpload',
@@ -38,6 +44,34 @@ describe('commandRegistry', () => {
     expect(findCommandDefinition('save')?.kind).toBe('app')
     expect(findCommandDefinition('print')?.kind).toBe('app')
     expect(findCommandDefinition('printPreview')?.kind).toBe('app')
+  })
+
+  it('models the target-page local export submenu under the file menu', () => {
+    const fileTab = topMenuTabs.find(tab => tab.id === 'file')
+    const fileCommands = fileTab?.groups.flatMap(group => group.commands) || []
+    const exportCommand = fileCommands.find(command => command.id === 'exportLocal')
+
+    expect(exportCommand).toMatchObject({
+      kind: 'placeholder',
+      label: '导出到本地',
+      icon: 'Download',
+    })
+    expect(exportCommand?.children?.map(command => command.label)).toEqual([
+      'XML',
+      'PDF',
+      'DOC',
+      'TXT',
+      'HTML',
+      'JSON',
+    ])
+    expect(exportCommand?.children?.map(command => command.id)).toEqual([
+      'exportXml',
+      'exportPdf',
+      'exportDoc',
+      'exportTxt',
+      'exportHtml',
+      'exportJson',
+    ])
   })
 
   it('maps existing WriterControl editing commands without changing payloads', () => {
@@ -129,7 +163,12 @@ describe('commandRegistry', () => {
 
   it('does not duplicate command ids across menu tabs', () => {
     const commandIds = topMenuTabs.flatMap(tab =>
-      tab.groups.flatMap(group => group.commands.map(command => command.id)),
+      tab.groups.flatMap(group =>
+        group.commands.flatMap(command => [
+          command.id,
+          ...(command.children?.map(child => child.id) || []),
+        ]),
+      ),
     )
 
     expect(new Set(commandIds).size).toBe(commandIds.length)

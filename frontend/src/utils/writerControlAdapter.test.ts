@@ -106,6 +106,104 @@ describe('writerControlAdapter', () => {
     expect(target.SaveDocumentToString).toHaveBeenCalledWith({ FileFormat: 'XML' })
   })
 
+  it('returns exported document content through SaveDocumentToString for supported local formats', () => {
+    const target: WriterControlTarget = {
+      SaveDocumentToString: vi.fn(() => '{"document":true}'),
+    }
+
+    expect(createWriterControlAdapter(target).saveDocument('json')).toEqual({
+      ok: true,
+      format: 'json',
+      content: '{"document":true}',
+    })
+    expect(target.SaveDocumentToString).toHaveBeenCalledWith({ FileFormat: 'json' })
+  })
+
+  it('returns RTF content for DOC-compatible exports', () => {
+    const target: WriterControlTarget = {
+      SaveDocumentToString: vi.fn(() => '{\\rtf1}'),
+    }
+
+    expect(createWriterControlAdapter(target).saveDocument('rtf')).toEqual({
+      ok: true,
+      format: 'rtf',
+      content: '{\\rtf1}',
+    })
+    expect(target.SaveDocumentToString).toHaveBeenCalledWith({ FileFormat: 'rtf' })
+  })
+
+  it('adds WriterControl page settings to saved HTML content', () => {
+    const target: WriterControlTarget = {
+      SaveDocumentToString: vi.fn(() => '<html><head><title>病案首页</title></head><body></body></html>'),
+      GetDocumentPageSettings: vi.fn(() => ({
+        PaperWidthInCM: 21,
+        LeftMarginInCM: 2,
+        RightMarginInCM: 1.5,
+      })),
+    }
+
+    const result = createWriterControlAdapter(target).saveDocument('html')
+
+    expect(result).toEqual({
+      ok: true,
+      format: 'html',
+      content: '<html><head><title>病案首页</title><style>body{margin-left:auto;margin-right:auto;width:21cm;padding-left:2cm;padding-right:1.5cm;box-sizing:border-box;}</style></head><body></body></html>',
+    })
+  })
+
+  it('exports PDF through the print API instead of WriterControl local.pdf download', () => {
+    const target: WriterControlTarget = {
+      DownLoadFile: vi.fn(() => true),
+      PrintDocument: vi.fn(() => true),
+    }
+    const adapter = createWriterControlAdapter(target)
+
+    expect(adapter.exportPdfFile()).toEqual({ ok: true })
+    expect(target.PrintDocument).toHaveBeenCalledWith({ PrintRange: 'AllPages' })
+    expect(target.DownLoadFile).not.toHaveBeenCalled()
+  })
+
+  it('rejects direct WriterControl local.pdf downloads to avoid WASM font memory overflow', () => {
+    const target: WriterControlTarget = {
+      DownLoadFile: vi.fn(() => true),
+    }
+
+    expect(createWriterControlAdapter(target).downloadDocumentFile('pdf', '西医病案首页')).toEqual({
+      ok: false,
+      reason: 'command-rejected',
+      message: 'PDF 导出已切换为浏览器打印保存，避免 WriterControl 本地 PDF 生成读取字体时内存溢出。',
+    })
+    expect(target.DownLoadFile).not.toHaveBeenCalled()
+  })
+
+  it('downloads DOC and HTML through the WriterControl local export API', () => {
+    const target: WriterControlTarget = {
+      DownLoadFile: vi.fn(() => true),
+    }
+    const adapter = createWriterControlAdapter(target)
+
+    expect(adapter.downloadDocumentFile('doc', '西医病案首页')).toEqual({
+      ok: true,
+      format: 'doc',
+      writerFormat: 'rtf',
+    })
+    expect(adapter.downloadDocumentFile('html', '西医病案首页')).toEqual({
+      ok: true,
+      format: 'html',
+      writerFormat: 'html',
+    })
+    expect(target.DownLoadFile).toHaveBeenNthCalledWith(1, 'rtf', '西医病案首页')
+    expect(target.DownLoadFile).toHaveBeenNthCalledWith(2, 'html', '西医病案首页')
+  })
+
+  it('reports unavailable local export API when DownLoadFile is missing', () => {
+    expect(createWriterControlAdapter({}).downloadDocumentFile('html', '西医病案首页')).toEqual({
+      ok: false,
+      reason: 'download-api-unavailable',
+      message: '当前外部编辑器未暴露本地文件导出接口。',
+    })
+  })
+
   it('reports unavailable save API when SaveDocumentToString is missing', () => {
     expect(createWriterControlAdapter({}).saveXml()).toEqual({
       ok: false,

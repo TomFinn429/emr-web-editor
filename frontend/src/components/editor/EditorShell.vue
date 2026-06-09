@@ -13,7 +13,7 @@ import { useDocumentImport } from '../../composables/useDocumentImport'
 import { useElementInspector } from '../../composables/useElementInspector'
 import { useDocumentSession } from '../../composables/useDocumentSession'
 import { useWorkbenchDialog } from '../../composables/useWorkbenchDialog'
-import { downloadXml, saveDocumentToBackend } from '../../services/documentSaveService'
+import { downloadDocument, downloadXml, saveDocumentToBackend } from '../../services/documentSaveService'
 import {
   bindMetadataToInputField,
   createDefaultElementProperties,
@@ -43,7 +43,7 @@ import {
   type TemplateTreeNode,
   type TemplateWorkbenchData,
 } from '../../services/templateWorkbenchService'
-import type { EditorCommandId, ValidationIssue, WriterCommandPayload } from '../../types/document'
+import type { DocumentExportFormat, EditorCommandId, ValidationIssue, WriterCommandPayload } from '../../types/document'
 import type { EditorElementProperties, FragmentTemplateTreeNode, MetadataTreeNode } from '../../types/editorElement'
 import { insertCodeElement as insertWriterCodeElement, insertFragmentTemplate } from '../../utils/writerElementAdapter'
 import { createWriterControlAdapter } from '../../utils/writerControlAdapter'
@@ -80,6 +80,56 @@ const canUseWriter = computed(() => writerElement.value !== null)
 const canSaveFromWriter = computed(() => Boolean(session.document.value) && canUseWriter.value)
 const canUseTemplateCommands = computed(() => Boolean(currentTemplateId.value))
 const statusRenderMode = computed(() => (rendererMode.value === 'external' ? '外部渲染' : '结构化预览'))
+
+const exportFormatByCommand = {
+  exportXml: 'xml',
+  exportPdf: 'pdf',
+  exportDoc: 'doc',
+  exportTxt: 'txt',
+  exportHtml: 'html',
+  exportJson: 'json',
+} satisfies Partial<Record<EditorCommandId, DocumentExportFormat>>
+
+type ExportCommandId = keyof typeof exportFormatByCommand
+
+const localExportFormats: Partial<Record<DocumentExportFormat, {
+  extension: string
+  mimeType: string
+  writerFormat: DocumentExportFormat | 'text' | 'rtf'
+}>> = {
+  xml: {
+    extension: 'xml',
+    mimeType: 'application/xml;charset=utf-8',
+    writerFormat: 'xml',
+  },
+  txt: {
+    extension: 'txt',
+    mimeType: 'text/plain;charset=utf-8',
+    writerFormat: 'text',
+  },
+  json: {
+    extension: 'json',
+    mimeType: 'application/json;charset=utf-8',
+    writerFormat: 'json',
+  },
+  doc: {
+    extension: 'doc',
+    mimeType: 'application/rtf',
+    writerFormat: 'rtf',
+  },
+  html: {
+    extension: 'html',
+    mimeType: 'text/html;charset=utf-8',
+    writerFormat: 'html',
+  },
+}
+
+const writerDownloadExportFormats = new Set<DocumentExportFormat>(['html'])
+
+function isExportCommandId(commandId: EditorCommandId): commandId is ExportCommandId {
+  return Object.prototype.hasOwnProperty.call(exportFormatByCommand, commandId)
+}
+
 const workbenchTree = computed(() => workbenchData.value?.templateTree || [])
 const workbenchCategories = computed(() => workbenchData.value?.categories || ['全部分类'])
 const workbenchScopes = computed(() => workbenchData.value?.templateScopes || [
@@ -231,6 +281,8 @@ async function runAppCommand(commandId: EditorCommandId) {
     await saveAsTemplate()
   } else if (commandId === 'downloadXml') {
     downloadCurrentXml()
+  } else if (isExportCommandId(commandId)) {
+    exportCurrentDocument(exportFormatByCommand[commandId])
   } else if (commandId === 'uploadTemplate') {
     uploadCurrentTemplate()
   } else if (commandId === 'batchUploadTemplates') {
@@ -356,6 +408,62 @@ function downloadCurrentXml() {
     saveTemplateContent(document.templateId, result.xml, document.fileName)
     void refreshWorkbenchData(document.templateId)
   }
+  commandMessage.value = null
+}
+
+function exportCurrentDocument(format: DocumentExportFormat) {
+  if (format === 'xml') {
+    downloadCurrentXml()
+    return
+  }
+
+  const document = session.document.value
+  if (!document) {
+    return
+  }
+
+  if (format === 'pdf') {
+    const result = adapter.value.exportPdfFile()
+    if (result.ok) {
+      commandMessage.value = null
+      return
+    }
+
+    session.markFailed(result.message, document.id)
+    return
+  }
+
+  if (writerDownloadExportFormats.has(format)) {
+    const result = adapter.value.downloadDocumentFile(format, document.fileName.replace(/\.[^.\\/]+$/, ''))
+    if (result.ok) {
+      commandMessage.value = null
+      return
+    }
+
+    if (result.reason !== 'download-api-unavailable') {
+      session.markFailed(result.message, document.id)
+      return
+    }
+  }
+
+  const exportConfig = localExportFormats[format]
+  if (!exportConfig) {
+    commandMessage.value = `${format.toUpperCase()} 导出入口已还原，当前版本暂未接入该格式生成能力。`
+    return
+  }
+
+  const result = adapter.value.saveDocument(exportConfig.writerFormat)
+  if (!result.ok) {
+    session.markFailed(result.message, document.id)
+    return
+  }
+
+  downloadDocument({
+    fileName: document.fileName,
+    extension: exportConfig.extension,
+    content: result.content,
+    mimeType: exportConfig.mimeType,
+  })
   commandMessage.value = null
 }
 

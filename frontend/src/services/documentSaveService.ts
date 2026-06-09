@@ -18,6 +18,13 @@ export type BackendSaveResult =
   | { ok: false; reason: 'validation-failed'; issues: ValidationIssue[] }
   | { ok: false; reason: 'backend-failed'; message: string; xml: string }
 
+export interface DownloadDocumentOptions {
+  fileName: string
+  extension: string
+  content: string | BlobPart[]
+  mimeType: string
+}
+
 export async function saveDocumentToBackend(
   adapter: SaveAdapter,
   options: SaveDocumentOptions,
@@ -68,15 +75,31 @@ export async function saveDocumentToBackend(
 }
 
 export function downloadXml(fileName: string, xml: string) {
-  const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' })
+  downloadDocument({
+    fileName: fileName || 'document.xml',
+    extension: 'xml',
+    content: xml,
+    mimeType: 'application/xml;charset=utf-8',
+  })
+}
+
+export function downloadDocument(options: DownloadDocumentOptions) {
+  const content = Array.isArray(options.content) ? options.content : [options.content]
+  const blob = new Blob(content, { type: options.mimeType })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = fileName || 'document.xml'
+  anchor.download = withExtension(options.fileName, options.extension)
   document.body.appendChild(anchor)
   anchor.click()
   document.body.removeChild(anchor)
   setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function withExtension(fileName: string, extension: string) {
+  const normalizedExtension = extension.replace(/^\./, '')
+  const baseName = fileName.trim() || `document.${normalizedExtension}`
+  return baseName.replace(/\.[^.\\/]+$/, '') + `.${normalizedExtension}`
 }
 
 function readErrorMessage(payload: unknown) {

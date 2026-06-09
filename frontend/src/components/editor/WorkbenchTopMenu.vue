@@ -6,6 +6,7 @@ import {
   Barcode,
   Bold,
   CalendarDays,
+  ChevronDown,
   CheckSquare,
   CircleDot,
   ClipboardPaste,
@@ -42,10 +43,11 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-vue-next'
-import { computed, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import type { Component } from 'vue'
 import type { AppCommandId, EditorCommandId } from '../../types/document'
 import { topMenuTabs, type CommandDefinition } from './commandRegistry'
+import WorkbenchDropdownMenu from './WorkbenchDropdownMenu.vue'
 
 interface Props {
   canUseWriterCommands: boolean
@@ -64,12 +66,27 @@ interface Emits {
   importFile: [file: File]
 }
 
+interface SubmenuPosition {
+  top: number
+  left: number
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const activeMenuId = shallowRef(topMenuTabs[0]?.id || 'file')
+const openSubmenuCommandId = shallowRef<EditorCommandId | null>(null)
+const submenuPosition = shallowRef<SubmenuPosition | null>(null)
 const activeMenu = computed(() => (
   topMenuTabs.find(tab => tab.id === activeMenuId.value) || topMenuTabs[0]
+))
+const submenuStyle = computed(() => (
+  submenuPosition.value
+    ? {
+        top: `${submenuPosition.value.top}px`,
+        left: `${submenuPosition.value.left}px`,
+      }
+    : undefined
 ))
 
 const iconMap: Record<string, Component> = {
@@ -79,6 +96,7 @@ const iconMap: Record<string, Component> = {
   Barcode,
   Bold,
   CalendarDays,
+  ChevronDown,
   CheckSquare,
   CircleDot,
   ClipboardPaste,
@@ -118,6 +136,7 @@ const iconMap: Record<string, Component> = {
 
 function selectMenu(menuId: string) {
   activeMenuId.value = menuId
+  closeSubmenu()
 }
 
 function commandIcon(command: CommandDefinition) {
@@ -132,7 +151,11 @@ function buttonCommands(commands: readonly CommandDefinition[]) {
   return commands.filter(command => command.id !== 'importXml')
 }
 
-function isCommandDisabled(command: CommandDefinition) {
+function isCommandDisabled(command: CommandDefinition): boolean {
+  if (command.children?.length) {
+    return command.children.every(child => isCommandDisabled(child))
+  }
+
   if (command.kind === 'placeholder') {
     return true
   }
@@ -148,6 +171,14 @@ function isAppCommandDisabled(commandId: AppCommandId) {
   if (commandId === 'save') return !props.canSave || props.isSaving
   if (commandId === 'saveAsTemplate') return !props.canSave || props.isSaving
   if (commandId === 'downloadXml') return !props.canSave
+  if (
+    commandId === 'exportXml'
+    || commandId === 'exportTxt'
+    || commandId === 'exportJson'
+    || commandId === 'exportPdf'
+    || commandId === 'exportDoc'
+    || commandId === 'exportHtml'
+  ) return !props.canSave
   if (commandId === 'uploadTemplate') return !props.canUpload
   if (commandId === 'batchUploadTemplates') return !props.canUpload
   if (commandId === 'cancelUpload') return !props.canUpload
@@ -163,10 +194,42 @@ function isAppCommandDisabled(commandId: AppCommandId) {
   return false
 }
 
-function runCommand(command: CommandDefinition) {
+function closeSubmenu() {
+  openSubmenuCommandId.value = null
+  submenuPosition.value = null
+}
+
+function openSubmenu(command: CommandDefinition, event?: MouseEvent) {
+  if (openSubmenuCommandId.value === command.id) {
+    closeSubmenu()
+    return
+  }
+
+  const target = event?.currentTarget
+  if (target instanceof HTMLElement) {
+    const rect = target.getBoundingClientRect()
+    submenuPosition.value = {
+      top: rect.bottom + 4,
+      left: rect.left,
+    }
+  }
+
+  openSubmenuCommandId.value = command.id
+}
+
+function handleDocumentClick() {
+  closeSubmenu()
+}
+
+function runCommand(command: CommandDefinition, event?: MouseEvent) {
   if (isCommandDisabled(command)) {
     return
   }
+  if (command.children?.length) {
+    openSubmenu(command, event)
+    return
+  }
+  closeSubmenu()
   emit('command', command.id)
 }
 
@@ -178,21 +241,33 @@ function handleFileChange(event: Event) {
   }
   input.value = ''
 }
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
 </script>
 
 <template>
   <header class="workbench-menu">
     <div class="workbench-menu__tabs" aria-label="模板制作菜单">
-      <button
+      <div
         v-for="menu in topMenuTabs"
         :key="menu.id"
-        class="workbench-menu__tab"
-        :class="{ 'workbench-menu__tab--active': menu.id === activeMenu?.id }"
-        type="button"
-        @click="selectMenu(menu.id)"
+        class="workbench-menu__tab-wrap"
       >
-        {{ menu.label }}
-      </button>
+        <button
+          class="workbench-menu__tab"
+          :class="{ 'workbench-menu__tab--active': menu.id === activeMenu?.id }"
+          type="button"
+          @click="selectMenu(menu.id)"
+        >
+          {{ menu.label }}
+        </button>
+      </div>
       <div class="workbench-menu__state" :title="props.fileName || '未打开文档'">
         {{ props.fileName || '未打开文档' }}
       </div>
@@ -222,19 +297,37 @@ function handleFileChange(event: Event) {
               @change="handleFileChange"
             />
           </label>
-          <button
+          <div
             v-for="command in buttonCommands(group.commands)"
             :key="command.id"
-            class="workbench-command"
-            type="button"
-            :title="command.disabledReason || command.label"
-            :disabled="isCommandDisabled(command)"
-            @mousedown.prevent
-            @click="runCommand(command)"
+            class="workbench-command-wrap"
           >
-            <component :is="commandIcon(command)" :size="17" aria-hidden="true" />
-            <span>{{ command.label }}</span>
-          </button>
+            <button
+              class="workbench-command"
+              :class="{ 'workbench-command--with-menu': command.children?.length }"
+              type="button"
+              :title="command.disabledReason || command.label"
+              :disabled="isCommandDisabled(command)"
+              :aria-haspopup="command.children?.length ? 'menu' : undefined"
+              :aria-expanded="command.children?.length ? openSubmenuCommandId === command.id : undefined"
+              @mousedown.prevent
+              @click.stop="runCommand(command, $event)"
+            >
+              <component :is="commandIcon(command)" :size="17" aria-hidden="true" />
+              <span>{{ command.label }}</span>
+              <ChevronDown v-if="command.children?.length" :size="13" aria-hidden="true" />
+            </button>
+            <Teleport v-if="command.children?.length" to="body">
+              <WorkbenchDropdownMenu
+                v-if="openSubmenuCommandId === command.id && submenuPosition"
+                :commands="command.children"
+                :command-icon="commandIcon"
+                :is-command-disabled="isCommandDisabled"
+                :style="submenuStyle"
+                @command="runCommand"
+              />
+            </Teleport>
+          </div>
         </div>
         <div class="workbench-menu__group-title">{{ group.label }}</div>
       </div>
@@ -272,6 +365,11 @@ function handleFileChange(event: Event) {
   background: transparent;
   color: #2e4054;
   font-size: 13px;
+}
+
+.workbench-menu__tab-wrap {
+  position: relative;
+  height: 28px;
 }
 
 .workbench-menu__tab:hover {
@@ -348,6 +446,11 @@ function handleFileChange(event: Event) {
   font-size: 12px;
 }
 
+.workbench-command-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .workbench-command:hover:not(:disabled) {
   border-color: #b7c9d6;
   background: #e7f0f5;
@@ -363,6 +466,10 @@ function handleFileChange(event: Event) {
   border-color: #b9cad6;
   background: #f8fbfd;
   cursor: pointer;
+}
+
+.workbench-command--with-menu {
+  padding-right: 6px;
 }
 
 .workbench-command__file {

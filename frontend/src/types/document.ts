@@ -32,6 +32,8 @@ export interface TemplateContent extends TemplateSummary {
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'failed'
 
+export type DocumentExportFormat = 'xml' | 'pdf' | 'doc' | 'txt' | 'html' | 'json'
+
 export interface SaveDocumentResponse {
   id: string
   fileName: string
@@ -87,6 +89,12 @@ export type AppCommandId =
   | 'save'
   | 'saveAsTemplate'
   | 'downloadXml'
+  | 'exportXml'
+  | 'exportPdf'
+  | 'exportDoc'
+  | 'exportTxt'
+  | 'exportHtml'
+  | 'exportJson'
   | 'uploadTemplate'
   | 'batchUploadTemplates'
   | 'cancelUpload'
@@ -105,6 +113,7 @@ export type AppCommandId =
   | 'refreshDocument'
 
 export type PlaceholderCommandId =
+  | 'exportLocal'
   | 'fontSize'
   | 'fontName'
   | 'foreColor'

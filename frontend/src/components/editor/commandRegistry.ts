@@ -15,6 +15,7 @@ export interface CommandDefinition {
   icon?: string
   payload?: WriterCommandPayload
   disabledReason?: string
+  children?: CommandDefinition[]
 }
 
 export interface CommandGroup {
@@ -37,8 +38,10 @@ function placeholderCommand(
   id: PlaceholderCommandId,
   label: string,
   disabledReason = '该能力将在第二阶段接入。',
+  icon?: string,
+  children?: CommandDefinition[],
 ): CommandDefinition {
-  return { id, label, kind: 'placeholder', disabledReason }
+  return { id, label, icon, kind: 'placeholder', disabledReason, children }
 }
 
 function writerCommand(
@@ -76,6 +79,14 @@ export const topMenuTabs: CommandMenuTab[] = [
           appCommand('save', '保存', 'Save'),
           appCommand('saveAsTemplate', '另存为', 'CopyPlus'),
           appCommand('downloadXml', '下载 XML', 'Download'),
+          placeholderCommand('exportLocal', '导出到本地', '', 'Download', [
+            appCommand('exportXml', 'XML', 'FileText'),
+            appCommand('exportPdf', 'PDF', 'FileText'),
+            appCommand('exportDoc', 'DOC', 'FileText'),
+            appCommand('exportTxt', 'TXT', 'FileText'),
+            appCommand('exportHtml', 'HTML', 'FileText'),
+            appCommand('exportJson', 'JSON', 'FileText'),
+          ]),
           appCommand('uploadTemplate', '上传', 'UploadCloud'),
           appCommand('batchUploadTemplates', '批量上传', 'CloudUpload'),
           appCommand('cancelUpload', '取消上传', 'X'),
@@ -304,8 +315,15 @@ export const topMenuTabs: CommandMenuTab[] = [
 ]
 
 const commandDefinitions = topMenuTabs.flatMap(tab =>
-  tab.groups.flatMap(group => group.commands),
+  tab.groups.flatMap(group => flattenCommands(group.commands)),
 )
+
+function flattenCommands(commands: CommandDefinition[]): CommandDefinition[] {
+  return commands.flatMap(command => [
+    command,
+    ...(command.children ? flattenCommands(command.children) : []),
+  ])
+}
 
 export const appCommandIds = commandDefinitions
   .filter((command): command is CommandDefinition & { id: AppCommandId; kind: 'app' } => command.kind === 'app')

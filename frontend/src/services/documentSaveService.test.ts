@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ValidationIssue } from '../types/document'
-import { downloadXml, saveDocumentToBackend } from './documentSaveService'
+import { downloadDocument, downloadXml, saveDocumentToBackend } from './documentSaveService'
 
 const invalidXmlIssue: ValidationIssue = {
   id: 'invalid-xml',
@@ -231,5 +231,44 @@ describe('documentSaveService', () => {
     vi.runOnlyPendingTimers()
 
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:document')
+  })
+
+  it('downloads arbitrary exported document content with target extension and MIME type', () => {
+    vi.useFakeTimers()
+    const click = vi.fn()
+    const anchor = {
+      href: '',
+      download: '',
+      click,
+    }
+    const createObjectURL = vi.fn(() => 'blob:exported-document')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+      body: {
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+    })
+    vi.stubGlobal('URL', {
+      createObjectURL,
+      revokeObjectURL,
+    })
+
+    downloadDocument({
+      fileName: '西医病案首页.xml',
+      extension: 'json',
+      content: '{"ok":true}',
+      mimeType: 'application/json;charset=utf-8',
+    })
+
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(anchor.href).toBe('blob:exported-document')
+    expect(anchor.download).toBe('西医病案首页.json')
+    expect(click).toHaveBeenCalled()
+
+    vi.runOnlyPendingTimers()
+
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:exported-document')
   })
 })
