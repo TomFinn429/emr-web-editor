@@ -24,7 +24,7 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5174,
     strictPort: false,
-    open: '/?stage=month-2-import-preview',
+    open: '/',
     proxy: {
       '/api': {
         target: 'http://localhost:5190',
