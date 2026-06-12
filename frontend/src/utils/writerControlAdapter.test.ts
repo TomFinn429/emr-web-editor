@@ -362,6 +362,81 @@ describe('writerControlAdapter', () => {
     expect(removeEventListener).toHaveBeenCalledTimes(4)
   })
 
+  it('inserts native WriterControl comments through insertcomment', () => {
+    const focus = vi.fn()
+    const executeCommand = vi.fn(() => true)
+    const target: WriterControlTarget = {
+      Focus: focus,
+      DCExecuteCommand: executeCommand,
+    }
+    const options = {
+      Text: '数据校验错误\nPatient Name：数据不能为空。',
+      author: 'DCWriter',
+      AuthorID: 'validation',
+      Attributes: {
+        source: 'validation',
+        issueId: 'required-patient-name',
+        fieldId: 'patient-name',
+      },
+      BackColor: '#8B8DF4',
+      BorderColor: '#3434A8',
+      ForeColor: '#000000',
+    }
+
+    expect(createWriterControlAdapter(target).insertComment(options)).toEqual({ ok: true })
+    expect(focus).toHaveBeenCalledBefore(executeCommand)
+    expect(executeCommand).toHaveBeenCalledWith('insertcomment', true, options)
+  })
+
+  it('reads and updates native WriterControl comments', () => {
+    const comments = [{ Index: 0, Text: '请检查这里的内容是否正确', Author: '李四主任医师' }]
+    const setCommentContent = vi.fn(() => true)
+    const refreshDocument = vi.fn()
+    const target: WriterControlTarget = {
+      getCommentList: vi.fn(() => comments),
+      setCommentContent,
+      RefreshDocument: refreshDocument,
+    }
+    const adapter = createWriterControlAdapter(target)
+
+    expect(adapter.getCommentList()).toEqual({ ok: true, comments })
+    expect(adapter.setCommentContent(0, '已处理')).toEqual({ ok: true })
+    expect(setCommentContent).toHaveBeenCalledWith(0, '已处理')
+    expect(refreshDocument).toHaveBeenCalled()
+  })
+
+  it('deletes current native WriterControl comments and refreshes the document', () => {
+    const executeCommand = vi.fn(() => true)
+    const refreshDocument = vi.fn()
+    const target: WriterControlTarget = {
+      DCExecuteCommand: executeCommand,
+      RefreshDocument: refreshDocument,
+    }
+
+    expect(createWriterControlAdapter(target).deleteCurrentComment()).toEqual({ ok: true })
+    expect(executeCommand).toHaveBeenCalledWith('DeleteComment', false, null)
+    expect(refreshDocument).toHaveBeenCalled()
+  })
+
+  it('sets native WriterControl comment visibility through document options', () => {
+    const applyDocumentOptions = vi.fn()
+    const refreshDocument = vi.fn()
+    const target: WriterControlTarget = {
+      DocumentOptions: {
+        BehaviorOptions: {
+          CommentVisibility: 'Auto',
+        },
+      },
+      ApplyDocumentOptions: applyDocumentOptions,
+      RefreshDocument: refreshDocument,
+    }
+
+    expect(createWriterControlAdapter(target).setCommentVisibility('Hide')).toEqual({ ok: true })
+    expect(target.DocumentOptions?.BehaviorOptions?.CommentVisibility).toBe('Hide')
+    expect(applyDocumentOptions).toHaveBeenCalled()
+    expect(refreshDocument).toHaveBeenCalled()
+  })
+
   it('delegates print operations to existing writer print helpers', () => {
     const target: WriterControlTarget = {
       PrintDocument: vi.fn(() => true),

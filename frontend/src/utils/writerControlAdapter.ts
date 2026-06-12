@@ -28,6 +28,38 @@ export interface WriterControlTarget extends WriterPrintTarget {
   DocumentSelectionChanged?: (sender: unknown, args: unknown) => void
   EventFieldOnFocus?: (...args: unknown[]) => void
   EventFieldOnBlur?: (...args: unknown[]) => void
+  RefreshDocument?: () => boolean | void
+  ApplyDocumentOptions?: () => boolean | void
+  getCommentList?: () => WriterComment[]
+  setCommentContent?: (index: number, text: string) => boolean | void
+  DocumentOptions?: {
+    BehaviorOptions?: {
+      CommentVisibility?: WriterCommentVisibility
+    }
+  }
+}
+
+export type WriterCommentVisibility = 'Auto' | 'Visible' | 'Hide'
+
+export interface WriterComment {
+  Index?: number
+  Text?: string
+  Author?: string
+  AuthorID?: string
+  CreationTime?: string
+  Attributes?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+export interface WriterCommentOptions {
+  Text: string
+  author?: string
+  Author?: string
+  AuthorID?: string
+  Attributes?: Record<string, unknown>
+  BackColor?: string
+  BorderColor?: string
+  ForeColor?: string
 }
 
 export type WriterAdapterFailureReason =
@@ -36,6 +68,7 @@ export type WriterAdapterFailureReason =
   | 'save-api-unavailable'
   | 'download-api-unavailable'
   | 'command-api-unavailable'
+  | 'comment-api-unavailable'
   | 'command-rejected'
   | 'save-empty'
 
@@ -121,6 +154,90 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
       }
 
       return target.GetCommandStatus(commandName)
+    },
+
+    insertComment(options: WriterCommentOptions): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.DCExecuteCommand !== 'function') {
+        return commentApiUnavailable('当前外部编辑器未暴露批注插入接口。')
+      }
+
+      target.Focus?.()
+      return normalizeWriterResult(
+        target.DCExecuteCommand('insertcomment', true, options),
+        '编辑器未接受批注插入请求。',
+      )
+    },
+
+    getCommentList(): { ok: true; comments: WriterComment[] } | WriterAdapterFailure {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.getCommentList !== 'function') {
+        return commentApiUnavailable('当前外部编辑器未暴露批注列表接口。')
+      }
+
+      const comments = target.getCommentList()
+      return { ok: true, comments: Array.isArray(comments) ? comments : [] }
+    },
+
+    setCommentContent(index: number, text: string): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.setCommentContent !== 'function') {
+        return commentApiUnavailable('当前外部编辑器未暴露批注修改接口。')
+      }
+
+      const result = normalizeWriterResult(
+        target.setCommentContent(index, text),
+        '编辑器未接受批注修改请求。',
+      )
+      if (result.ok) {
+        target.RefreshDocument?.()
+      }
+
+      return result
+    },
+
+    deleteCurrentComment(): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.DCExecuteCommand !== 'function') {
+        return commentApiUnavailable('当前外部编辑器未暴露批注删除接口。')
+      }
+
+      const result = normalizeWriterResult(
+        target.DCExecuteCommand('DeleteComment', false, null),
+        '编辑器未接受批注删除请求。',
+      )
+      if (result.ok) {
+        target.RefreshDocument?.()
+      }
+
+      return result
+    },
+
+    setCommentVisibility(visibility: WriterCommentVisibility): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (!target.DocumentOptions?.BehaviorOptions) {
+        return commentApiUnavailable('当前外部编辑器未暴露批注显示选项。')
+      }
+
+      target.DocumentOptions.BehaviorOptions.CommentVisibility = visibility
+      target.ApplyDocumentOptions?.()
+      target.RefreshDocument?.()
+      return { ok: true }
     },
 
     onContentChanged(callback: () => void) {
@@ -366,6 +483,14 @@ function writerUnavailable(): WriterAdapterFailure {
     ok: false,
     reason: 'writer-unavailable',
     message: writerUnavailableMessage,
+  }
+}
+
+function commentApiUnavailable(message: string): WriterAdapterFailure {
+  return {
+    ok: false,
+    reason: 'comment-api-unavailable',
+    message,
   }
 }
 

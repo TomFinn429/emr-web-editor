@@ -21,27 +21,36 @@ describe('documentSaveService', () => {
     vi.unstubAllGlobals()
   })
 
-  it('blocks backend save when validation returns invalid XML issue', async () => {
+  it('posts XML without running local save validation or writing validation comments', async () => {
     const { validateDocumentXml } = await import('./documentValidationService')
     vi.mocked(validateDocumentXml).mockReturnValue([invalidXmlIssue])
-    const fetchMock = vi.fn()
+    const backendResponse = {
+      id: 'saved-1',
+      fileName: 'test.xml',
+      source: 'local',
+      savedAt: '2026-05-16T08:30:01.000Z',
+    }
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => backendResponse,
+    }))
     vi.stubGlobal('fetch', fetchMock)
+    const saveXml = vi.fn(() => ({ ok: true as const, xml: '<broken>' }))
 
     await expect(
       saveDocumentToBackend(
-        { saveXml: () => ({ ok: true, xml: '<broken>' }) },
+        { saveXml },
         {
           sessionId: 'session-1',
           fileName: 'test.xml',
           source: 'local',
         },
       ),
-    ).resolves.toEqual({
-      ok: false,
-      reason: 'validation-failed',
-      issues: [invalidXmlIssue],
-    })
-    expect(fetchMock).not.toHaveBeenCalled()
+    ).resolves.toEqual({ ok: true, response: backendResponse, xml: '<broken>' })
+
+    expect(validateDocumentXml).not.toHaveBeenCalled()
+    expect(saveXml).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalled()
   })
 
   it('posts latest XML from adapter to backend and returns response with saved XML', async () => {

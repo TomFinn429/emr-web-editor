@@ -17,6 +17,7 @@ export interface ExternalWriterElement extends HTMLElement, WriterPrintTarget {
       ShowHeaderBottomLine?: boolean
     }
     BehaviorOptions?: {
+      CommentVisibility?: 'Auto' | 'Visible' | 'Hide'
       DesignMode?: boolean
       Readonly?: boolean
     }

@@ -21,6 +21,7 @@ import {
 } from '../../services/elementPropertyService'
 import { refreshFragmentTemplateTree } from '../../services/fragmentTemplateService'
 import { refreshMetadataTree } from '../../services/metadataService'
+import { insertManualCommentAndSave } from '../../services/writerCommentService'
 import {
   batchUploadTemplates,
   beginTemplateUpload,
@@ -46,7 +47,11 @@ import {
 import type { DocumentExportFormat, EditorCommandId, ValidationIssue, WriterCommandPayload } from '../../types/document'
 import type { EditorElementProperties, FragmentTemplateTreeNode, MetadataTreeNode } from '../../types/editorElement'
 import { insertCodeElement as insertWriterCodeElement, insertFragmentTemplate } from '../../utils/writerElementAdapter'
-import { createWriterControlAdapter } from '../../utils/writerControlAdapter'
+import {
+  createWriterControlAdapter,
+  type WriterComment,
+  type WriterCommentVisibility,
+} from '../../utils/writerControlAdapter'
 import type { WriterPrintResult } from '../../utils/writerPrint'
 import { createWriterCommandPayload, findCommandDefinition } from './commandRegistry'
 import { toPreviewDocument } from './editorShellState'
@@ -61,6 +66,9 @@ const rendererError = shallowRef<string | null>(null)
 const printMessage = shallowRef<string | null>(null)
 const commandMessage = shallowRef<string | null>(null)
 const writerElement = shallowRef<ExternalWriterElement | null>(null)
+const writerComments = shallowRef<WriterComment[]>([])
+const writerCommentVisibility = shallowRef<WriterCommentVisibility>('Visible')
+const writerCommentError = shallowRef<string | null>(null)
 const isPrintPreviewing = shallowRef(false)
 const templatesError = shallowRef<string | null>(null)
 const isLoadingWorkbench = shallowRef(false)
@@ -377,9 +385,6 @@ async function saveToBackend() {
       saveTemplateContent(document.templateId, result.xml, document.fileName)
       await refreshWorkbenchData(document.templateId)
     }
-  } else if (result.reason === 'validation-failed') {
-    session.setValidationIssues(result.issues)
-    session.markFailed('保存前校验未通过。', document.id)
   } else if (result.reason === 'backend-failed' && document.templateId) {
     session.setValidationIssues([])
     session.markSaved(result.xml, document.id)
@@ -589,20 +594,106 @@ function updateWriterElement(element: ExternalWriterElement | null) {
   isPrintPreviewing.value = false
   printMessage.value = null
   commandMessage.value = null
+  writerComments.value = []
+  writerCommentError.value = null
   if (element) {
     const writerAdapter = createWriterControlAdapter(element)
     elementInspector.refreshFromWriter()
+    applyWriterCommentVisibility(writerCommentVisibility.value, writerAdapter)
+    refreshWriterComments(writerAdapter)
     disposeSelectionChanged = writerAdapter.onSelectionChanged(() => {
       elementInspector.refreshFromWriter()
     })
     disposeContentChanged = writerAdapter.onContentChanged(() => {
       session.markDirty()
+      refreshWriterComments(writerAdapter)
       if (currentTemplateId.value) {
         markTemplateDirty(currentTemplateId.value)
         void refreshWorkbenchData(currentTemplateId.value)
       }
     })
   }
+}
+
+function refreshWriterComments(writerAdapter = adapter.value) {
+  const result = writerAdapter.getCommentList()
+  if (result.ok) {
+    writerComments.value = result.comments
+    writerCommentError.value = null
+    return
+  }
+
+  writerComments.value = []
+  writerCommentError.value = result.message
+}
+
+async function addManualWriterComment() {
+  const document = session.document.value
+  if (!document) {
+    return
+  }
+
+  const text = await dialog.requestText({
+    title: '新增批注',
+    message: '请先在正文中选中需要批注的内容，然后输入批注内容。',
+    placeholder: '输入批注内容',
+    confirmText: '添加批注',
+    required: true,
+  })
+  if (!text) {
+    return
+  }
+
+  const result = insertManualCommentAndSave(adapter.value, text)
+  if (!result.ok) {
+    writerCommentError.value = result.message
+    commandMessage.value = result.message
+    return
+  }
+
+  writerCommentError.value = null
+  commandMessage.value = '已写入原生批注。'
+  session.markDirty()
+  if (document.templateId) {
+    saveTemplateContent(document.templateId, result.xml, document.fileName)
+    markTemplateDirty(document.templateId)
+    await refreshWorkbenchData(document.templateId)
+  }
+  refreshWriterComments()
+}
+
+function deleteCurrentWriterComment() {
+  const result = adapter.value.deleteCurrentComment()
+  if (!result.ok) {
+    writerCommentError.value = result.message
+    return
+  }
+
+  writerCommentError.value = null
+  session.markDirty()
+  if (currentTemplateId.value) {
+    markTemplateDirty(currentTemplateId.value)
+    void refreshWorkbenchData(currentTemplateId.value)
+  }
+  refreshWriterComments()
+}
+
+function handleWriterCommentVisibilityChange(visibility: WriterCommentVisibility) {
+  writerCommentVisibility.value = visibility
+  applyWriterCommentVisibility(visibility)
+}
+
+function applyWriterCommentVisibility(
+  visibility: WriterCommentVisibility,
+  writerAdapter = adapter.value,
+) {
+  const result = writerAdapter.setCommentVisibility(visibility)
+  if (!result.ok) {
+    writerCommentError.value = result.message
+    return
+  }
+
+  writerCommentError.value = null
 }
 
 async function refreshMetadataPanel() {
@@ -945,12 +1036,20 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
               :warning-text="warningText"
               :zoom="zoom"
               :validation-issues="session.validationIssues.value"
+              :comments="writerComments"
+              :comment-visibility="writerCommentVisibility"
+              :comment-error="writerCommentError"
+              :can-use-comments="canUseWriter"
               :open-tabs="openTabs"
               :active-template-id="activeTemplateId"
               @mode-change="rendererMode = $event"
               @render-error="rendererError = $event"
               @writer-ready="updateWriterElement"
               @select-issue="handleValidationIssue"
+              @add-comment="addManualWriterComment"
+              @refresh-comments="refreshWriterComments"
+              @delete-current-comment="deleteCurrentWriterComment"
+              @comment-visibility-change="handleWriterCommentVisibilityChange"
               @select-tab="selectOpenTab"
               @close-tab="closeOpenTab"
             />

@@ -1,6 +1,5 @@
-import type { DocumentSource, SaveDocumentResponse, ValidationIssue } from '../types/document'
+import type { DocumentSource, SaveDocumentResponse } from '../types/document'
 import type { WriterSaveResult } from '../utils/writerControlAdapter'
-import { validateDocumentXml } from './documentValidationService'
 
 interface SaveAdapter {
   saveXml: () => WriterSaveResult
@@ -15,7 +14,6 @@ export interface SaveDocumentOptions {
 export type BackendSaveResult =
   | { ok: true; response: SaveDocumentResponse; xml: string }
   | { ok: false; reason: 'adapter-failed'; message: string }
-  | { ok: false; reason: 'validation-failed'; issues: ValidationIssue[] }
   | { ok: false; reason: 'backend-failed'; message: string; xml: string }
 
 export interface DownloadDocumentOptions {
@@ -32,11 +30,6 @@ export async function saveDocumentToBackend(
   const saveResult = adapter.saveXml()
   if (!saveResult.ok) {
     return { ok: false, reason: 'adapter-failed', message: saveResult.message }
-  }
-
-  const issues = validateDocumentXml(saveResult.xml)
-  if (issues.some(issue => issue.severity === 'error')) {
-    return { ok: false, reason: 'validation-failed', issues }
   }
 
   let response: Response

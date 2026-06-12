@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import CanvasPreview from './CanvasPreview.vue'
 import ValidationPanel from './ValidationPanel.vue'
+import WriterCommentsPanel from './WriterCommentsPanel.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import type { TemplateOpenTab } from '../../services/templateWorkbenchService'
 import type { ImportedDocument, ValidationIssue } from '../../types/document'
+import type { WriterComment, WriterCommentVisibility } from '../../utils/writerControlAdapter'
 
 interface Props {
   document: ImportedDocument | null
@@ -12,6 +14,10 @@ interface Props {
   warningText: string
   zoom: number
   validationIssues: readonly ValidationIssue[]
+  comments: readonly WriterComment[]
+  commentVisibility: WriterCommentVisibility
+  commentError: string | null
+  canUseComments: boolean
   openTabs: readonly TemplateOpenTab[]
   activeTemplateId?: string
 }
@@ -21,6 +27,10 @@ interface Emits {
   renderError: [message: string | null]
   writerReady: [writerElement: ExternalWriterElement | null]
   selectIssue: [issue: ValidationIssue]
+  addComment: []
+  refreshComments: []
+  deleteCurrentComment: []
+  commentVisibilityChange: [visibility: WriterCommentVisibility]
   selectTab: [templateId: string]
   closeTab: [templateId: string]
 }
@@ -67,6 +77,17 @@ const emit = defineEmits<Emits>()
       :issues="props.validationIssues"
       @select-issue="emit('selectIssue', $event)"
     />
+
+    <WriterCommentsPanel
+      :comments="props.comments"
+      :visibility="props.commentVisibility"
+      :error-message="props.commentError"
+      :can-use-comments="props.canUseComments"
+      @add-comment="emit('addComment')"
+      @refresh-comments="emit('refreshComments')"
+      @delete-current-comment="emit('deleteCurrentComment')"
+      @visibility-change="emit('commentVisibilityChange', $event)"
+    />
   </section>
 </template>
 
@@ -75,7 +96,7 @@ const emit = defineEmits<Emits>()
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: 34px auto minmax(0, 1fr) auto;
+  grid-template-rows: 34px auto minmax(0, 1fr) auto auto;
   background: #dbe5ed;
 }
 

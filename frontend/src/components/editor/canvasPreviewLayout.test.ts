@@ -64,7 +64,7 @@ describe('canvas preview layout styles', () => {
     })
   })
 
-  it('hides horizontal overflow on DCWriter internal page scrollers', () => {
+  it('allows DCWriter native side comments to render outside the page box', () => {
     const pageContainerStyle = extractStyleRule(
       '.preview-panel__host :deep(.external-renderer-host [dctype="page-container"])',
     )
@@ -72,12 +72,12 @@ describe('canvas preview layout styles', () => {
       '.preview-panel__host :deep(.external-renderer-host [dctype="page-printpreview"])',
     )
 
-    expect(pageContainerStyle).toContain('overflow-y: auto !important;')
-    expect(pageContainerStyle).toContain('overflow-x: hidden !important;')
+    expect(pageContainerStyle).toContain('overflow: visible !important;')
+    expect(pageContainerStyle).not.toContain('overflow-x: hidden !important;')
     expect(pageContainerStyle).not.toContain('overflow: auto !important;')
 
-    expect(printPreviewStyle).toContain('overflow-y: auto !important;')
-    expect(printPreviewStyle).toContain('overflow-x: hidden !important;')
+    expect(printPreviewStyle).toContain('overflow: visible !important;')
+    expect(printPreviewStyle).not.toContain('overflow-x: hidden !important;')
     expect(printPreviewStyle).not.toContain('overflow: auto !important;')
   })
 })
