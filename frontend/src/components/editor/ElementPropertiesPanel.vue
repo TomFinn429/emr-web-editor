@@ -28,6 +28,7 @@ import ValidationRuleEditorDialog from './ValidationRuleEditorDialog.vue'
 interface Props {
   element: EditorElementProperties
   status: ElementPropertyUpdateResult
+  canEdit: boolean
 }
 
 interface Emits {
@@ -39,6 +40,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const groups = computed(() => getVisibleElementPropertyGroups(props.element.type, props.element))
+const isReadOnly = computed(() => !props.canEdit)
 const editingListItemsField = shallowRef<ElementPropertyField | null>(null)
 const editingValidationRuleField = shallowRef<ElementPropertyField | null>(null)
 const editingCustomAttributesField = shallowRef<ElementPropertyField | null>(null)
@@ -105,6 +107,7 @@ function fieldMultiSelectValues(field: ElementPropertyField) {
 }
 
 function updateField(field: ElementPropertyField, event: Event) {
+  if (isReadOnly.value) return
   const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
   const value = field.kind === 'checkbox' || field.kind === 'switch'
     ? (target as HTMLInputElement).checked
@@ -115,6 +118,7 @@ function updateField(field: ElementPropertyField, event: Event) {
 }
 
 function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
+  if (isReadOnly.value) return
   const selectedValues = Array.isArray(value)
     ? value.map(String)
     : typeof value === 'string'
@@ -124,6 +128,7 @@ function updateMultiSelectField(field: ElementPropertyField, value: unknown) {
 }
 
 function updateFieldValue(field: ElementPropertyField, value: string) {
+  if (isReadOnly.value) return
   emit('update', createElementPropertyPatch(field, value))
 }
 
@@ -132,14 +137,17 @@ function updateColorField(field: ElementPropertyField, value: string) {
 }
 
 function openListItemsEditor(field: ElementPropertyField) {
+  if (isReadOnly.value) return
   editingListItemsField.value = field
 }
 
 function openValidationRuleEditor(field: ElementPropertyField) {
+  if (isReadOnly.value) return
   editingValidationRuleField.value = field
 }
 
 function openCustomAttributesEditor(field: ElementPropertyField) {
+  if (isReadOnly.value) return
   editingCustomAttributesField.value = field
 }
 
@@ -215,6 +223,7 @@ function saveCustomAttributes(value: string) {
                 v-if="field.kind === 'checkbox'"
                 type="checkbox"
                 :checked="fieldCheckedValue(field)"
+                :disabled="isReadOnly"
                 @change="updateField(field, $event)"
               />
               <input
@@ -223,11 +232,13 @@ function saveCustomAttributes(value: string) {
                 type="checkbox"
                 role="switch"
                 :checked="fieldCheckedValue(field)"
+                :disabled="isReadOnly"
                 @change="updateField(field, $event)"
               />
               <select
                 v-else-if="field.kind === 'select'"
                 :value="fieldTextValue(field)"
+                :disabled="isReadOnly"
                 @change="updateField(field, $event)"
               >
                 <option v-if="field.allowEmptyOption !== false" value="">未设置</option>
@@ -243,6 +254,7 @@ function saveCustomAttributes(value: string) {
                 :collapse-tags="field.collapseTags"
                 collapse-tags-tooltip
                 :placeholder="field.label"
+                :disabled="isReadOnly"
                 popper-class="element-properties__select-popper"
                 @update:model-value="updateMultiSelectField(field, $event)"
               >
@@ -258,6 +270,7 @@ function saveCustomAttributes(value: string) {
                 :value="fieldTextValue(field)"
                 :placeholder="field.placeholder || field.label"
                 rows="2"
+                :disabled="isReadOnly"
                 @input="updateField(field, $event)"
               />
               <span v-else-if="field.kind === 'list-items'" class="element-properties__json">
@@ -266,9 +279,10 @@ function saveCustomAttributes(value: string) {
                   readonly
                   :value="summarizeStaticListItems(fieldTextValue(field))"
                   :placeholder="field.placeholder || field.label"
+                  :disabled="isReadOnly"
                   @dblclick="openListItemsEditor(field)"
                 />
-                <button type="button" :title="`编辑${field.label}`" @click="openListItemsEditor(field)">
+                <button type="button" :title="`编辑${field.label}`" :disabled="isReadOnly" @click="openListItemsEditor(field)">
                   <Edit3 :size="13" aria-hidden="true" />
                 </button>
               </span>
@@ -276,6 +290,7 @@ function saveCustomAttributes(value: string) {
                 v-else-if="field.kind === 'display-format'"
                 :value="fieldTextValue(field)"
                 :options="field.options || []"
+                :disabled="isReadOnly"
                 @update="updateFieldValue(field, $event)"
               />
               <span v-else-if="field.kind === 'validation-rule'" class="element-properties__json">
@@ -284,9 +299,10 @@ function saveCustomAttributes(value: string) {
                   readonly
                   :value="fieldTextValue(field)"
                   :placeholder="field.placeholder || field.label"
+                  :disabled="isReadOnly"
                   @click="openValidationRuleEditor(field)"
                 />
-                <button type="button" :title="`编辑${field.label}`" @click="openValidationRuleEditor(field)">
+                <button type="button" :title="`编辑${field.label}`" :disabled="isReadOnly" @click="openValidationRuleEditor(field)">
                   <Edit3 :size="13" aria-hidden="true" />
                 </button>
               </span>
@@ -296,10 +312,11 @@ function saveCustomAttributes(value: string) {
                   readonly
                   :value="summarizeCustomAttributes(fieldTextValue(field))"
                   :placeholder="field.placeholder || field.label"
+                  :disabled="isReadOnly"
                   @click="openCustomAttributesEditor(field)"
                   @dblclick="openCustomAttributesEditor(field)"
                 />
-                <button type="button" :title="`编辑${field.label}`" @click="openCustomAttributesEditor(field)">
+                <button type="button" :title="`编辑${field.label}`" :disabled="isReadOnly" @click="openCustomAttributesEditor(field)">
                   <Edit3 :size="13" aria-hidden="true" />
                 </button>
               </span>
@@ -308,9 +325,10 @@ function saveCustomAttributes(value: string) {
                   type="text"
                   :value="fieldTextValue(field)"
                   :placeholder="field.placeholder || field.label"
+                  :disabled="isReadOnly"
                   @input="updateField(field, $event)"
                 />
-                <button type="button" :title="`编辑${field.label}`">
+                <button type="button" :title="`编辑${field.label}`" :disabled="isReadOnly">
                   <Edit3 :size="13" aria-hidden="true" />
                 </button>
               </span>
@@ -319,6 +337,7 @@ function saveCustomAttributes(value: string) {
                   type="text"
                   :value="fieldTextValue(field)"
                   :placeholder="field.placeholder || field.label"
+                  :disabled="isReadOnly"
                   @input="updateField(field, $event)"
                 />
                 <ElColorPicker
@@ -326,6 +345,7 @@ function saveCustomAttributes(value: string) {
                   show-alpha
                   color-format="rgb"
                   :predefine="['#000000FF', '#FFFFFFFF', '#FF0000FF', '#00FF00FF', '#0000FFFF', '#FFFFFF00']"
+                  :disabled="isReadOnly"
                   @update:model-value="updateColorField(field, $event || '')"
                 />
               </span>
@@ -334,6 +354,7 @@ function saveCustomAttributes(value: string) {
                 :type="field.kind === 'number' ? 'number' : 'text'"
                 :value="fieldTextValue(field)"
                 :placeholder="field.placeholder || field.label"
+                :disabled="isReadOnly"
                 @input="updateField(field, $event)"
               />
             </span>
@@ -620,6 +641,15 @@ function saveCustomAttributes(value: string) {
   border-radius: 0 4px 4px 0;
   background: #f7fafc;
   color: #697586;
+}
+
+.element-properties__field input:disabled,
+.element-properties__field select:disabled,
+.element-properties__field textarea:disabled,
+.element-properties__json button:disabled {
+  cursor: not-allowed;
+  background: #f3f6f8;
+  color: #8a96a3;
 }
 
 .element-properties__color {

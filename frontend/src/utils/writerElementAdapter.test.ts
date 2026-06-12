@@ -140,6 +140,21 @@ describe('writerElementAdapter', () => {
     })
   })
 
+  it('does not normalize plain text characters as editable input fields', () => {
+    expect(readSelectedWriterElement({
+      CurrentElement: vi.fn(() => ({ _id: 'char-ref' })),
+      GetElementProperties: vi.fn(() => ({
+        TypeName: 'XTextCharElement',
+        NativeHandle: 569,
+        Text: '医',
+      })),
+    })).toEqual({
+      ok: false,
+      reason: 'unsupported',
+      message: '当前 WriterControl 选中元素暂不支持属性编辑。',
+    })
+  })
+
   it('reads current table cell, row, and table through confirmed WriterControl APIs', () => {
     const cellRef = { kind: 'cell-ref' }
     const rowRef = { kind: 'row-ref' }
@@ -235,6 +250,10 @@ describe('writerElementAdapter', () => {
   it('writes normalized properties through SetElementProperties for the current WriterControl element', () => {
     const inputRef = { serializeAsArg: vi.fn() }
     const currentInputField = vi.fn(() => inputRef)
+    const getElementProperties = vi.fn(() => ({
+      TypeName: 'XTextInputFieldElement',
+      NativeHandle: 101,
+    }))
     const setElementProperties = vi.fn(() => true)
     const element = {
       ...createDefaultElementProperties('input-field'),
@@ -258,13 +277,15 @@ describe('writerElementAdapter', () => {
 
     expect(updateSelectedWriterElementProperties({
       CurrentInputField: currentInputField,
+      GetElementProperties: getElementProperties,
       SetElementProperties: setElementProperties,
     }, element)).toEqual({
       ok: true,
       status: 'success',
       message: '元素属性已同步到 WriterControl。',
     })
-    expect(setElementProperties).toHaveBeenCalledWith(inputRef, expect.objectContaining({
+    expect(getElementProperties).toHaveBeenCalledWith(inputRef, false)
+    expect(setElementProperties).toHaveBeenCalledWith(101, expect.objectContaining({
       ID: 'Patient.Name',
       Name: '患者姓名',
       BackgroundText: '患者姓名',
@@ -282,6 +303,21 @@ describe('writerElementAdapter', () => {
       BindingPath: 'Patient.Name',
       BindingPathForText: 'Patient.Name.Text',
     }), true)
+  })
+
+  it('falls back to the current element reference when WriterControl properties do not include NativeHandle', () => {
+    const inputRef = { serializeAsArg: vi.fn() }
+    const setElementProperties = vi.fn(() => true)
+
+    expect(updateSelectedWriterElementProperties({
+      CurrentInputField: vi.fn(() => inputRef),
+      GetElementProperties: vi.fn(() => ({
+        TypeName: 'XTextInputFieldElement',
+      })),
+      SetElementProperties: setElementProperties,
+    }, createDefaultElementProperties('input-field'))).toMatchObject({ ok: true })
+
+    expect(setElementProperties).toHaveBeenCalledWith(inputRef, expect.any(Object), true)
   })
 
   it('writes structured ValidateStyle JSON through SetElementProperties', () => {

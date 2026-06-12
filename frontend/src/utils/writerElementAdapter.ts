@@ -68,6 +68,14 @@ export function readSelectedWriterElement(target: WriterElementTarget | null): W
     }
   }
 
+  if (!isSupportedWriterElement(rawElement as Record<string, unknown>)) {
+    return {
+      ok: false,
+      reason: 'unsupported',
+      message: '当前 WriterControl 选中元素暂不支持属性编辑。',
+    }
+  }
+
   return {
     ok: true,
     element: normalizeWriterElement(rawElement as Record<string, unknown>),
@@ -127,7 +135,8 @@ export function updateSelectedWriterElementProperties(
 
   if (typeof target.SetElementProperties === 'function') {
     const currentElementRef = resolveCurrentWriterElementRef(target, properties.type)
-    if (!currentElementRef) {
+    const writableElementRef = resolveWritableWriterElementRef(target, currentElementRef)
+    if (!writableElementRef) {
       return {
         ok: false,
         status: 'no-selection',
@@ -136,7 +145,7 @@ export function updateSelectedWriterElementProperties(
       }
     }
 
-    const result = target.SetElementProperties(currentElementRef, toWriterElementOptions(properties), true)
+    const result = target.SetElementProperties(writableElementRef, toWriterElementOptions(properties), true)
     if (result === false) {
       return {
         ok: false,
@@ -399,6 +408,22 @@ function toProperties(target: WriterElementTarget, elementRef: unknown) {
   return elementRef
 }
 
+function resolveWritableWriterElementRef(target: WriterElementTarget, elementRef: unknown) {
+  if (!elementRef) {
+    return null
+  }
+
+  const properties = toProperties(target, elementRef)
+  if (properties && typeof properties === 'object') {
+    const nativeHandle = readNativeHandle(properties as Record<string, unknown>)
+    if (nativeHandle !== undefined) {
+      return nativeHandle
+    }
+  }
+
+  return elementRef
+}
+
 function callCurrentElement(target: WriterElementTarget) {
   if (typeof target.CurrentElement !== 'function') {
     return null
@@ -559,6 +584,26 @@ function inferElementType(rawElement: Record<string, unknown>): EditorElementTyp
   return 'input-field'
 }
 
+function isSupportedWriterElement(rawElement: Record<string, unknown>) {
+  const typeName = [
+    readString(rawElement, ['TypeName', 'typeName', 'ElementType', 'elementType']),
+    String(rawElement['xsi:type'] || ''),
+  ].join(' ').toLocaleLowerCase()
+
+  return [
+    'inputfield',
+    'checkbox',
+    'radio',
+    'tablecell',
+    'tablerow',
+    'table',
+    'barcode',
+    'qrcode',
+    'header',
+    'footer',
+  ].some(keyword => typeName.includes(keyword))
+}
+
 function readString(rawElement: Record<string, unknown>, names: string[]) {
   for (const name of names) {
     const value = rawElement[name]
@@ -658,6 +703,14 @@ function readNumber(rawElement: Record<string, unknown>, names: string[]) {
     if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) {
       return Number(value)
     }
+  }
+  return undefined
+}
+
+function readNativeHandle(rawElement: Record<string, unknown>) {
+  const value = rawElement['NativeHandle']
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
   }
   return undefined
 }

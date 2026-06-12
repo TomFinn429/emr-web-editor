@@ -26,6 +26,8 @@ export interface WriterControlTarget extends WriterPrintTarget {
   DocumentContentChanged?: (sender: unknown, args: unknown) => void
   SelectionChanged?: (sender: unknown, args: unknown) => void
   DocumentSelectionChanged?: (sender: unknown, args: unknown) => void
+  EventFieldOnFocus?: (...args: unknown[]) => void
+  EventFieldOnBlur?: (...args: unknown[]) => void
 }
 
 export type WriterAdapterFailureReason =
@@ -157,29 +159,61 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
 
       const previousSelectionChanged = target.SelectionChanged
       const previousDocumentSelectionChanged = target.DocumentSelectionChanged
+      const previousEventFieldOnFocus = target.EventFieldOnFocus
+      const previousEventFieldOnBlur = target.EventFieldOnBlur
+      let pendingSelectionRefresh: ReturnType<typeof setTimeout> | null = null
+      const scheduleSelectionRefresh = () => {
+        if (pendingSelectionRefresh !== null) {
+          return
+        }
+        pendingSelectionRefresh = setTimeout(() => {
+          pendingSelectionRefresh = null
+          callback()
+        }, 0)
+      }
       const selectionChangedHandler = (sender: unknown, args: unknown) => {
         previousSelectionChanged?.call(target, sender, args)
-        callback()
+        scheduleSelectionRefresh()
       }
       const documentSelectionChangedHandler = (sender: unknown, args: unknown) => {
         previousDocumentSelectionChanged?.call(target, sender, args)
-        callback()
+        scheduleSelectionRefresh()
+      }
+      const fieldOnFocusHandler = (...args: unknown[]) => {
+        previousEventFieldOnFocus?.call(target, ...args)
+        scheduleSelectionRefresh()
+      }
+      const fieldOnBlurHandler = (...args: unknown[]) => {
+        previousEventFieldOnBlur?.call(target, ...args)
+        scheduleSelectionRefresh()
       }
       target.SelectionChanged = selectionChangedHandler
       target.DocumentSelectionChanged = documentSelectionChangedHandler
+      target.EventFieldOnFocus = fieldOnFocusHandler
+      target.EventFieldOnBlur = fieldOnBlurHandler
 
       const fallbackEvents = ['click', 'mouseup', 'keyup'] as const
-      const fallbackHandler = () => callback()
+      const fallbackHandler = () => scheduleSelectionRefresh()
       fallbackEvents.forEach((eventName) => {
         target.addEventListener?.(eventName, fallbackHandler, true)
       })
 
       return () => {
+        if (pendingSelectionRefresh !== null) {
+          clearTimeout(pendingSelectionRefresh)
+          pendingSelectionRefresh = null
+        }
         if (target.SelectionChanged === selectionChangedHandler) {
           target.SelectionChanged = previousSelectionChanged
         }
         if (target.DocumentSelectionChanged === documentSelectionChangedHandler) {
           target.DocumentSelectionChanged = previousDocumentSelectionChanged
+        }
+        if (target.EventFieldOnFocus === fieldOnFocusHandler) {
+          target.EventFieldOnFocus = previousEventFieldOnFocus
+        }
+        if (target.EventFieldOnBlur === fieldOnBlurHandler) {
+          target.EventFieldOnBlur = previousEventFieldOnBlur
         }
 
         fallbackEvents.forEach((eventName) => {

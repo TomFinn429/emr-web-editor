@@ -282,7 +282,8 @@ describe('writerControlAdapter', () => {
     expect(removeEventListener).toHaveBeenCalledWith('cut', expect.any(Function), true)
   })
 
-  it('binds WriterControl selection change callback and DOM selection fallbacks', () => {
+  it('binds WriterControl selection change callback and DOM selection fallbacks after WriterControl state settles', () => {
+    vi.useFakeTimers()
     const previousSelectionChanged = vi.fn()
     const addEventListener = vi.fn()
     const removeEventListener = vi.fn()
@@ -300,7 +301,9 @@ describe('writerControlAdapter', () => {
       .forEach(([, handler]) => handler(new Event('click')))
 
     expect(previousSelectionChanged).toHaveBeenCalledWith(target, { TriggerType: 'test' })
-    expect(onSelectionChanged).toHaveBeenCalledTimes(2)
+    expect(onSelectionChanged).not.toHaveBeenCalled()
+    vi.runOnlyPendingTimers()
+    expect(onSelectionChanged).toHaveBeenCalledTimes(1)
     expect(addEventListener).toHaveBeenCalledWith('click', expect.any(Function), true)
     expect(addEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function), true)
     expect(addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function), true)
@@ -311,6 +314,34 @@ describe('writerControlAdapter', () => {
     expect(removeEventListener).toHaveBeenCalledWith('click', expect.any(Function), true)
     expect(removeEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function), true)
     expect(removeEventListener).toHaveBeenCalledWith('keyup', expect.any(Function), true)
+    vi.useRealTimers()
+  })
+
+  it('refreshes element selection from WriterControl field focus and blur events', () => {
+    vi.useFakeTimers()
+    const previousFieldOnFocus = vi.fn()
+    const previousFieldOnBlur = vi.fn()
+    const target: WriterControlTarget = {
+      EventFieldOnFocus: previousFieldOnFocus,
+      EventFieldOnBlur: previousFieldOnBlur,
+    }
+    const onSelectionChanged = vi.fn()
+
+    const dispose = createWriterControlAdapter(target).onSelectionChanged(onSelectionChanged)
+    target.EventFieldOnFocus?.({ TypeName: 'XTextInputFieldElement' })
+    target.EventFieldOnBlur?.({ TypeName: 'XTextInputFieldElement' })
+
+    expect(previousFieldOnFocus).toHaveBeenCalledWith({ TypeName: 'XTextInputFieldElement' })
+    expect(previousFieldOnBlur).toHaveBeenCalledWith({ TypeName: 'XTextInputFieldElement' })
+    expect(onSelectionChanged).not.toHaveBeenCalled()
+    vi.runOnlyPendingTimers()
+    expect(onSelectionChanged).toHaveBeenCalledTimes(1)
+
+    dispose()
+
+    expect(target.EventFieldOnFocus).toBe(previousFieldOnFocus)
+    expect(target.EventFieldOnBlur).toBe(previousFieldOnBlur)
+    vi.useRealTimers()
   })
 
   it('does not overwrite a newer WriterControl content change callback when disposed', () => {

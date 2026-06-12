@@ -14,6 +14,7 @@ interface Props {
   templateProperties: TemplateProperties | null
   elementProperties: EditorElementProperties
   elementStatus: ElementPropertyUpdateResult
+  canEditElement: boolean
   historyVersions: readonly TemplateHistoryVersion[]
   showHistory: boolean
 }
@@ -72,6 +73,7 @@ const activeTab = shallowRef<'template' | 'element'>('template')
       v-else
       :element="props.elementProperties"
       :status="props.elementStatus"
+      :can-edit="props.canEditElement"
       @refresh="emit('refreshElement')"
       @select-type="emit('selectElementType', $event)"
       @update="emit('updateElement', $event)"

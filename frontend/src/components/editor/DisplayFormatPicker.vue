@@ -10,6 +10,7 @@ import type { ElementPropertyOption } from './elementPropertySchema'
 interface Props {
   value: string
   options: ElementPropertyOption[]
+  disabled?: boolean
 }
 
 interface Emits {
@@ -34,11 +35,13 @@ const cascaderOptions = computed(() => props.options as unknown as CascaderOptio
 const selectedPath = computed(() => resolveDisplayFormatPath(props.value, props.options))
 
 function updatePath(value: unknown) {
+  if (props.disabled) return
   const path = Array.isArray(value) ? value.map(String).filter(Boolean) : []
   emit('update', path.length > 1 ? path[1] : path[0] || '')
 }
 
 function openPicker() {
+  if (props.disabled) return
   cascaderRef.value?.togglePopperVisible?.(true)
   cascaderRef.value?.focus?.()
 }
@@ -72,9 +75,10 @@ function resolveDisplayFormatPath(value: string, options: ElementPropertyOption[
       :show-all-levels="false"
       placeholder="输出格式"
       clearable
+      :disabled="props.disabled"
       @update:model-value="updatePath"
     />
-    <ElButton class="display-format-picker__button" title="编辑输出格式" @click="openPicker">
+    <ElButton class="display-format-picker__button" title="编辑输出格式" :disabled="props.disabled" @click="openPicker">
       <Edit3 :size="13" aria-hidden="true" />
     </ElButton>
   </span>

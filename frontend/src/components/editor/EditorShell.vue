@@ -631,6 +631,16 @@ function selectMetadata(node: MetadataTreeNode) {
 
 function bindMetadata(node: MetadataTreeNode) {
   selectedMetadataId.value = node.id
+  if (!elementInspector.canEditSelectedElement.value) {
+    elementInspector.setStatus({
+      ok: false,
+      status: 'no-selection',
+      reason: 'no-selection',
+      message: '请先在 WriterControl 中选中一个输入域，再绑定元数据。',
+    })
+    commandMessage.value = elementInspector.updateStatus.value.message
+    return
+  }
   elementInspector.bindMetadata(node)
   commandMessage.value = elementInspector.updateStatus.value.message
 }
@@ -685,6 +695,16 @@ function selectElementType(type: EditorElementProperties['type']) {
 }
 
 function updateElementProperties(patch: Partial<EditorElementProperties>) {
+  if (!elementInspector.canEditSelectedElement.value) {
+    elementInspector.setStatus({
+      ok: false,
+      status: 'no-selection',
+      reason: 'no-selection',
+      message: '当前未选中可编辑的 WriterControl 元素，请先在文档中选择元素。',
+    })
+    commandMessage.value = elementInspector.updateStatus.value.message
+    return
+  }
   elementInspector.updateProperties(patch)
   commandMessage.value = elementInspector.updateStatus.value.message
 }
@@ -940,6 +960,7 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
             :template-properties="templateProperties"
             :element-properties="elementProperties"
             :element-status="elementInspector.updateStatus.value"
+            :can-edit-element="elementInspector.canEditSelectedElement.value"
             :history-versions="historyVersions"
             :show-history="showHistoryVersions"
             @toggle-history="showHistoryVersions = !showHistoryVersions"

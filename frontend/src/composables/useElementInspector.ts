@@ -35,6 +35,7 @@ export function useElementInspector(options: UseElementInspectorOptions) {
   const updateStatus = shallowRef<ElementPropertyUpdateResult>(initialStatus)
 
   const canBindMetadata = computed(() => selectedElement.value.type === 'input-field')
+  const canEditSelectedElement = computed(() => selectedElement.value.supportLevel === 'writer')
 
   function refreshFromWriter() {
     const result = readSelectedWriterElement(options.writerTarget.value)
@@ -48,6 +49,7 @@ export function useElementInspector(options: UseElementInspectorOptions) {
       return
     }
 
+    selectedElement.value = setCurrentElementProperties(selectMockElement('none'))
     updateStatus.value = toPropertyStatus(result.reason, result.message)
   }
 
@@ -91,6 +93,7 @@ export function useElementInspector(options: UseElementInspectorOptions) {
     selectedElement: readonly(selectedElement),
     updateStatus: readonly(updateStatus),
     canBindMetadata,
+    canEditSelectedElement,
     refreshFromWriter,
     selectElementType,
     updateProperties,
