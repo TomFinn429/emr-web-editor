@@ -111,6 +111,10 @@ export type AppCommandId =
   | 'insertHeaderFooter'
   | 'saveAsHeaderFooter'
   | 'refreshDocument'
+  | 'traceLogin'
+  | 'traceRefresh'
+  | 'traceComplexView'
+  | 'traceCleanView'
 
 export type PlaceholderCommandId =
   | 'exportLocal'

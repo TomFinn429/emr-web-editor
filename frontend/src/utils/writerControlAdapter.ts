@@ -29,12 +29,32 @@ export interface WriterControlTarget extends WriterPrintTarget {
   EventFieldOnFocus?: (...args: unknown[]) => void
   EventFieldOnBlur?: (...args: unknown[]) => void
   RefreshDocument?: () => boolean | void
+  RefreshInnerView?: (fastMode?: boolean) => boolean | void
+  EditorRefreshView?: () => boolean | void
+  UpdateDocumentView?: () => boolean | void
+  InvalidateAllView?: () => boolean | void
   ApplyDocumentOptions?: () => boolean | void
   getCommentList?: () => WriterComment[]
   setCommentContent?: (index: number, text: string) => boolean | void
+  UserLoginByUserLoginInfo?: (loginInfo: WriterTraceUser, updateUI?: boolean) => boolean | void
+  UserLoginByParameter?: (
+    userID: string,
+    userName: string,
+    permissionLevel?: string | number,
+  ) => boolean | void
+  ComplexViewMode?: () => boolean | void
+  CleanViewMode?: () => boolean | void
+  InComplexViewMode?: () => boolean
+  InCleanViewMode?: () => boolean
+  GetDocumentUserTrackInfos?: (cleanMode?: boolean) => unknown
+  NavigateByUserTrackInfo?: (nativeHandle: number) => boolean | void
   DocumentOptions?: {
     BehaviorOptions?: {
       CommentVisibility?: WriterCommentVisibility
+    }
+    SecurityOptions?: {
+      TrackVisibleLevel1?: Partial<WriterTraceVisualLevel>
+      [key: string]: unknown
     }
   }
 }
@@ -62,6 +82,33 @@ export interface WriterCommentOptions {
   ForeColor?: string
 }
 
+export interface WriterTraceUser {
+  ID: string
+  Name: string
+  ClientName?: string
+  PermissionLevel?: string | number
+  Description?: string
+}
+
+export interface WriterTraceInfo {
+  NativeHandle?: number | string
+  InfoType?: string
+  Text?: string
+  UserName?: string
+  SaveTime?: string
+  [key: string]: unknown
+}
+
+export interface WriterTraceVisualLevel {
+  DeleteLineNum: string
+  DeleteLineColorString: string
+  UnderLineColorString: string
+  UnderLineColorNum: string
+  BackgroundColorString: string
+}
+
+export type WriterTraceViewMode = 'complex' | 'clean'
+
 export type WriterAdapterFailureReason =
   | 'writer-unavailable'
   | 'load-api-unavailable'
@@ -69,6 +116,7 @@ export type WriterAdapterFailureReason =
   | 'download-api-unavailable'
   | 'command-api-unavailable'
   | 'comment-api-unavailable'
+  | 'trace-api-unavailable'
   | 'command-rejected'
   | 'save-empty'
 
@@ -92,6 +140,10 @@ export type WriterDocumentDownloadResult =
   | { ok: true; format: DocumentExportFormat; writerFormat: string }
   | WriterAdapterFailure
 
+export type WriterTraceListResult =
+  | { ok: true; traces: WriterTraceInfo[] }
+  | WriterAdapterFailure
+
 export interface WriterDocumentPageSettings {
   PaperWidthInCM: number
   LeftMarginInCM: number
@@ -99,6 +151,14 @@ export interface WriterDocumentPageSettings {
 }
 
 const writerUnavailableMessage = '外部编辑器尚未加载，无法执行该操作。'
+
+export const defaultTraceVisualLevel = {
+  DeleteLineNum: '2',
+  DeleteLineColorString: 'Black',
+  UnderLineColorString: 'Yellow',
+  UnderLineColorNum: '2',
+  BackgroundColorString: 'LightGrey',
+} satisfies WriterTraceVisualLevel
 
 export function createWriterControlAdapter(target: WriterControlTarget | null) {
   return {
@@ -238,6 +298,118 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
       target.ApplyDocumentOptions?.()
       target.RefreshDocument?.()
       return { ok: true }
+    },
+
+    loginTraceUser(user: WriterTraceUser): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      let loginResult: WriterAdapterResult
+      if (typeof target.UserLoginByUserLoginInfo === 'function') {
+        loginResult = normalizeWriterResult(
+          target.UserLoginByUserLoginInfo(user, true),
+          '编辑器未接受留痕用户登录请求。',
+        )
+      } else if (typeof target.UserLoginByParameter === 'function') {
+        loginResult = normalizeWriterResult(
+          target.UserLoginByParameter(user.ID, user.Name, user.PermissionLevel),
+          '编辑器未接受留痕用户登录请求。',
+        )
+      } else {
+        return traceApiUnavailable('当前外部编辑器未暴露留痕登录接口。')
+      }
+
+      if (!loginResult.ok) {
+        return loginResult
+      }
+
+      return applyTraceVisualOptionsToTarget(target)
+    },
+
+    applyTraceVisualOptions(): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      return applyTraceVisualOptionsToTarget(target)
+    },
+
+    setTraceViewMode(mode: WriterTraceViewMode): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      const directMethod = mode === 'complex' ? target.ComplexViewMode : target.CleanViewMode
+      if (typeof directMethod === 'function') {
+        const result = normalizeWriterResult(
+          directMethod.call(target),
+          mode === 'complex' ? '编辑器未接受留痕视图切换请求。' : '编辑器未接受清洁视图切换请求。',
+        )
+        if (result.ok) {
+          refreshWriterTraceView(target)
+        }
+        return result
+      }
+
+      if (typeof target.DCExecuteCommand === 'function') {
+        const commandName = mode === 'complex' ? 'ComplexViewMode' : 'CleanViewMode'
+        const result = normalizeWriterResult(
+          target.DCExecuteCommand(commandName, false, null),
+          mode === 'complex' ? '编辑器未接受留痕视图切换请求。' : '编辑器未接受清洁视图切换请求。',
+        )
+        if (result.ok) {
+          refreshWriterTraceView(target)
+        }
+        return result
+      }
+
+      return traceApiUnavailable('当前外部编辑器未暴露留痕视图切换接口。')
+    },
+
+    getTraceViewMode(): WriterTraceViewMode | null {
+      if (!target) {
+        return null
+      }
+
+      if (typeof target.InComplexViewMode === 'function' && target.InComplexViewMode()) {
+        return 'complex'
+      }
+
+      if (typeof target.InCleanViewMode === 'function' && target.InCleanViewMode()) {
+        return 'clean'
+      }
+
+      return null
+    },
+
+    getTraceList(options?: { cleanMode?: boolean }): WriterTraceListResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.GetDocumentUserTrackInfos !== 'function') {
+        return traceApiUnavailable('当前外部编辑器未暴露留痕列表接口。')
+      }
+
+      const traces = target.GetDocumentUserTrackInfos(options?.cleanMode)
+      return { ok: true, traces: Array.isArray(traces) ? traces : [] }
+    },
+
+    navigateToTrace(nativeHandle: number): WriterAdapterResult {
+      if (!target) {
+        return writerUnavailable()
+      }
+
+      if (typeof target.NavigateByUserTrackInfo !== 'function') {
+        return traceApiUnavailable('当前外部编辑器未暴露留痕定位接口。')
+      }
+
+      target.Focus?.()
+      return normalizeWriterResult(
+        target.NavigateByUserTrackInfo(nativeHandle),
+        '编辑器未接受留痕定位请求。',
+      )
     },
 
     onContentChanged(callback: () => void) {
@@ -435,6 +607,30 @@ export function createWriterControlAdapter(target: WriterControlTarget | null) {
   }
 }
 
+function applyTraceVisualOptionsToTarget(target: WriterControlTarget): WriterAdapterResult {
+  if (!target.DocumentOptions?.SecurityOptions) {
+    return traceApiUnavailable('当前外部编辑器未暴露留痕显示选项。')
+  }
+
+  target.DocumentOptions.SecurityOptions.TrackVisibleLevel1 ??= {}
+  Object.assign(target.DocumentOptions.SecurityOptions.TrackVisibleLevel1, defaultTraceVisualLevel)
+  target.ApplyDocumentOptions?.()
+  refreshWriterTraceView(target)
+  return { ok: true }
+}
+
+function refreshWriterTraceView(target: WriterControlTarget) {
+  if (typeof target.RefreshInnerView === 'function') {
+    target.RefreshInnerView(false)
+    return
+  }
+
+  target.RefreshDocument?.()
+  target.EditorRefreshView?.()
+  target.UpdateDocumentView?.()
+  target.InvalidateAllView?.()
+}
+
 function writerSaveFormat(format: WriterSaveDocumentFormat) {
   if (format === 'xml') return 'XML'
   if (format === 'txt') return 'text'
@@ -490,6 +686,14 @@ function commentApiUnavailable(message: string): WriterAdapterFailure {
   return {
     ok: false,
     reason: 'comment-api-unavailable',
+    message,
+  }
+}
+
+function traceApiUnavailable(message: string): WriterAdapterFailure {
+  return {
+    ok: false,
+    reason: 'trace-api-unavailable',
     message,
   }
 }

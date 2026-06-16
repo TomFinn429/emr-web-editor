@@ -21,6 +21,8 @@ import {
   Hash,
   History,
   Italic,
+  Eye,
+  LogIn,
   Merge,
   PanelTop,
   Printer,
@@ -33,6 +35,7 @@ import {
   Scissors,
   Settings,
   SplitSquareHorizontal,
+  Sparkles,
   Strikethrough,
   Table,
   Trash2,
@@ -111,6 +114,8 @@ const iconMap: Record<string, Component> = {
   Hash,
   History,
   Italic,
+  Eye,
+  LogIn,
   Merge,
   PanelTop,
   Printer,
@@ -123,6 +128,7 @@ const iconMap: Record<string, Component> = {
   Scissors,
   Settings,
   SplitSquareHorizontal,
+  Sparkles,
   Strikethrough,
   Table,
   Trash2,
@@ -183,6 +189,12 @@ function isAppCommandDisabled(commandId: AppCommandId) {
   if (commandId === 'batchUploadTemplates') return !props.canUpload
   if (commandId === 'cancelUpload') return !props.canUpload
   if (commandId === 'historyVersions') return !props.canPrint
+  if (
+    commandId === 'traceLogin'
+    || commandId === 'traceRefresh'
+    || commandId === 'traceComplexView'
+    || commandId === 'traceCleanView'
+  ) return !props.canUseWriterCommands
   if (commandId === 'print' || commandId === 'printPreview') {
     return !props.canPrint || !props.canUseWriterPrint
   }

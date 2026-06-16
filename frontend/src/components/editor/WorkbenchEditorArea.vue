@@ -2,10 +2,18 @@
 import CanvasPreview from './CanvasPreview.vue'
 import ValidationPanel from './ValidationPanel.vue'
 import WriterCommentsPanel from './WriterCommentsPanel.vue'
+import WriterTracesPanel from './WriterTracesPanel.vue'
 import type { ExternalWriterElement } from '../../composables/useCanvasRenderer'
 import type { TemplateOpenTab } from '../../services/templateWorkbenchService'
 import type { ImportedDocument, ValidationIssue } from '../../types/document'
-import type { WriterComment, WriterCommentVisibility } from '../../utils/writerControlAdapter'
+import type { TraceIdentityOption } from '../../services/writerTraceService'
+import type {
+  WriterComment,
+  WriterCommentVisibility,
+  WriterTraceInfo,
+  WriterTraceUser,
+  WriterTraceViewMode,
+} from '../../utils/writerControlAdapter'
 
 interface Props {
   document: ImportedDocument | null
@@ -18,6 +26,13 @@ interface Props {
   commentVisibility: WriterCommentVisibility
   commentError: string | null
   canUseComments: boolean
+  traces: readonly WriterTraceInfo[]
+  traceViewMode: WriterTraceViewMode | null
+  traceUser: WriterTraceUser | null
+  traceError: string | null
+  traceIdentityOptions: readonly TraceIdentityOption[]
+  activeTraceKey?: string | null
+  canUseTraces: boolean
   openTabs: readonly TemplateOpenTab[]
   activeTemplateId?: string
 }
@@ -31,6 +46,11 @@ interface Emits {
   refreshComments: []
   deleteCurrentComment: []
   commentVisibilityChange: [visibility: WriterCommentVisibility]
+  loginTraceUser: []
+  refreshTraces: []
+  traceViewModeChange: [mode: WriterTraceViewMode]
+  traceIdentityChange: [identityId: string]
+  selectTrace: [trace: WriterTraceInfo]
   selectTab: [templateId: string]
   closeTab: [templateId: string]
 }
@@ -88,6 +108,21 @@ const emit = defineEmits<Emits>()
       @delete-current-comment="emit('deleteCurrentComment')"
       @visibility-change="emit('commentVisibilityChange', $event)"
     />
+
+    <WriterTracesPanel
+      :traces="props.traces"
+      :view-mode="props.traceViewMode"
+      :current-user="props.traceUser"
+      :error-message="props.traceError"
+      :identity-options="props.traceIdentityOptions"
+      :active-trace-key="props.activeTraceKey"
+      :can-use-traces="props.canUseTraces"
+      @login-trace-user="emit('loginTraceUser')"
+      @refresh-traces="emit('refreshTraces')"
+      @view-mode-change="emit('traceViewModeChange', $event)"
+      @trace-identity-change="emit('traceIdentityChange', $event)"
+      @select-trace="emit('selectTrace', $event)"
+    />
   </section>
 </template>
 
@@ -96,7 +131,7 @@ const emit = defineEmits<Emits>()
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: 34px auto minmax(0, 1fr) auto auto;
+  grid-template-rows: 34px auto minmax(0, 1fr) auto auto auto;
   background: #dbe5ed;
 }
 

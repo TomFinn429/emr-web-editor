@@ -437,6 +437,196 @@ describe('writerControlAdapter', () => {
     expect(refreshDocument).toHaveBeenCalled()
   })
 
+  it('logs in trace users with full login info and applies trace visual options', () => {
+    const login = vi.fn(() => true)
+    const applyDocumentOptions = vi.fn()
+    const target: WriterControlTarget = {
+      UserLoginByUserLoginInfo: login,
+      DocumentOptions: {
+        SecurityOptions: {
+          TrackVisibleLevel1: {},
+        },
+      },
+      ApplyDocumentOptions: applyDocumentOptions,
+    }
+    const adapter = createWriterControlAdapter(target)
+    const user = {
+      ID: '009',
+      Name: '张三主任医师',
+      ClientName: 'emr-web-editor',
+      PermissionLevel: 2,
+      Description: '演示留痕用户',
+    }
+
+    expect(adapter.applyTraceVisualOptions()).toEqual({ ok: true })
+    expect(adapter.loginTraceUser(user)).toEqual({ ok: true })
+
+    expect(target.DocumentOptions?.SecurityOptions?.TrackVisibleLevel1).toMatchObject({
+      DeleteLineNum: '2',
+      DeleteLineColorString: 'Black',
+      UnderLineColorString: 'Yellow',
+      UnderLineColorNum: '2',
+      BackgroundColorString: 'LightGrey',
+    })
+    expect(applyDocumentOptions).toHaveBeenCalled()
+    expect(login).toHaveBeenCalledWith(user, true)
+  })
+
+  it('reapplies trace visuals and refreshes native rendering after trace login', () => {
+    const refreshInnerView = vi.fn()
+    const target = {
+      UserLoginByUserLoginInfo: vi.fn(() => {
+        target.DocumentOptions = {
+          SecurityOptions: {
+            TrackVisibleLevel1: {},
+            EnablePermission: true,
+            EnableLogicDelete: true,
+            ShowLogicDeletedContent: true,
+            ShowPermissionMark: true,
+            ShowPermissionTip: true,
+          },
+        }
+        return true
+      }),
+      DocumentOptions: {
+        SecurityOptions: {
+          TrackVisibleLevel1: {},
+        },
+      },
+      ApplyDocumentOptions: vi.fn(() => true),
+      RefreshInnerView: refreshInnerView,
+    } as WriterControlTarget & {
+      RefreshInnerView: (fastMode?: boolean) => boolean | void
+    }
+
+    expect(createWriterControlAdapter(target).loginTraceUser({
+      ID: '009',
+      Name: '张三主任医师',
+      PermissionLevel: 2,
+    })).toEqual({ ok: true })
+
+    expect(target.DocumentOptions?.SecurityOptions?.TrackVisibleLevel1).toMatchObject({
+      DeleteLineNum: '2',
+      DeleteLineColorString: 'Black',
+      UnderLineColorString: 'Yellow',
+      UnderLineColorNum: '2',
+      BackgroundColorString: 'LightGrey',
+    })
+    expect(target.ApplyDocumentOptions).toHaveBeenCalled()
+    expect(refreshInnerView).toHaveBeenCalledWith(false)
+  })
+
+  it('creates missing trace visual options from available security options', () => {
+    const target: WriterControlTarget = {
+      DocumentOptions: {
+        SecurityOptions: {},
+      },
+      ApplyDocumentOptions: vi.fn(() => true),
+      RefreshDocument: vi.fn(),
+    }
+
+    expect(createWriterControlAdapter(target).applyTraceVisualOptions()).toEqual({ ok: true })
+    expect(target.DocumentOptions?.SecurityOptions?.TrackVisibleLevel1).toMatchObject({
+      DeleteLineNum: '2',
+      DeleteLineColorString: 'Black',
+      UnderLineColorString: 'Yellow',
+      UnderLineColorNum: '2',
+      BackgroundColorString: 'LightGrey',
+    })
+    expect(target.ApplyDocumentOptions).toHaveBeenCalled()
+    expect(target.RefreshDocument).toHaveBeenCalled()
+  })
+
+  it('reports unavailable trace visual options when security options are missing', () => {
+    expect(createWriterControlAdapter({}).applyTraceVisualOptions()).toEqual({
+      ok: false,
+      reason: 'trace-api-unavailable',
+      message: '当前外部编辑器未暴露留痕显示选项。',
+    })
+  })
+
+  it('falls back to parameter trace login when full login info API is unavailable', () => {
+    const parameterLogin = vi.fn(() => true)
+    const target: WriterControlTarget = {
+      UserLoginByParameter: parameterLogin,
+      DocumentOptions: {
+        SecurityOptions: {
+          TrackVisibleLevel1: {},
+        },
+      },
+    }
+
+    expect(createWriterControlAdapter(target).loginTraceUser({
+      ID: '009',
+      Name: '张三主任医师',
+      PermissionLevel: 2,
+    })).toEqual({ ok: true })
+    expect(parameterLogin).toHaveBeenCalledWith('009', '张三主任医师', 2)
+  })
+
+  it('switches trace view modes and reports the current mode', () => {
+    const refreshInnerView = vi.fn()
+    const target = {
+      ComplexViewMode: vi.fn(() => true),
+      CleanViewMode: vi.fn(() => true),
+      InComplexViewMode: vi.fn(() => false),
+      InCleanViewMode: vi.fn(() => true),
+      RefreshInnerView: refreshInnerView,
+    } as WriterControlTarget & {
+      RefreshInnerView: (fastMode?: boolean) => boolean | void
+    }
+    const adapter = createWriterControlAdapter(target)
+
+    expect(adapter.setTraceViewMode('complex')).toEqual({ ok: true })
+    expect(adapter.setTraceViewMode('clean')).toEqual({ ok: true })
+    expect(adapter.getTraceViewMode()).toBe('clean')
+    expect(target.ComplexViewMode).toHaveBeenCalled()
+    expect(target.CleanViewMode).toHaveBeenCalled()
+    expect(refreshInnerView).toHaveBeenCalledTimes(2)
+    expect(refreshInnerView).toHaveBeenNthCalledWith(1, false)
+    expect(refreshInnerView).toHaveBeenNthCalledWith(2, false)
+  })
+
+  it('reads native WriterControl trace list and normalizes non-array responses', () => {
+    const traces = [{ NativeHandle: 12, InfoType: 'Create', Text: '新增内容' }]
+    const target: WriterControlTarget = {
+      GetDocumentUserTrackInfos: vi.fn(() => traces),
+    }
+    const adapter = createWriterControlAdapter(target)
+
+    expect(adapter.getTraceList()).toEqual({ ok: true, traces })
+    expect(target.GetDocumentUserTrackInfos).toHaveBeenCalledWith(undefined)
+
+    target.GetDocumentUserTrackInfos = vi.fn(() => null)
+    expect(adapter.getTraceList({ cleanMode: true })).toEqual({ ok: true, traces: [] })
+    expect(target.GetDocumentUserTrackInfos).toHaveBeenCalledWith(true)
+  })
+
+  it('navigates to native WriterControl traces by NativeHandle', () => {
+    const navigate = vi.fn(() => true)
+    const target: WriterControlTarget = {
+      Focus: vi.fn(),
+      NavigateByUserTrackInfo: navigate,
+    }
+
+    expect(createWriterControlAdapter(target).navigateToTrace(12)).toEqual({ ok: true })
+    expect(target.Focus).toHaveBeenCalledBefore(navigate)
+    expect(navigate).toHaveBeenCalledWith(12)
+  })
+
+  it('reports unavailable or rejected trace APIs with structured failures', () => {
+    expect(createWriterControlAdapter({}).getTraceList()).toEqual({
+      ok: false,
+      reason: 'trace-api-unavailable',
+      message: '当前外部编辑器未暴露留痕列表接口。',
+    })
+    expect(createWriterControlAdapter({ NavigateByUserTrackInfo: vi.fn(() => false) }).navigateToTrace(9)).toEqual({
+      ok: false,
+      reason: 'command-rejected',
+      message: '编辑器未接受留痕定位请求。',
+    })
+  })
+
   it('delegates print operations to existing writer print helpers', () => {
     const target: WriterControlTarget = {
       PrintDocument: vi.fn(() => true),

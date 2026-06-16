@@ -17,6 +17,7 @@ describe('commandRegistry', () => {
       '插入',
       '设计',
       '表格',
+      '审阅',
       '高级',
     ])
   })
@@ -40,6 +41,10 @@ describe('commandRegistry', () => {
       'printPreview',
       'closePrintPreview',
       'importXml',
+      'traceLogin',
+      'traceRefresh',
+      'traceComplexView',
+      'traceCleanView',
     ]))
     expect(findCommandDefinition('save')?.kind).toBe('app')
     expect(findCommandDefinition('print')?.kind).toBe('app')
@@ -144,6 +149,24 @@ describe('commandRegistry', () => {
       kind: 'placeholder',
       label: 'XML 源码',
     })
+  })
+
+  it('adds trace commands as app commands under the review menu', () => {
+    const reviewTab = topMenuTabs.find(tab => tab.id === 'review')
+    const reviewCommands = reviewTab?.groups.flatMap(group => group.commands) || []
+
+    expect(reviewTab?.label).toBe('审阅')
+    expect(reviewCommands.map(command => command.id)).toEqual([
+      'traceLogin',
+      'traceRefresh',
+      'traceComplexView',
+      'traceCleanView',
+    ])
+    expect(findCommandDefinition('traceLogin')?.kind).toBe('app')
+    expect(findCommandDefinition('traceRefresh')?.kind).toBe('app')
+    expect(findCommandDefinition('traceComplexView')?.kind).toBe('app')
+    expect(findCommandDefinition('traceCleanView')?.kind).toBe('app')
+    expect(createWriterCommandPayload('traceRefresh')).toBeNull()
   })
 
   it('keeps barcode and qrcode as app commands backed by writerElementAdapter', () => {

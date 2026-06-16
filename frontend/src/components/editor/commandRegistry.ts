@@ -296,6 +296,22 @@ export const topMenuTabs: CommandMenuTab[] = [
     ],
   },
   {
+    id: 'review',
+    label: '审阅',
+    groups: [
+      {
+        id: 'trace-review',
+        label: '留痕',
+        commands: [
+          appCommand('traceLogin', '登录留痕', 'LogIn'),
+          appCommand('traceRefresh', '刷新留痕', 'RefreshCw'),
+          appCommand('traceComplexView', '留痕模式', 'Eye'),
+          appCommand('traceCleanView', '清洁模式', 'Sparkles'),
+        ],
+      },
+    ],
+  },
+  {
     id: 'advanced',
     label: '高级',
     groups: [

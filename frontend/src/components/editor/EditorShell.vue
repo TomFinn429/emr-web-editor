@@ -23,6 +23,11 @@ import { refreshFragmentTemplateTree } from '../../services/fragmentTemplateServ
 import { refreshMetadataTree } from '../../services/metadataService'
 import { insertManualCommentAndSave } from '../../services/writerCommentService'
 import {
+  createDefaultTraceUser,
+  findTraceIdentityById,
+  traceIdentityOptions,
+} from '../../services/writerTraceService'
+import {
   batchUploadTemplates,
   beginTemplateUpload,
   cancelTemplateUpload,
@@ -51,6 +56,9 @@ import {
   createWriterControlAdapter,
   type WriterComment,
   type WriterCommentVisibility,
+  type WriterTraceInfo,
+  type WriterTraceUser,
+  type WriterTraceViewMode,
 } from '../../utils/writerControlAdapter'
 import type { WriterPrintResult } from '../../utils/writerPrint'
 import { createWriterCommandPayload, findCommandDefinition } from './commandRegistry'
@@ -69,6 +77,11 @@ const writerElement = shallowRef<ExternalWriterElement | null>(null)
 const writerComments = shallowRef<WriterComment[]>([])
 const writerCommentVisibility = shallowRef<WriterCommentVisibility>('Visible')
 const writerCommentError = shallowRef<string | null>(null)
+const writerTraces = shallowRef<WriterTraceInfo[]>([])
+const writerTraceViewMode = shallowRef<WriterTraceViewMode | null>(null)
+const writerTraceUser = shallowRef<WriterTraceUser | null>(null)
+const writerTraceError = shallowRef<string | null>(null)
+const activeTraceKey = shallowRef<string | null>(null)
 const isPrintPreviewing = shallowRef(false)
 const templatesError = shallowRef<string | null>(null)
 const isLoadingWorkbench = shallowRef(false)
@@ -324,6 +337,14 @@ async function runAppCommand(commandId: EditorCommandId) {
   } else if (commandId === 'refreshDocument') {
     await refreshWorkbenchData(currentTemplateId.value)
     commandMessage.value = '文档状态已刷新。'
+  } else if (commandId === 'traceLogin') {
+    loginCurrentTraceUser()
+  } else if (commandId === 'traceRefresh') {
+    refreshWriterTraces()
+  } else if (commandId === 'traceComplexView') {
+    handleWriterTraceViewModeChange('complex')
+  } else if (commandId === 'traceCleanView') {
+    handleWriterTraceViewModeChange('clean')
   }
 }
 
@@ -596,22 +617,31 @@ function updateWriterElement(element: ExternalWriterElement | null) {
   commandMessage.value = null
   writerComments.value = []
   writerCommentError.value = null
+  writerTraces.value = []
+  writerTraceViewMode.value = null
+  writerTraceError.value = null
+  activeTraceKey.value = null
   if (element) {
     const writerAdapter = createWriterControlAdapter(element)
+    writerTraceUser.value = createCurrentTraceUser()
     elementInspector.refreshFromWriter()
     applyWriterCommentVisibility(writerCommentVisibility.value, writerAdapter)
     refreshWriterComments(writerAdapter)
+    initializeWriterTraces(writerAdapter)
     disposeSelectionChanged = writerAdapter.onSelectionChanged(() => {
       elementInspector.refreshFromWriter()
     })
     disposeContentChanged = writerAdapter.onContentChanged(() => {
       session.markDirty()
       refreshWriterComments(writerAdapter)
+      refreshWriterTraces(writerAdapter)
       if (currentTemplateId.value) {
         markTemplateDirty(currentTemplateId.value)
         void refreshWorkbenchData(currentTemplateId.value)
       }
     })
+  } else {
+    writerTraceUser.value = null
   }
 }
 
@@ -694,6 +724,106 @@ function applyWriterCommentVisibility(
   }
 
   writerCommentError.value = null
+}
+
+function createCurrentTraceUser(): WriterTraceUser {
+  return createDefaultTraceUser({
+    templateName: templateProperties.value?.name || session.document.value?.fileName,
+    authorName: templateProperties.value?.updatedBy || templateProperties.value?.author,
+  })
+}
+
+function initializeWriterTraces(writerAdapter = adapter.value) {
+  const visualResult = writerAdapter.applyTraceVisualOptions()
+  if (!visualResult.ok) {
+    writerTraceError.value = visualResult.message
+  }
+
+  loginCurrentTraceUser(writerAdapter)
+  refreshTraceViewMode(writerAdapter)
+  refreshWriterTraces(writerAdapter)
+}
+
+function loginCurrentTraceUser(writerAdapter = adapter.value) {
+  const user = writerTraceUser.value || createCurrentTraceUser()
+  writerTraceUser.value = user
+  const result = writerAdapter.loginTraceUser(user)
+  if (!result.ok) {
+    writerTraceError.value = result.message
+    commandMessage.value = result.message
+    return
+  }
+
+  writerTraceError.value = null
+  commandMessage.value = null
+}
+
+function refreshTraceViewMode(writerAdapter = adapter.value) {
+  writerTraceViewMode.value = writerAdapter.getTraceViewMode()
+}
+
+function refreshWriterTraces(writerAdapter = adapter.value) {
+  const result = writerAdapter.getTraceList({
+    cleanMode: writerTraceViewMode.value === 'clean',
+  })
+  if (result.ok) {
+    writerTraces.value = result.traces
+    writerTraceError.value = null
+    return
+  }
+
+  writerTraces.value = []
+  writerTraceError.value = result.message
+  activeTraceKey.value = null
+}
+
+function handleWriterTraceViewModeChange(mode: WriterTraceViewMode) {
+  const result = adapter.value.setTraceViewMode(mode)
+  if (!result.ok) {
+    writerTraceError.value = result.message
+    commandMessage.value = result.message
+    return
+  }
+
+  writerTraceViewMode.value = mode
+  writerTraceError.value = null
+  commandMessage.value = null
+  activeTraceKey.value = null
+  refreshWriterTraces()
+}
+
+function handleWriterTraceIdentityChange(identityId: string) {
+  const identity = findTraceIdentityById(identityId)
+  if (!identity) {
+    writerTraceError.value = '未找到可切换的留痕编辑身份。'
+    commandMessage.value = writerTraceError.value
+    return
+  }
+
+  writerTraceUser.value = { ...identity }
+  activeTraceKey.value = null
+  loginCurrentTraceUser()
+  refreshWriterTraces()
+}
+
+function handleWriterTraceSelect(trace: WriterTraceInfo) {
+  const nativeHandle = Number(trace.NativeHandle)
+  if (!Number.isFinite(nativeHandle)) {
+    writerTraceError.value = '该留痕缺少可定位的 NativeHandle。'
+    commandMessage.value = writerTraceError.value
+    return
+  }
+
+  const result = adapter.value.navigateToTrace(nativeHandle)
+  if (!result.ok) {
+    writerTraceError.value = result.message
+    commandMessage.value = result.message
+    return
+  }
+
+  writerTraceError.value = null
+  commandMessage.value = null
+  activeTraceKey.value = String(nativeHandle)
 }
 
 async function refreshMetadataPanel() {
@@ -841,6 +971,11 @@ async function clearDocument() {
   isPrintPreviewing.value = false
   printMessage.value = null
   commandMessage.value = null
+  writerTraces.value = []
+  writerTraceUser.value = null
+  writerTraceViewMode.value = null
+  writerTraceError.value = null
+  activeTraceKey.value = null
   rendererError.value = null
 }
 
@@ -930,6 +1065,11 @@ async function deleteTreeNode(node: TemplateTreeNode) {
     if (wasActive) {
       session.clearDocument()
       writerElement.value = null
+      writerTraces.value = []
+      writerTraceUser.value = null
+      writerTraceViewMode.value = null
+      writerTraceError.value = null
+      activeTraceKey.value = null
     }
   } else {
     deleteTemplateDirectory(node.id)
@@ -1040,6 +1180,13 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
               :comment-visibility="writerCommentVisibility"
               :comment-error="writerCommentError"
               :can-use-comments="canUseWriter"
+              :traces="writerTraces"
+              :trace-view-mode="writerTraceViewMode"
+              :trace-user="writerTraceUser"
+              :trace-error="writerTraceError"
+              :trace-identity-options="traceIdentityOptions"
+              :active-trace-key="activeTraceKey"
+              :can-use-traces="canUseWriter"
               :open-tabs="openTabs"
               :active-template-id="activeTemplateId"
               @mode-change="rendererMode = $event"
@@ -1050,6 +1197,11 @@ async function canReplaceCurrentDocumentAsync(isDirty: boolean) {
               @refresh-comments="refreshWriterComments"
               @delete-current-comment="deleteCurrentWriterComment"
               @comment-visibility-change="handleWriterCommentVisibilityChange"
+              @login-trace-user="loginCurrentTraceUser"
+              @refresh-traces="refreshWriterTraces"
+              @trace-view-mode-change="handleWriterTraceViewModeChange"
+              @trace-identity-change="handleWriterTraceIdentityChange"
+              @select-trace="handleWriterTraceSelect"
               @select-tab="selectOpenTab"
               @close-tab="closeOpenTab"
             />

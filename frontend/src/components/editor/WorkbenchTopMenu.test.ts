@@ -39,6 +39,12 @@ describe('WorkbenchTopMenu', () => {
     expect(html).toContain('aria-expanded="false"')
   })
 
+  it('renders the review tab for trace commands', async () => {
+    const html = await renderTopMenu()
+
+    expect(html).toContain('审阅')
+  })
+
   it('teleports command dropdowns so toolbar overflow does not clip them', async () => {
     const html = await renderTopMenu()
 

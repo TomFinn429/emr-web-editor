@@ -2,6 +2,7 @@ import { readonly, shallowRef } from 'vue'
 import type { ShallowRef } from 'vue'
 import type { DocumentSource, ImportedDocument } from '../types/document'
 import { createClientId } from '../utils/idGenerator'
+import { defaultTraceVisualLevel } from '../utils/writerControlAdapter'
 import {
   DEFAULT_PREVIEW_PAGE_SIZE,
   getPreviewPageSizeFromXml,
@@ -20,6 +21,14 @@ export interface ExternalWriterElement extends HTMLElement, WriterPrintTarget {
       CommentVisibility?: 'Auto' | 'Visible' | 'Hide'
       DesignMode?: boolean
       Readonly?: boolean
+    }
+    SecurityOptions?: {
+      EnablePermission?: boolean
+      EnableLogicDelete?: boolean
+      ShowLogicDeletedContent?: boolean
+      ShowPermissionTip?: boolean
+      ShowPermissionMark?: boolean
+      TrackVisibleLevel1?: Partial<typeof defaultTraceVisualLevel>
     }
   }
   LoadDocumentFromString?: (
@@ -169,6 +178,14 @@ export function configureExternalWriterHost(editorElement: HTMLElement, source?:
   editorElement.setAttribute('DocumentOptions.ViewOptions.FieldBorderPrintVisibility', 'hidden')
   editorElement.setAttribute('DocumentOptions.BehaviorOptions.DesignMode', 'false')
   editorElement.setAttribute('DocumentOptions.BehaviorOptions.Readonly', isTemplate ? 'false' : 'true')
+  editorElement.setAttribute('DocumentOptions.SecurityOptions.EnablePermission', 'true')
+  editorElement.setAttribute('DocumentOptions.SecurityOptions.EnableLogicDelete', 'true')
+  editorElement.setAttribute('DocumentOptions.SecurityOptions.ShowLogicDeletedContent', 'true')
+  editorElement.setAttribute('DocumentOptions.SecurityOptions.ShowPermissionTip', 'false')
+  editorElement.setAttribute('DocumentOptions.SecurityOptions.ShowPermissionMark', 'false')
+  Object.entries(defaultTraceVisualLevel).forEach(([key, value]) => {
+    editorElement.setAttribute(`DocumentOptions.SecurityOptions.TrackVisibleLevel1.${key}`, value)
+  })
   editorElement.setAttribute('Readonly', isTemplate ? 'false' : 'true')
   editorElement.setAttribute('ReadViewMode', 'false')
 }

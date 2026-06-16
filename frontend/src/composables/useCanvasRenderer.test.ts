@@ -31,6 +31,23 @@ describe('useCanvasRenderer external writer setup', () => {
     expect(host.getAttribute('DocumentOptions.BehaviorOptions.DesignMode')).toBe('false')
   })
 
+  it('initializes trace-related security options on the writer host', () => {
+    const host = createAttributeTarget()
+
+    configureExternalWriterHost(host, 'template')
+
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.EnablePermission')).toBe('true')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.EnableLogicDelete')).toBe('true')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.ShowLogicDeletedContent')).toBe('true')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.ShowPermissionTip')).toBe('false')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.ShowPermissionMark')).toBe('false')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.TrackVisibleLevel1.DeleteLineNum')).toBe('2')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.TrackVisibleLevel1.DeleteLineColorString')).toBe('Black')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.TrackVisibleLevel1.UnderLineColorString')).toBe('Yellow')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.TrackVisibleLevel1.UnderLineColorNum')).toBe('2')
+    expect(host.getAttribute('DocumentOptions.SecurityOptions.TrackVisibleLevel1.BackgroundColorString')).toBe('LightGrey')
+  })
+
   it('unlocks table container ContentReadonly before loading template XML without changing field readonly flags', () => {
     installXmlDomStub()
 
